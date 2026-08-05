@@ -1,0 +1,3384 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>Solo Task</title>
+<style>
+  /* กฎสี 60-30-10: 60% พื้นหลังตามช่วงเวลา · 30% พื้นผิวการ์ด/เมนู · 10% สี accent (indigo) */
+  :root, :root[data-theme="day"] {
+    /* กลางวัน: พื้นเหลืองอบอุ่น */
+    --bg: #faf1da; --fg: #2d2416; --card: #fffdf7; --border: #eaddbd;
+    --muted: #77684a; --primary: #6366f1; --primary-dark: #4f46e5;
+    --primary-soft: #eef0ff;
+    --danger: #ef4444; --danger-text: #c2410c; --success: #059669;
+    --switch-on: #0f8a3d;
+  }
+  :root[data-theme="night"] {
+    /* กลางคืน: น้ำเงินเข้ม */
+    --bg: #0b1630; --fg: #edf2fc; --card: #17244a; --border: #2a3a63;
+    --muted: #9daecd; --primary: #818cf8; --primary-dark: #6366f1;
+    --primary-soft: #2b3170;
+    --danger: #ef4444; --danger-text: #fca5a5; --success: #34d399;
+    --switch-on: #34c759;
+  }
+  html { transition: background .4s ease-out; }
+  :focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
+  @media (prefers-reduced-motion: reduce) {
+    * { transition: none !important; animation: none !important; }
+  }
+
+  /* ---- motion: สื่อสถานะ ไม่ตกแต่งเกิน (150-250ms, ease-out) ---- */
+  #view.anim > * { animation: viewIn .2s cubic-bezier(.22, 1, .36, 1) both; }
+  @keyframes viewIn {
+    from { opacity: 0; transform: translateY(8px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  .just-done .task-status, .just-done .mini-dot { animation: checkPop .28s cubic-bezier(.22, 1.6, .36, 1); }
+  @keyframes checkPop {
+    0% { transform: scale(.6); }
+    60% { transform: scale(1.18); }
+    100% { transform: scale(1); }
+  }
+  .task.just-done { animation: cardSettle .25s cubic-bezier(.22, 1, .36, 1); }
+  @keyframes cardSettle {
+    0% { transform: scale(.985); }
+    100% { transform: scale(1); }
+  }
+  .overlay { animation: overlayIn .18s ease-out both; }
+  @keyframes overlayIn { from { background: rgba(0,0,0,0); } to { background: rgba(0,0,0,.45); } }
+  .sheet { animation: sheetUp .24s cubic-bezier(.22, 1, .36, 1) both; }
+  @keyframes sheetUp {
+    from { opacity: .4; transform: translateY(28px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  .fab { transition: transform .15s cubic-bezier(.22, 1, .36, 1), background .15s; }
+  .fab:active { transform: scale(.9); }
+  .nav-btn .ico { transition: transform .15s cubic-bezier(.22, 1, .36, 1); }
+  .nav-btn.active .ico { transform: translateY(-1px) scale(1.08); }
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    background: var(--bg); color: var(--fg); min-height: 100dvh;
+  }
+  .app { max-width: 28rem; margin: 0 auto; padding-bottom: 5.5rem; }
+  .page { padding: 1rem; }
+  h1 { font-size: 1.5rem; margin-bottom: 1rem; }
+  .page-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 1rem; }
+  .page-head h1 { margin-bottom: 0; }
+  h2.section-title, .section-title {
+    font-size: .7rem; font-weight: 600; text-transform: uppercase; letter-spacing: .05em;
+    color: var(--muted); margin: 1.1rem 0 .5rem;
+  }
+  .empty { text-align: center; color: var(--muted); font-size: .875rem; margin-top: 4rem; }
+  .cat-head { display: flex; align-items: center; gap: .4rem; }
+  .cat-head .cat-dot { width: .6rem; height: .6rem; }
+
+  /* home overview */
+  .today-date { font-size: .8rem; color: var(--muted); margin: -0.75rem 0 1rem; }
+  .ov-grid { display: grid; grid-template-columns: 1fr 1fr; gap: .6rem; align-items: start; }
+  .ov-card {
+    background: var(--card); border: 1px solid var(--border); border-radius: .9rem;
+    padding: .75rem; display: flex; flex-direction: column; gap: .5rem;
+    color: var(--fg); position: relative;
+  }
+  .ov-head { display: flex; align-items: center; gap: .45rem; font-size: .78rem; font-weight: 600; min-width: 0; }
+  .ov-head .name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .cat-ico {
+    flex-shrink: 0; width: 1.8rem; height: 1.8rem; border-radius: .5rem;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .ov-more {
+    flex-shrink: 0; background: none; border: none; color: var(--muted); cursor: pointer;
+    width: 2.75rem; height: 2.75rem; margin: -.65rem -.65rem -.65rem 0;
+    display: flex; align-items: center; justify-content: center; border-radius: .4rem;
+  }
+  .ov-sub { font-size: .68rem; color: var(--muted); }
+  .ov-sub .ov-overdue { color: var(--danger-text); font-weight: 600; }
+  .ov-bar { display: block; height: .3rem; background: var(--border); border-radius: 999px; overflow: hidden; }
+  .ov-bar span { display: block; height: 100%; border-radius: 999px; }
+  .ov-done-all { color: var(--success); font-weight: 600; }
+  .mini-list { display: flex; flex-direction: column; }
+  .mini-task {
+    display: flex; align-items: flex-start; gap: .4rem;
+    padding: .35rem 0; background: none; border: none; text-align: left; width: 100%;
+    font-family: inherit; font-size: .74rem; color: var(--fg); cursor: pointer;
+  }
+  .mini-task:active { opacity: .6; }
+  .mini-dot {
+    flex-shrink: 0; width: .95rem; height: .95rem; margin-top: .05rem;
+    border: 1.5px solid var(--muted); border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    color: #fff; font-size: .55rem;
+  }
+  .mini-task.done .mini-dot { background: var(--success); border-color: var(--success); }
+  .mini-task.done .mini-title { text-decoration: line-through; opacity: .55; }
+  .mini-title { min-width: 0; line-height: 1.3; }
+  .mini-time { display: block; font-size: .62rem; color: var(--muted); font-weight: 400; }
+  .mini-time.overdue { color: var(--danger-text); font-weight: 600; }
+  .mini-empty { font-size: .68rem; color: var(--muted); padding: .2rem 0; }
+
+  /* iOS-style switch */
+  .switch {
+    flex-shrink: 0; width: 2.85rem; height: 1.7rem; border-radius: 999px; border: none;
+    background: color-mix(in srgb, var(--fg) 42%, var(--border)); cursor: pointer; position: relative;
+    transition: background .2s ease-out; padding: 0;
+  }
+  /* ขยายพื้นที่กดให้ถึง 44px โดยไม่เปลี่ยนขนาดที่เห็น */
+  .switch::before { content: ""; position: absolute; inset: -.55rem; }
+  .switch::after {
+    content: ""; position: absolute; top: .15rem; left: .15rem;
+    width: 1.4rem; height: 1.4rem; border-radius: 50%; background: #fff;
+    box-shadow: 0 1px 3px rgba(0,0,0,.35);
+    transition: transform .2s cubic-bezier(.22, 1, .36, 1);
+  }
+  .switch[aria-checked="true"] { background: var(--switch-on); }
+  .switch[aria-checked="true"]::after { transform: translateX(1.15rem); }
+
+  /* featured "Now" card + schedule editor */
+  .ov-card.featured {
+    grid-column: 1 / -1; border-width: 1.5px;
+    box-shadow: 0 6px 20px -8px rgba(0, 0, 0, .25);
+  }
+  .now-badge {
+    flex-shrink: 0; color: #fff; font-size: .62rem; font-weight: 700;
+    padding: .15rem .5rem; border-radius: 999px; letter-spacing: .02em;
+  }
+  .day-pills { display: flex; gap: .35rem; }
+  .day-pill {
+    flex: 1; aspect-ratio: 1; max-width: 2.6rem; border-radius: 50%;
+    border: 1.5px solid var(--border); background: var(--card); color: var(--muted);
+    font-family: inherit; font-size: .8rem; font-weight: 600; cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    transition: transform .12s cubic-bezier(.22, 1, .36, 1);
+  }
+  .day-pill:active { transform: scale(.9); }
+  .day-pill.sel { background: var(--primary); border-color: var(--primary); color: #fff; }
+
+  /* pet + streak card */
+  .pet-card {
+    display: flex; align-items: center; flex-wrap: wrap; gap: .85rem;
+    background: var(--card); border: 1px solid var(--border); border-radius: 1rem;
+    padding: .9rem 1rem; margin: .9rem 0 .25rem;
+  }
+  .pet-week {
+    flex-basis: 100%; display: flex; gap: .3rem; justify-content: space-between;
+    border-top: 1px solid var(--border); padding-top: .6rem; margin-top: .1rem;
+  }
+  .pw-cell {
+    flex: 1; display: flex; flex-direction: column; align-items: center; gap: .15rem;
+    border-radius: .5rem; padding: .25rem 0;
+  }
+  .pw-cell.today { background: var(--primary-soft); }
+  .pw-dow { font-size: .62rem; font-weight: 700; color: var(--muted); }
+  .pw-dot {
+    width: 1.35rem; height: 1.35rem; line-height: 0;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .pw-dot svg { filter: none; }
+  .pw-dot.in svg { filter: drop-shadow(0 1px 3px rgba(255, 100, 20, .45)); }
+  .pw-num { font-size: .62rem; color: var(--muted); }
+  .pet-streak b { color: var(--fg); font-weight: 700; }
+  .pet-streak { display: flex; align-items: center; gap: .3rem; }
+  .flame-anim { animation: flameFlick 1.7s ease-in-out infinite; transform-origin: 50% 90%; }
+  .pet-card.level-up { border-color: var(--primary); box-shadow: 0 0 0 3px var(--primary-soft); }
+  .pet-emoji {
+    width: 4.6rem; height: 4.6rem; flex-shrink: 0; background: none; border: none;
+    padding: 0; cursor: pointer; line-height: 0;
+  }
+  .pet-svg { width: 100%; height: 100%; overflow: visible; }
+  .pet-emoji.bounce { animation: petBounce .9s cubic-bezier(.22, 1.4, .36, 1); }
+  /* อนิเมชันสัตว์เลี้ยง: ตัวเด้ง กะพริบตา ปีกขยับ ไข่โยก โน้ตลอย ไฟวูบวาบ */
+  .p-body { animation: petBob 2.6s ease-in-out infinite; transform-origin: 50% 85%; }
+  @keyframes petBob {
+    0%, 100% { transform: translateY(0) scale(1); }
+    50% { transform: translateY(-2.5px) scale(1.015, .985); }
+  }
+  .p-eye { animation: petBlink 4.2s infinite; transform-origin: 50% 52%; transform-box: fill-box; }
+  @keyframes petBlink {
+    0%, 93%, 100% { transform: scaleY(1); }
+    95%, 97% { transform: scaleY(.08); }
+  }
+  .p-wing { animation: petFlap 3.4s ease-in-out infinite; transform-box: fill-box; }
+  .p-wing-l { transform-origin: 90% 15%; }
+  .p-wing-r { transform-origin: 10% 15%; animation-delay: .1s; }
+  @keyframes petFlap {
+    0%, 74%, 100% { transform: rotate(0deg); }
+    80% { transform: rotate(-16deg); }
+    86% { transform: rotate(4deg); }
+    92% { transform: rotate(-10deg); }
+  }
+  .p-wing-r { animation-name: petFlapR; }
+  @keyframes petFlapR {
+    0%, 74%, 100% { transform: rotate(0deg); }
+    80% { transform: rotate(16deg); }
+    86% { transform: rotate(-4deg); }
+    92% { transform: rotate(10deg); }
+  }
+  .p-wobble { animation: petWobble 3s ease-in-out infinite; transform-origin: 50% 90%; }
+  @keyframes petWobble {
+    0%, 100% { transform: rotate(0deg); }
+    25% { transform: rotate(-4deg); }
+    75% { transform: rotate(4deg); }
+  }
+  .p-note { animation: noteFloat 2.8s ease-in-out infinite; transform-box: fill-box; }
+  @keyframes noteFloat {
+    0%, 100% { transform: translateY(0); opacity: 0; }
+    25% { opacity: 1; }
+    60% { transform: translateY(-9px); opacity: 1; }
+    90% { transform: translateY(-14px); opacity: 0; }
+  }
+  .p-flame { animation: flameFlick 1.6s ease-in-out infinite; transform-origin: 50% 100%; transform-box: fill-box; }
+  @keyframes flameFlick {
+    0%, 100% { transform: scale(1) rotate(0deg); }
+    30% { transform: scale(1.12, .94) rotate(-2deg); }
+    65% { transform: scale(.94, 1.1) rotate(2deg); }
+  }
+  @keyframes petBounce {
+    0% { transform: scale(1); }
+    30% { transform: scale(1.35) rotate(-8deg); }
+    55% { transform: scale(.92) rotate(5deg); }
+    75% { transform: scale(1.12); }
+    100% { transform: scale(1); }
+  }
+  .pet-info { flex: 1; min-width: 0; }
+  .pet-name { font-size: .9rem; font-weight: 700; display: flex; align-items: center; gap: .4rem; flex-wrap: wrap; }
+  .pet-level {
+    font-size: .62rem; font-weight: 700; color: var(--primary);
+    background: var(--primary-soft); border-radius: 999px; padding: .1rem .45rem;
+  }
+  .pet-levelup {
+    font-size: .6rem; font-weight: 800; color: #fff; background: var(--primary);
+    border-radius: 999px; padding: .1rem .45rem; letter-spacing: .04em;
+    animation: petBounce .9s cubic-bezier(.22, 1.4, .36, 1);
+  }
+  .pet-streak { font-size: .72rem; color: var(--muted); margin-top: .15rem; }
+  .pet-xp { display: flex; align-items: center; gap: .5rem; margin-top: .35rem; }
+  .pet-xp-num { font-size: .6rem; color: var(--muted); flex-shrink: 0; }
+  .pet-next { font-size: .62rem; color: var(--muted); margin-top: .3rem; }
+  .toast {
+    position: fixed; left: 50%; bottom: calc(5.5rem + env(safe-area-inset-bottom));
+    transform: translate(-50%, 12px); opacity: 0; z-index: 60;
+    background: var(--fg); color: var(--bg); font-size: .8rem; font-weight: 600;
+    padding: .6rem 1rem; border-radius: 999px; box-shadow: 0 6px 20px rgba(0,0,0,.3);
+    transition: transform .3s cubic-bezier(.22, 1, .36, 1), opacity .3s;
+    max-width: min(90vw, 24rem); text-align: center;
+  }
+  .toast.show { transform: translate(-50%, 0); opacity: 1; }
+
+  /* pet page (focus) */
+  .pet-page { display: flex; flex-direction: column; align-items: center; gap: .8rem; padding-top: .25rem; }
+  .pp-head { display: flex; align-items: center; gap: .5rem; }
+  .pp-head h1 { font-size: 1.3rem; }
+  .pp-bubble {
+    position: relative; background: var(--card); border: 1px solid var(--border);
+    border-radius: 1rem; padding: .6rem .9rem; font-size: .82rem; max-width: 18rem; text-align: center;
+  }
+  .pp-bubble::after {
+    content: ""; position: absolute; bottom: -7px; left: 50%; transform: translateX(-50%) rotate(45deg);
+    width: 12px; height: 12px; background: var(--card);
+    border-right: 1px solid var(--border); border-bottom: 1px solid var(--border);
+  }
+  .pp-pet { position: relative; width: 9.5rem; height: 9.5rem; }
+  .pp-pet.small { width: 6.5rem; height: 6.5rem; }
+  .pp-pet svg { width: 100%; height: 100%; overflow: visible; }
+  .pp-spark { position: absolute; color: var(--primary); opacity: .6; animation: sparkTw 2.4s ease-in-out infinite; }
+  .pp-spark.s1 { top: 8%; left: -6%; font-size: 1rem; }
+  .pp-spark.s2 { top: 30%; right: -10%; font-size: .7rem; animation-delay: .7s; }
+  .pp-spark.s3 { bottom: 12%; left: -12%; font-size: .8rem; animation-delay: 1.3s; }
+  @keyframes sparkTw { 0%, 100% { opacity: .25; transform: scale(.9); } 50% { opacity: .85; transform: scale(1.15); } }
+  .pp-stats { display: grid; grid-template-columns: 1fr 1fr; gap: .6rem; width: 100%; max-width: 22rem; }
+  .pp-stat {
+    background: var(--card); border: 1px solid var(--border); border-radius: .8rem;
+    padding: .7rem .8rem; display: flex; flex-direction: column; gap: .3rem;
+  }
+  .pp-stat-label { font-size: .7rem; color: var(--muted); font-weight: 600; }
+  .pp-stat b { font-size: 1.1rem; }
+  .pp-start { max-width: 22rem; }
+  .pp-hint { font-size: .74rem; color: var(--muted); text-align: center; }
+  .pp-card {
+    background: var(--card); border: 1px solid var(--border); border-radius: 1rem;
+    padding: .9rem; width: 100%; max-width: 22rem;
+  }
+  .pp-q { font-size: .82rem; font-weight: 700; margin-bottom: .6rem; text-align: center; }
+  .fp-stepper { display: flex; align-items: center; justify-content: center; gap: 1.1rem; margin-bottom: .6rem; }
+  .fp-step {
+    width: 2.75rem; height: 2.75rem; border-radius: 50%; border: 1px solid var(--border);
+    background: var(--bg); color: var(--fg); font-size: 1.2rem; cursor: pointer; font-family: inherit;
+  }
+  .fp-num { font-size: 2rem; font-weight: 800; text-align: center; line-height: 1; }
+  .fp-num span { display: block; font-size: .62rem; font-weight: 400; color: var(--muted); margin-top: .2rem; }
+  .fp-presets { display: flex; flex-wrap: wrap; gap: .4rem; justify-content: center; }
+  .fp-pill {
+    border: 1px solid var(--border); background: var(--bg); color: var(--muted);
+    font-family: inherit; font-size: .74rem; font-weight: 600; border-radius: 999px;
+    padding: .45rem .7rem; cursor: pointer; min-height: 2.2rem;
+  }
+  .fp-pill.sel { background: var(--primary); border-color: var(--primary); color: #fff; }
+  .pp-clock { font-size: 3.2rem; font-weight: 800; letter-spacing: .02em; font-variant-numeric: tabular-nums; }
+  .pp-bar {
+    width: 100%; max-width: 20rem; height: .5rem; border-radius: 999px;
+    background: var(--border); overflow: hidden;
+  }
+  .pp-bar span { display: block; height: 100%; background: var(--primary); border-radius: 999px; transition: width .5s linear; }
+
+  /* real pets */
+  .petr-card {
+    display: flex; align-items: center; gap: .8rem; width: 100%;
+    background: var(--card); border: 1px solid var(--border); border-radius: 1rem;
+    padding: .8rem .9rem; margin-bottom: .55rem; cursor: pointer;
+    font-family: inherit; color: var(--fg); text-align: left;
+    transition: transform .08s;
+  }
+  .petr-card:active { transform: scale(.985); }
+  .petr-avatar {
+    flex-shrink: 0; width: 2.9rem; height: 2.9rem; border-radius: 50%;
+    background: var(--primary-soft); display: flex; align-items: center; justify-content: center;
+    font-size: 1.5rem;
+  }
+  .petr-avatar.big { width: 3.6rem; height: 3.6rem; font-size: 1.9rem; }
+  .petr-info { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: .1rem; }
+  .petr-info b { font-size: .95rem; }
+  .petr-sub { font-size: .72rem; color: var(--muted); }
+  .petr-head { display: flex; align-items: center; gap: .8rem; margin-bottom: .5rem; }
+  .petr-notes {
+    font-size: .78rem; color: var(--muted); background: var(--card);
+    border: 1px solid var(--border); border-radius: .7rem; padding: .55rem .7rem; margin-bottom: .7rem;
+  }
+  .petr-rec {
+    display: flex; gap: .65rem; align-items: flex-start; width: 100%;
+    background: var(--card); border: 1px solid var(--border); border-radius: .8rem;
+    padding: .7rem .8rem; margin-bottom: .5rem; cursor: pointer;
+    font-family: inherit; color: var(--fg); text-align: left;
+  }
+  .petr-rec:active { background: color-mix(in srgb, var(--fg) 4%, var(--card)); }
+  .petr-rec-body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: .25rem; }
+  .petr-rec-head { display: flex; align-items: baseline; justify-content: space-between; gap: .5rem; }
+  .petr-rec-head b { font-size: .85rem; }
+  .bl-table { display: flex; flex-wrap: wrap; gap: .3rem; }
+  .bl-cell {
+    background: var(--bg); border: 1px solid var(--border); border-radius: .45rem;
+    padding: .25rem .5rem; font-size: .7rem; display: flex; flex-direction: column;
+  }
+  .bl-cell i { font-style: normal; color: var(--muted); font-size: .62rem; }
+  .petr-status {
+    background: var(--card); border: 1px solid var(--border); border-radius: .9rem;
+    padding: .75rem; cursor: pointer; font-family: inherit; color: var(--fg); text-align: left;
+    display: flex; flex-direction: column; gap: .35rem; min-width: 0;
+    transition: transform .08s;
+  }
+  .petr-status:active { transform: scale(.97); }
+  .petr-status-head { display: flex; align-items: center; gap: .45rem; font-size: .76rem; font-weight: 700; min-width: 0; }
+  .petr-status-head .name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .petr-count {
+    font-size: .62rem; font-weight: 700; color: var(--muted);
+    background: var(--bg); border: 1px solid var(--border); border-radius: 999px; padding: .05rem .4rem;
+  }
+  .petr-status-big { font-size: 1.35rem; font-weight: 800; line-height: 1.1; }
+  .petr-status .petr-sub { display: flex; align-items: center; gap: .2rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .petr-chart-mini .wt-chart { height: 2.6rem; }
+  .petr-chart-mini .wt-range { display: none; }
+  .bl-row { display: flex; gap: .4rem; align-items: center; margin-bottom: .4rem; }
+  .bl-row input { margin: 0; }
+  .bl-row .bl-k { flex: 1.2; }
+  .bl-row .bl-v { flex: 1; }
+  .wt-chart { width: 100%; height: 4rem; display: block; }
+  .wt-range { display: flex; justify-content: space-between; font-size: .64rem; color: var(--muted); }
+
+  /* pet journal */
+  .jr-add { display: flex; flex-direction: column; gap: .5rem; }
+  .jr-add textarea { margin: 0; }
+  .jr-entry {
+    background: var(--card); border: 1px solid var(--border); border-radius: .8rem;
+    padding: .7rem .8rem .4rem; margin-bottom: .5rem;
+  }
+  .jr-text { font-size: .85rem; line-height: 1.5; white-space: pre-wrap; overflow-wrap: break-word; }
+  .jr-meta {
+    display: flex; align-items: center; justify-content: space-between;
+    font-size: .66rem; color: var(--muted); margin-top: .15rem;
+  }
+
+  /* greeting header */
+  .greet { display: flex; align-items: center; gap: .55rem; }
+  .greet-ico { line-height: 0; }
+
+  /* daily routine + tomorrow cards */
+  .rt-card { grid-column: 1 / -1; }
+  .rt-row { display: flex; align-items: center; gap: .25rem; }
+  .rt-row .mini-task { flex: 1; min-width: 0; }
+  .rt-del {
+    flex-shrink: 0; background: none; border: none; color: var(--muted); cursor: pointer;
+    width: 2.75rem; height: 2.75rem; margin: -.3rem 0; border-radius: .4rem; opacity: .55;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .rt-del:hover { opacity: 1; color: var(--danger-text); }
+  .rt-add { display: flex; align-items: center; gap: .4rem; margin-top: .3rem; }
+  .rt-add input {
+    flex: 1; margin: 0; padding: .5rem .65rem; font-size: .78rem;
+    border-radius: .5rem; border: 1px dashed var(--border); background: transparent;
+  }
+  .rt-add button {
+    flex-shrink: 0; width: 2.2rem; height: 2.2rem; border-radius: .5rem; border: none;
+    background: var(--primary-soft); color: var(--primary); cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+  }
+
+  /* settings — grouped list แบบแอพ */
+  .set-profile {
+    display: flex; align-items: center; gap: .85rem;
+    background: var(--card); border: 1px solid var(--border); border-radius: 1rem;
+    padding: 1rem; margin-bottom: 1.1rem;
+  }
+  .set-avatar {
+    width: 2.9rem; height: 2.9rem; border-radius: 50%; background: var(--primary); color: #fff;
+    display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 1.1rem;
+    flex-shrink: 0;
+  }
+  .set-group {
+    background: var(--card); border: 1px solid var(--border); border-radius: 1rem;
+    margin-bottom: 1.1rem; overflow: hidden;
+  }
+  .set-row {
+    display: flex; align-items: center; gap: .7rem; width: 100%;
+    padding: .8rem .9rem; background: none; border: none; text-align: left;
+    font-family: inherit; font-size: .85rem; color: var(--fg); cursor: pointer;
+  }
+  .set-row + .set-row, .set-group form.set-row { border-top: 1px solid var(--border); }
+  .set-row:active { background: color-mix(in srgb, var(--fg) 4%, var(--card)); }
+  .set-row .set-ico {
+    flex-shrink: 0; width: 1.9rem; height: 1.9rem; border-radius: .5rem;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .set-row .set-label { flex: 1; min-width: 0; }
+  .set-row .set-sub { display: block; font-size: .68rem; color: var(--muted); margin-top: .1rem; }
+  .set-row .set-value { font-size: .75rem; color: var(--muted); flex-shrink: 0; display: flex; align-items: center; gap: .2rem; }
+  .set-row.static { cursor: default; }
+  .set-row.static:active { background: none; }
+  .set-row.danger { color: var(--danger-text); }
+  .set-add { display: flex; align-items: center; gap: .5rem; padding: .55rem .9rem; border-top: 1px solid var(--border); }
+  .set-add input { border: none; background: none; margin: 0; padding: .35rem 0; font-size: .82rem; flex: 1; min-width: 0; }
+  .set-add input:focus { outline: none; }
+
+  /* splash (ตอนเปิดแอพ) */
+  #splash {
+    position: fixed; inset: 0; z-index: 100; background: var(--bg);
+    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: .9rem;
+    transition: opacity .35s ease-out;
+  }
+  #splash.hide { opacity: 0; pointer-events: none; }
+  .splash-logo {
+    width: 4.5rem; height: 4.5rem; border-radius: 1.1rem; background: var(--primary); color: #fff;
+    display: flex; align-items: center; justify-content: center;
+    animation: splashIn .55s cubic-bezier(.16, 1, .3, 1) both;
+  }
+  .splash-name { font-size: 1.15rem; font-weight: 700; animation: splashIn .55s cubic-bezier(.16, 1, .3, 1) .12s both; }
+  @keyframes splashIn {
+    from { opacity: 0; transform: scale(.6) translateY(10px); }
+    to { opacity: 1; transform: scale(1) translateY(0); }
+  }
+
+  /* login */
+  .login-wrap { min-height: 100dvh; display: flex; flex-direction: column; }
+  .login-hero { height: 15rem; overflow: hidden; flex-shrink: 0; }
+  .login-hero svg { width: 100%; height: 100%; display: block; }
+  .login-wrap .login { min-height: 0; flex: 1; justify-content: flex-start; padding-top: 1.75rem; }
+  @media (min-width: 1024px) {
+    .login-wrap { flex-direction: row; }
+    .login-hero { height: auto; flex: 1.1; }
+    .login-wrap .login { flex: 1; justify-content: center; }
+  }
+  .setup-q { width: 100%; margin-bottom: .35rem; }
+  .setup-label { font-size: .8rem; font-weight: 600; margin-bottom: .5rem; }
+  .setup-chips { display: flex; flex-wrap: wrap; gap: .45rem; }
+  .setup-chip {
+    display: inline-flex; align-items: center; gap: .35rem;
+    padding: .45rem .7rem; border-radius: 999px; font-size: .78rem; font-family: inherit;
+    border: 1.5px solid var(--border); background: var(--card); color: var(--muted); cursor: pointer;
+    transition: transform .12s cubic-bezier(.22, 1, .36, 1);
+  }
+  .setup-chip:active { transform: scale(.95); }
+  .setup-chip.sel-primary { background: var(--primary-soft); border-color: var(--primary); color: var(--primary); }
+  .login {
+    min-height: 100dvh; display: flex; flex-direction: column; align-items: center; justify-content: center;
+    padding: 2rem 1.5rem; max-width: 22rem; margin: 0 auto; gap: .75rem;
+    animation: loginIn .45s cubic-bezier(.16, 1, .3, 1) both;
+  }
+  @keyframes loginIn {
+    from { opacity: 0; transform: translateY(22px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  .login-logo {
+    width: 3.6rem; height: 3.6rem; border-radius: .9rem; background: var(--primary); color: #fff;
+    display: flex; align-items: center; justify-content: center; margin-bottom: .25rem;
+  }
+  .login h1 { font-size: 1.4rem; margin: 0; }
+  .login .tagline { font-size: .8rem; color: var(--muted); margin-bottom: .75rem; }
+  .login input { margin: 0; }
+  .login .btn { margin: 0; }
+  .login-or {
+    display: flex; align-items: center; gap: .75rem; width: 100%;
+    color: var(--muted); font-size: .7rem; margin: .25rem 0;
+  }
+  .login-or::before, .login-or::after { content: ""; flex: 1; height: 1px; background: var(--border); }
+  .btn-google {
+    background: var(--card); border: 1px solid var(--border); color: var(--fg);
+    display: inline-flex; align-items: center; justify-content: center; gap: .5rem;
+  }
+  .login .demo-note { font-size: .68rem; color: var(--muted); text-align: center; margin-top: .5rem; }
+  .back-btn {
+    background: none; border: none; color: var(--primary); font-size: .875rem; font-weight: 600;
+    cursor: pointer; font-family: inherit; padding: 0; margin-bottom: .75rem; display: inline-flex; align-items: center; gap: .25rem;
+  }
+  .empty-sm { text-align: center; color: var(--muted); font-size: .8rem; padding: 1rem 0; }
+
+  .task {
+    display: flex; gap: .6rem; align-items: flex-start;
+    background: var(--card); border: 1px solid var(--border); border-radius: .75rem;
+    padding: .75rem; margin-bottom: .5rem;
+    cursor: pointer; user-select: none; transition: transform .08s, opacity .15s;
+  }
+  .task:active { transform: scale(.98); }
+  .task.is-done { opacity: .65; border-color: var(--success); }
+  .task-status {
+    flex-shrink: 0; margin-top: .1rem; width: 1.35rem; height: 1.35rem;
+    border-radius: 50%; border: 2px solid var(--border);
+    display: flex; align-items: center; justify-content: center;
+    color: #fff; font-size: .7rem; pointer-events: none;
+  }
+  .task.is-done .task-status { background: var(--success); border-color: var(--success); }
+  .task-body { flex: 1; min-width: 0; }
+  .edit-btn {
+    flex-shrink: 0; background: none; border: none; color: var(--muted);
+    cursor: pointer; width: 2.75rem; height: 2.75rem; border-radius: .5rem;
+    display: flex; align-items: center; justify-content: center;
+    margin: -.55rem -.55rem -.55rem -.25rem;
+  }
+  .task-title { font-size: .9rem; font-weight: 500; }
+  .task-title.done { text-decoration: line-through; opacity: .5; }
+  .task-meta {
+    display: flex; flex-wrap: wrap; gap: .15rem .5rem; align-items: center;
+    font-size: .75rem; color: var(--muted); margin-top: .15rem;
+  }
+  .task-meta .overdue { color: var(--danger-text); font-weight: 600; }
+  .chip { border-radius: 999px; padding: .1rem .5rem; font-size: .65rem; font-weight: 600; }
+
+  .fab {
+    position: fixed; bottom: calc(4.5rem + env(safe-area-inset-bottom)); right: 1rem;
+    width: 3.5rem; height: 3.5rem; border-radius: 50%; border: none;
+    background: var(--primary); color: #fff;
+    display: flex; align-items: center; justify-content: center;
+    box-shadow: 0 4px 12px rgba(0,0,0,.25); cursor: pointer; z-index: 20;
+  }
+  @media (min-width: 30rem) { .fab { right: calc(50% - 13rem); } }
+  .fab:active { background: var(--primary-dark); }
+
+  nav { position: fixed; inset-inline: 0; bottom: 0; z-index: 20; background: var(--card); border-top: 1px solid var(--border); }
+  .nav-inner { max-width: 28rem; margin: 0 auto; display: flex; }
+  .nav-btn {
+    flex: 1; display: flex; flex-direction: column; align-items: center; gap: .1rem;
+    padding: .5rem 0 calc(.5rem + env(safe-area-inset-bottom));
+    background: none; border: none; font-size: .62rem; color: var(--muted); cursor: pointer; font-family: inherit;
+  }
+  .nav-btn .ico { line-height: 0; }
+  .btn { display: inline-flex; align-items: center; justify-content: center; gap: .4rem; }
+  .nav-btn.active { color: var(--primary); font-weight: 600; }
+
+  .overlay { position: fixed; inset: 0; background: rgba(0,0,0,.45); z-index: 30; display: flex; align-items: flex-end; justify-content: center; }
+  @media (min-width: 30rem) { .overlay { align-items: center; } }
+  .sheet {
+    width: 100%; max-width: 28rem; max-height: 90dvh; overflow-y: auto;
+    background: var(--bg); border-radius: 1rem 1rem 0 0; padding: 1rem;
+    padding-bottom: calc(1rem + env(safe-area-inset-bottom));
+  }
+  @media (min-width: 30rem) { .sheet { border-radius: 1rem; } }
+  .sheet-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: .75rem; }
+  .sheet-head h2 { font-size: 1.1rem; }
+  .x-btn { background: none; border: none; font-size: 1.25rem; color: var(--muted); cursor: pointer; }
+
+  label.fld { display: block; font-size: .7rem; color: var(--muted); margin-bottom: .75rem; }
+  input, select, textarea, .btn { font-family: inherit; font-size: .875rem; color: var(--fg); }
+  input, select, textarea {
+    width: 100%; background: var(--card); border: 1px solid var(--border);
+    border-radius: .75rem; padding: .6rem .75rem; margin-top: .25rem;
+  }
+  textarea { resize: vertical; }
+  .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: .75rem; }
+  .btn { width: 100%; border: none; border-radius: .75rem; padding: .75rem; font-weight: 600; cursor: pointer; margin-top: .25rem; }
+  .btn-primary { background: var(--primary); color: #fff; }
+  .btn-primary:active { background: var(--primary-dark); }
+  .btn-outline { background: transparent; border: 1px solid var(--border); color: var(--fg); }
+  .btn-danger-outline { background: transparent; border: 1px solid var(--danger); color: var(--danger); }
+
+  .card { background: var(--card); border: 1px solid var(--border); border-radius: .75rem; padding: 1rem; margin-bottom: .75rem; }
+  .cat-row { display: flex; align-items: center; gap: .75rem; background: var(--card); border: 1px solid var(--border); border-radius: .75rem; padding: .6rem .75rem; margin-bottom: .5rem; }
+  .cat-dot { width: 1rem; height: 1rem; border-radius: 50%; flex-shrink: 0; }
+  .cat-name { flex: 1; font-size: .875rem; }
+  .link-danger { background: none; border: none; color: var(--danger); font-size: .75rem; cursor: pointer; font-family: inherit; }
+  .add-cat { display: flex; align-items: center; gap: .5rem; border: 1px dashed var(--border); border-radius: .75rem; padding: .6rem .75rem; }
+  .add-cat input { border: none; background: none; padding: 0; margin: 0; flex: 1; min-width: 0; }
+  .color-opt { width: 1.2rem; height: 1.2rem; border-radius: 50%; border: 2px solid transparent; cursor: pointer; padding: 0; flex-shrink: 0; }
+  .color-opt.sel { border-color: var(--fg); }
+  .icon-opt {
+    width: 1.9rem; height: 1.9rem; border-radius: .45rem; border: 1px solid var(--border);
+    background: var(--card); color: var(--muted); cursor: pointer; padding: 0; flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .icon-opt.sel { border-color: var(--primary); color: var(--primary); background: var(--primary-soft); }
+  .link-primary { background: none; border: none; color: var(--primary); font-weight: 600; font-size: .875rem; cursor: pointer; font-family: inherit; }
+  .hint { font-size: .75rem; color: var(--muted); margin-top: .5rem; }
+  .filter-sel { width: auto; margin: 0; padding: .4rem .5rem; font-size: .8rem; }
+
+  /* calendar */
+  .cal-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: .75rem; }
+  .cal-head h2 { font-size: 1rem; }
+  .cal-title { display: flex; align-items: center; gap: .5rem; min-width: 0; }
+  .cal-today-btn {
+    border: 1px solid var(--primary); background: var(--primary-soft); color: var(--primary);
+    font-family: inherit; font-size: .68rem; font-weight: 700; border-radius: 999px;
+    padding: .3rem .65rem; cursor: pointer; flex-shrink: 0;
+  }
+  /* จอแคบพิเศษ (<360px): ปฏิทินซ่อนป้ายชื่องาน เหลือแถบสีบอกว่ามีงาน */
+  @media (max-width: 359px) {
+    .cal-day { min-height: 3rem; }
+    .cal-lbl { font-size: 0; height: .3rem; border-radius: 999px; padding: 0; margin: 0 .1rem; }
+    .cal-more { display: none; }
+  }
+  .cal-nav {
+    background: var(--card); border: 1px solid var(--border); border-radius: .6rem;
+    width: 2.75rem; height: 2.75rem; cursor: pointer; color: var(--fg);
+    display: flex; align-items: center; justify-content: center;
+  }
+  .cal-seg {
+    display: inline-flex; background: var(--card); border: 1px solid var(--border);
+    border-radius: .6rem; padding: .15rem; gap: .1rem;
+  }
+  .cal-seg-btn {
+    border: none; background: none; font-family: inherit; font-size: .75rem; font-weight: 600;
+    color: var(--muted); padding: .6rem .75rem; border-radius: .45rem; cursor: pointer;
+    min-height: 2.5rem; transition: background .15s, color .15s;
+  }
+  .cal-seg-btn.sel { background: var(--primary); color: #fff; }
+  .cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: .2rem; }
+  .cal-dow { text-align: center; font-size: .65rem; color: var(--muted); font-weight: 600; padding: .25rem 0; }
+  .cal-day {
+    min-height: 4.3rem; border: 1px solid transparent; border-radius: .55rem; background: none;
+    font-family: inherit; font-size: .78rem; color: var(--fg); cursor: pointer;
+    display: flex; flex-direction: column; align-items: stretch; gap: .14rem;
+    position: relative; padding: .2rem .15rem; min-width: 0; overflow: hidden;
+  }
+  .cal-num { text-align: center; line-height: 1.2; }
+  .cal-day.other { color: var(--muted); opacity: .4; }
+  .cal-day.today { border-color: var(--primary); font-weight: 700; }
+  .cal-day.sel { background: var(--primary); color: #fff; }
+  .cal-day.sel .cal-lbl { background: rgba(255,255,255,.25) !important; color: #fff !important; }
+  .cal-lbl {
+    display: block; font-size: .66rem; font-weight: 600; line-height: 1.45;
+    border-radius: .25rem; padding: 0 .2rem;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-align: left;
+  }
+  .cal-dot { width: .3rem; height: .3rem; border-radius: 50%; flex-shrink: 0; }
+  .cal-more { font-size: .62rem; color: var(--muted); line-height: 1.2; text-align: left; padding-left: .2rem; }
+  .cal-day.sel .cal-more { color: #fff; }
+
+  /* week view */
+  .wk-row {
+    display: flex; gap: .6rem; padding: .45rem 0; border-bottom: 1px solid var(--border);
+    align-items: flex-start;
+  }
+  .wk-row.today .wk-num { background: var(--primary); color: #fff; }
+  .wk-date {
+    flex-shrink: 0; width: 2.6rem; background: none; border: none; cursor: pointer;
+    display: flex; flex-direction: column; align-items: center; gap: .1rem; font-family: inherit;
+    color: var(--fg); padding: 0;
+  }
+  .wk-dow { font-size: .6rem; color: var(--muted); font-weight: 600; }
+  .wk-num {
+    width: 1.9rem; height: 1.9rem; border-radius: 50%; font-size: .85rem; font-weight: 600;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .wk-list { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: .15rem; }
+  .wk-item {
+    display: flex; align-items: center; gap: .4rem; background: none; border: none;
+    font-family: inherit; font-size: .76rem; color: var(--fg); cursor: pointer;
+    padding: .25rem .3rem; border-radius: .4rem; text-align: left; min-width: 0;
+  }
+  .wk-item:active { background: color-mix(in srgb, var(--fg) 5%, transparent); }
+  .wk-item.done .wk-title { text-decoration: line-through; opacity: .5; }
+  .wk-title { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .wk-time { flex-shrink: 0; font-size: .64rem; color: var(--muted); }
+
+  /* checklist */
+  .cl-new {
+    border-style: dashed; cursor: pointer; flex-direction: row; align-items: center;
+    justify-content: center; gap: .4rem; color: var(--muted); font-family: inherit; font-size: .8rem;
+  }
+  .cl-new:active { transform: scale(.985); }
+  .cl-complete { border-color: var(--success); }
+
+  /* dashboard */
+  .stat-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: .5rem; margin-bottom: .25rem; }
+  .stat-card {
+    background: var(--card); border: 1px solid var(--border); border-radius: .75rem;
+    padding: .6rem .5rem .65rem; text-align: center;
+    display: flex; flex-direction: column; align-items: center; gap: .1rem;
+  }
+  .stat-ico {
+    width: 1.5rem; height: 1.5rem; border-radius: .45rem; margin-bottom: .1rem;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .stat-num { font-size: 1.3rem; font-weight: 700; line-height: 1.1; }
+  .stat-num.danger { color: var(--danger-text); }
+  .stat-num.success { color: var(--success); }
+  .stat-label { font-size: .65rem; color: var(--muted); margin-top: .1rem; }
+  .dash-cat { background: var(--card); border: 1px solid var(--border); border-radius: .75rem; padding: .75rem; margin-bottom: .5rem; }
+  .dash-cat-head { display: flex; align-items: center; gap: .5rem; font-size: .85rem; font-weight: 600; }
+  .dash-cat-head .cat-dot { width: .75rem; height: .75rem; }
+  .dash-cat-nums { margin-left: auto; font-size: .75rem; color: var(--muted); font-weight: 400; }
+  .bar { height: .4rem; background: var(--border); border-radius: 999px; margin-top: .5rem; overflow: hidden; }
+  .bar-fill { height: 100%; border-radius: 999px; }
+  .week-chart { display: flex; align-items: flex-end; gap: .4rem; height: 5rem; margin-top: .5rem; }
+  .week-col { flex: 1; display: flex; flex-direction: column; align-items: center; gap: .25rem; height: 100%; justify-content: flex-end; }
+  .week-bar { width: 100%; max-width: 1.6rem; background: var(--primary); border-radius: .25rem .25rem 0 0; min-height: 2px; }
+  .week-bar.zero { background: var(--border); }
+  .week-label { font-size: .6rem; color: var(--muted); }
+
+  /* ---- responsive: จับขนาดจออัตโนมัติ ---- */
+  /* Tablet (>=640px): จอกว้างขึ้น การ์ด 3 คอลัมน์ */
+  @media (min-width: 640px) {
+    .app { max-width: 44rem; }
+    .nav-inner { max-width: 44rem; }
+    .ov-grid { grid-template-columns: repeat(3, 1fr); }
+    .fab { right: calc(50% - 21rem); }
+  }
+  /* Desktop (>=1024px): sidebar ซ้าย + เนื้อหากว้าง */
+  @media (min-width: 1024px) {
+    .app { max-width: none; margin-left: 14rem; padding-bottom: 3rem; }
+    .page { max-width: 56rem; margin: 0 auto; padding: 1.5rem 1.5rem 3rem; }
+    nav { inset: 0 auto 0 0; width: 14rem; border-top: none; border-right: 1px solid var(--border); }
+    .nav-inner {
+      flex-direction: column; max-width: none; padding-top: .75rem; gap: .2rem;
+    }
+    .nav-inner::before {
+      content: "Solo Task"; font-size: 1.05rem; font-weight: 700;
+      padding: .75rem 1.25rem 1rem; color: var(--fg);
+    }
+    .nav-btn {
+      flex: none; flex-direction: row; justify-content: flex-start; gap: .65rem;
+      font-size: .85rem; padding: .6rem .85rem; margin: 0 .6rem; border-radius: .5rem;
+    }
+    .nav-btn.active { background: var(--primary-soft); }
+    .ov-grid { grid-template-columns: repeat(3, 1fr); gap: .8rem; }
+    .fab { right: 2.5rem; bottom: 2.5rem; }
+    .stat-row { max-width: 32rem; }
+  }
+</style>
+</head>
+<body>
+<div id="splash" aria-hidden="true">
+  <div class="splash-logo"><svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg></div>
+  <div class="splash-name">Solo Task</div>
+</div>
+<div class="app">
+  <div id="view" class="page"></div>
+  <button class="fab" id="fabBtn" aria-label="Add task"></button>
+  <nav><div class="nav-inner" id="navBar"></div></nav>
+</div>
+<div id="modal"></div>
+
+<script>
+"use strict";
+
+/* ---------- icons (Feather, stroke currentColor) ---------- */
+const ICONS = {
+  sun: '<circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>',
+  calendar: '<rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>',
+  chart: '<line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/>',
+  list: '<line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/>',
+  gear: '<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/>',
+  edit: '<path d="M17 3a2.83 2.83 0 0 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/>',
+  plus: '<line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>',
+  repeat: '<polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/>',
+  right: '<polyline points="9 18 15 12 9 6"/>',
+  left: '<polyline points="15 18 9 12 15 6"/>',
+  download: '<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>',
+  upload: '<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/>',
+  briefcase: '<rect x="2" y="7" width="20" height="14" rx="2" ry="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/>',
+  user: '<path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>',
+  home: '<path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/>',
+  activity: '<polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>',
+  heart: '<path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>',
+  book: '<path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>',
+  cart: '<circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/>',
+  tag: '<path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.83z"/><line x1="7" y1="7" x2="7.01" y2="7"/>',
+  dumbbell: '<line x1="7" y1="12" x2="17" y2="12"/><rect x="4.5" y="7.5" width="3" height="9" rx="1"/><rect x="16.5" y="7.5" width="3" height="9" rx="1"/><line x1="2" y1="9.5" x2="2" y2="14.5"/><line x1="22" y1="9.5" x2="22" y2="14.5"/>',
+  logout: '<path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/>',
+  x: '<line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>',
+  clock: '<circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>',
+  checksquare: '<polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/>',
+  refresh: '<polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/>',
+  feather: '<path d="M20.24 12.24a6 6 0 0 0-8.49-8.49L5 10.5V19h8.5z"/><line x1="16" y1="8" x2="2" y2="22"/><line x1="17.5" y1="15" x2="9" y2="15"/>',
+  droplet: '<path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z"/>',
+  medcross: '<circle cx="12" cy="12" r="9"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/>',
+  sunrise: '<path d="M17 18a5 5 0 0 0-10 0"/><line x1="12" y1="2" x2="12" y2="9"/><line x1="4.22" y1="10.22" x2="5.64" y2="11.64"/><line x1="1" y1="18" x2="3" y2="18"/><line x1="21" y1="18" x2="23" y2="18"/><line x1="18.36" y1="11.64" x2="19.78" y2="10.22"/><line x1="23" y1="22" x2="1" y2="22"/><polyline points="8 6 12 2 16 6"/>',
+  sunset: '<path d="M17 18a5 5 0 0 0-10 0"/><line x1="12" y1="9" x2="12" y2="2"/><line x1="4.22" y1="10.22" x2="5.64" y2="11.64"/><line x1="1" y1="18" x2="3" y2="18"/><line x1="21" y1="18" x2="23" y2="18"/><line x1="18.36" y1="11.64" x2="19.78" y2="10.22"/><line x1="23" y1="22" x2="1" y2="22"/><polyline points="16 5 12 9 8 5"/>',
+  moon: '<path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>',
+  bell: '<path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/>',
+};
+/** คำทักทาย + ไอคอนตามช่วงเวลาจริง */
+function greeting() {
+  const h = new Date().getHours();
+  if (h >= 5 && h < 12) return { text: "Good morning", icon: "sunrise", color: "#d97706" };
+  if (h >= 12 && h < 17) return { text: "Good afternoon", icon: "sun", color: "#d97706" };
+  if (h >= 17 && h < 21) return { text: "Good evening", icon: "sunset", color: "#f59e0b" };
+  return { text: "Good night", icon: "moon", color: "#a5b4fc" };
+}
+
+/** ธีมตามเวลาจริง: กลางวันเหลือง (06:00-17:59) กลางคืนน้ำเงิน (18:00-05:59) */
+function applyTheme() {
+  const h = new Date().getHours();
+  document.documentElement.dataset.theme = (h >= 6 && h < 18) ? "day" : "night";
+}
+const CAT_ICONS = ["briefcase", "user", "home", "dumbbell", "activity", "heart", "book", "cart", "tag"];
+const GOOGLE_G = '<svg width="17" height="17" viewBox="0 0 48 48" aria-hidden="true"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg>';
+function guessIcon(name) {
+  const n = name.toLowerCase();
+  if (n.includes("workout") || n.includes("exercise") || n.includes("gym") || n.includes("ออกกำลัง")) return "dumbbell";
+  if (n.includes("work") || n.includes("งาน")) return "briefcase";
+  if (n.includes("personal") || n.includes("ส่วนตัว")) return "user";
+  if (n.includes("house") || n.includes("บ้าน")) return "home";
+  if (n.includes("health") || n.includes("สุขภาพ")) return "heart";
+  if (n.includes("study") || n.includes("read") || n.includes("เรียน")) return "book";
+  if (n.includes("shop") || n.includes("ซื้อ")) return "cart";
+  return "tag";
+}
+function icon(name, size) {
+  size = size || 18;
+  return `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICONS[name]}</svg>`;
+}
+
+/* ---------- storage ---------- */
+const KEY = "task-studio-v1";
+/* แยกข้อมูลตามบัญชี — แต่ละ account มี state key ของตัวเอง (สลับบัญชีข้อมูลไม่ปนกัน) */
+function accountKeyOf(u) {
+  if (!u) return KEY + ":anon";
+  return KEY + ":" + (u.uid || (u.email || "").toLowerCase() || "anon");
+}
+let _storedUser = null;
+try { _storedUser = JSON.parse(localStorage.getItem("task-studio-user")); } catch { _storedUser = null; }
+let stateKey = accountKeyOf(_storedUser);
+const state = migrate(load());
+
+function switchAccount(u) {
+  const newKey = accountKeyOf(u);
+  if (newKey === stateKey) return;
+  stateKey = newKey;
+  let data = null;
+  try { data = JSON.parse(localStorage.getItem(stateKey)); } catch { data = null; }
+  // ข้อมูลจากเวอร์ชันเก่า (key รวม) ยกให้บัญชีจริงบัญชีแรกที่ login
+  if (!data && u && !localStorage.getItem(KEY + ":claimed")) {
+    try { data = JSON.parse(localStorage.getItem(KEY)); } catch { data = null; }
+    if (data) localStorage.setItem(KEY + ":claimed", "1");
+  }
+  for (const k of Object.keys(state)) delete state[k];
+  Object.assign(state, migrate(data || defaultState()));
+  localStorage.setItem(stateKey, JSON.stringify(state));
+}
+
+let currentTab = "home";
+let lastToggled = null; // id ล่าสุดที่เพิ่งติ๊ก — ใช้เล่น check animation เฉพาะตัวนั้น
+let viewTransition = false; // true = render ถัดไปเล่นอนิเมชันเข้าหน้า
+
+function goCat(key) { todayCat = key; viewTransition = true; render(); }
+function goHome() { todayCat = null; viewTransition = true; render(); }
+let allFilter = "";
+let calMonth = startOfMonth(new Date());
+let calSelected = dateKey(new Date());
+let calMode = "month"; // day | week | month
+
+function defaultState() {
+  return {
+    categories: [
+      { id: uid(), name: "Work", color: "#6366f1", icon: "briefcase" },
+      { id: uid(), name: "Personal", color: "#8b5cf6", icon: "user" },
+      { id: uid(), name: "Housework", color: "#f59e0b", icon: "home" },
+      { id: uid(), name: "Workout", color: "#10b981", icon: "dumbbell" },
+    ],
+    tasks: [],
+    routines: [],
+    routineLog: {},
+    meta: {},
+  };
+}
+function load() {
+  try {
+    let raw = localStorage.getItem(stateKey);
+    // ข้อมูลเวอร์ชันเก่า (key รวม): ใช้ต่อได้ ถ้ายังไม่มีบัญชีไหน claim ไป
+    if (!raw && !localStorage.getItem(KEY + ":claimed")) {
+      raw = localStorage.getItem(KEY);
+      if (raw && _storedUser) localStorage.setItem(KEY + ":claimed", "1");
+    }
+    if (raw) return JSON.parse(raw);
+  } catch (e) { /* corrupted data — start fresh */ }
+  return defaultState();
+}
+// migration จากเวอร์ชันก่อน
+function migrate(s) {
+  s.categories.forEach(c => {
+    if (c.name === "Exercise") { c.name = "Workout"; c.icon = "dumbbell"; }
+    if (!c.icon) c.icon = guessIcon(c.name);
+    if (c.schedule === undefined) c.schedule = null; // {days:[0-6], start:"HH:MM", end:"HH:MM"}
+    if (c.enabled === undefined) c.enabled = true;
+  });
+  if (!Array.isArray(s.routines)) s.routines = [];
+  if (!s.routineLog || typeof s.routineLog !== "object") s.routineLog = {};
+  if (!s.meta || typeof s.meta !== "object") s.meta = {};
+  // checklists: [{id, title, items:[{id, text, checked}], reminder: {days:[0-6], time:"HH:MM"}|null}]
+  if (!Array.isArray(s.checklists)) s.checklists = [];
+  // gamification: check-in รายวัน + XP + level ของสัตว์เลี้ยง
+  if (!s.game || typeof s.game !== "object") s.game = { checkins: {}, best: 0, xp: 0 };
+  if (!s.game.checkins) s.game.checkins = {};
+  if (typeof s.game.xp !== "number") s.game.xp = 0;
+  if (typeof s.game.best !== "number") s.game.best = 0;
+  if (!s.game.focus || typeof s.game.focus !== "object") s.game.focus = {}; // dateKey -> นาทีที่โฟกัสสำเร็จ
+  // pet journal: [{id, date: dateKey, text, createdAt}]
+  if (!Array.isArray(s.journal)) s.journal = [];
+  // สัตว์เลี้ยงจริงที่บ้าน: [{id, name, species, sex, hatchDate, notes, records: [...]}]
+  // record: {id, type: checkup|blood|treatment|med|weight|note, date, title, details, values: [{k,v}], grams}
+  if (!Array.isArray(s.pets)) s.pets = [];
+  // เก็บ log แค่ 30 วันล่าสุด
+  const cutoff = new Date(); cutoff.setDate(cutoff.getDate() - 30);
+  for (const k of Object.keys(s.routineLog)) {
+    if (new Date(k + "T00:00:00") < cutoff) delete s.routineLog[k];
+  }
+  return s;
+}
+function save() {
+  localStorage.setItem(stateKey, JSON.stringify(state));
+  scheduleCloudSave(); // sync ขึ้น cloud ด้วยถ้าเชื่อมอยู่ (debounced)
+}
+function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 8); }
+
+/* ---------- dates ---------- */
+const DOW = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+const MONTHS = ["January","February","March","April","May","June","July","August","September","October","November","December"];
+const MONTHS_SHORT = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+
+function startOfDay(d) { const r = new Date(d); r.setHours(0,0,0,0); return r; }
+function startOfMonth(d) { const r = new Date(d); r.setDate(1); r.setHours(0,0,0,0); return r; }
+function isToday(d) { return startOfDay(d).getTime() === startOfDay(new Date()).getTime(); }
+function dateKey(d) {
+  const p = n => String(n).padStart(2, "0");
+  return d.getFullYear() + "-" + p(d.getMonth()+1) + "-" + p(d.getDate());
+}
+function fmtTime(d) {
+  let h = d.getHours(); const m = String(d.getMinutes()).padStart(2, "0");
+  const ap = h >= 12 ? "PM" : "AM";
+  h = h % 12 || 12;
+  return h + ":" + m + " " + ap;
+}
+function fmtDate(d) {
+  const diff = Math.round((startOfDay(d) - startOfDay(new Date())) / 86400000);
+  if (diff === 0) return "Today";
+  if (diff === 1) return "Tomorrow";
+  if (diff === -1) return "Yesterday";
+  return DOW[d.getDay()] + " " + d.getDate() + " " + MONTHS_SHORT[d.getMonth()];
+}
+function fmtDateTime(d) {
+  const hasTime = d.getHours() !== 0 || d.getMinutes() !== 0;
+  return hasTime ? fmtDate(d) + " " + fmtTime(d) : fmtDate(d);
+}
+function toInputValue(d) {
+  const p = n => String(n).padStart(2, "0");
+  return d.getFullYear() + "-" + p(d.getMonth()+1) + "-" + p(d.getDate()) + "T" + p(d.getHours()) + ":" + p(d.getMinutes());
+}
+
+/* ---------- recurrence ---------- */
+function nextDueDate(due, recurrence) {
+  if (recurrence === "none") return null;
+  const next = new Date(due.getTime());
+  if (recurrence === "daily") next.setDate(next.getDate() + 1);
+  else if (recurrence === "weekly") next.setDate(next.getDate() + 7);
+  else if (recurrence === "monthly") {
+    const day = next.getDate();
+    next.setDate(1);
+    next.setMonth(next.getMonth() + 1);
+    const dim = new Date(next.getFullYear(), next.getMonth() + 1, 0).getDate();
+    next.setDate(Math.min(day, dim));
+  }
+  return next;
+}
+
+const RECURRENCE_LABELS = { none: "No repeat", daily: "Daily", weekly: "Weekly", monthly: "Monthly" };
+const REMINDER_OPTIONS = [
+  ["", "No reminder"], ["0", "At due time"], ["15", "15 min before"],
+  ["30", "30 min before"], ["60", "1 hour before"], ["1440", "1 day before"],
+];
+
+/* ---------- cloud sync (Supabase) ----------
+   ตั้งค่าใน Settings › Cloud Sync (วาง Project URL + anon key ครั้งเดียว)
+   - เชื่อมแล้ว: login เป็นบัญชีจริง, ข้อมูล sync ข้ามเครื่องอัตโนมัติ
+   - ไม่เชื่อม: ทำงานแบบ local (localStorage) เหมือนเดิมทุกอย่าง */
+const SB_CFG_KEY = "task-studio-supabase";
+// ค่า default ของโปรเจกต์ solo-task — publishable key ปลอดภัยฝั่ง browser (ข้อมูลกันด้วย RLS)
+const SB_DEFAULT = {
+  url: "https://towguwjwflxrfiidpken.supabase.co",
+  key: "sb_publishable_nyM22Il9GueZ6gOBnM002A_xSfZYUop",
+};
+let sbCfg = null;
+try { sbCfg = JSON.parse(localStorage.getItem(SB_CFG_KEY)); } catch { sbCfg = null; }
+if (!sbCfg) sbCfg = SB_DEFAULT;
+let sb = null;            // supabase client
+let sbUser = null;        // supabase auth user
+let sbToken = null;       // access token ล่าสุด (ใช้ flush ตอนปิดแท็บ)
+let cloudStatus = "off";  // off | connecting | ready | error
+let cloudSaveTimer = null;
+let cloudPulling = false; // กัน save ระหว่างกำลังดึงข้อมูลลงมา
+let cloudDirty = false;   // มีการแก้ไขที่ยังไม่ได้ขึ้น cloud
+let syncState = "synced"; // synced | pending | error
+
+function cloudConfigured() { return !!(sbCfg && !sbCfg.off && sbCfg.url && sbCfg.key); }
+
+async function initCloud() {
+  if (!cloudConfigured()) return;
+  cloudStatus = "connecting";
+  try {
+    if (!window.supabase) {
+      await new Promise((resolve, reject) => {
+        const s = document.createElement("script");
+        s.src = "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js";
+        s.onload = resolve;
+        s.onerror = () => reject(new Error("โหลด Supabase library ไม่ได้ (ออฟไลน์?)"));
+        document.head.appendChild(s);
+      });
+    }
+    sb = window.supabase.createClient(sbCfg.url, sbCfg.key);
+    cloudStatus = "ready";
+    const { data } = await sb.auth.getSession();
+    sbToken = data.session?.access_token || null;
+    if (data.session) await onCloudSignedIn(data.session);
+    sb.auth.onAuthStateChange((event, session) => {
+      sbToken = session?.access_token || sbToken;
+      if (event === "SIGNED_IN" && session && (!sbUser || sbUser.id !== session.user.id)) {
+        onCloudSignedIn(session);
+      }
+      if (event === "SIGNED_OUT") { sbUser = null; sbToken = null; }
+    });
+  } catch (e) {
+    cloudStatus = "error";
+    showToast("⚠️ Cloud unavailable — working offline");
+  }
+  render();
+}
+
+async function onCloudSignedIn(session) {
+  sbUser = session.user;
+  user = {
+    uid: sbUser.id,
+    name: sbUser.user_metadata?.display_name || (sbUser.email || "").split("@")[0] || "Friend",
+    email: sbUser.email || "",
+    provider: (sbUser.app_metadata?.provider === "google") ? "google" : "email",
+  };
+  localStorage.setItem(USER_KEY, JSON.stringify(user));
+  switchAccount(user); // แยกข้อมูลตามบัญชี
+  await pullCloud();
+  if (!state.meta.setupDone) {
+    pendingUser = user;
+    authView = "setup";
+  }
+  viewTransition = true;
+  render();
+  setTimeout(autoCheckin, 400);
+}
+
+async function pullCloud() {
+  if (!sb || !sbUser) return;
+  // มีการแก้ไขค้างที่ยังไม่ขึ้น cloud → ห้ามดึงมาทับ ดันของเราขึ้นไปแทน
+  if (cloudDirty) { scheduleCloudSave(); return; }
+  cloudPulling = true;
+  try {
+    const { data, error } = await sb.from("app_state").select("data").eq("user_id", sbUser.id).maybeSingle();
+    if (error) { syncState = "error"; showToast("⚠️ Sync error: " + error.message); return; }
+    if (data && data.data && typeof data.data === "object") {
+      const remote = migrate(data.data);
+      for (const k of ["categories", "tasks", "routines", "routineLog", "checklists", "game", "meta", "journal", "pets"]) {
+        if (remote[k] !== undefined) state[k] = remote[k];
+      }
+      localStorage.setItem(stateKey, JSON.stringify(state));
+      syncState = "synced";
+    } else {
+      // cloud ยังว่าง → ดันข้อมูลเครื่องนี้ขึ้นไป
+      cloudDirty = true;
+      scheduleCloudSave();
+    }
+  } finally {
+    cloudPulling = false;
+  }
+}
+
+function scheduleCloudSave() {
+  if (!sb || !sbUser || cloudPulling) return;
+  cloudDirty = true;
+  syncState = "pending";
+  clearTimeout(cloudSaveTimer);
+  cloudSaveTimer = setTimeout(async () => {
+    cloudSaveTimer = null;
+    const { error } = await sb.from("app_state").upsert({
+      user_id: sbUser.id,
+      data: state,
+      updated_at: new Date().toISOString(),
+    });
+    if (error) {
+      syncState = "error";
+      showToast("⚠️ Sync failed — data kept on this device, will retry");
+      // ลองใหม่อัตโนมัติใน 10 วิ
+      setTimeout(() => { if (cloudDirty) scheduleCloudSave(); }, 10000);
+    } else {
+      cloudDirty = false;
+      syncState = "synced";
+    }
+  }, 1200);
+}
+
+/** ส่งข้อมูลค้างขึ้น cloud ทันทีก่อนแท็บถูกซ่อน/ปิด (fetch keepalive ทำงานต่อได้แม้หน้า unload) */
+function flushCloudSave() {
+  if (!cloudDirty || !sbUser || !sbToken || !cloudConfigured()) return;
+  clearTimeout(cloudSaveTimer);
+  cloudSaveTimer = null;
+  try {
+    fetch(sbCfg.url + "/rest/v1/app_state?on_conflict=user_id", {
+      method: "POST",
+      keepalive: true,
+      headers: {
+        apikey: sbCfg.key,
+        Authorization: "Bearer " + sbToken,
+        "Content-Type": "application/json",
+        Prefer: "resolution=merge-duplicates",
+      },
+      body: JSON.stringify([{ user_id: sbUser.id, data: state, updated_at: new Date().toISOString() }]),
+    });
+    cloudDirty = false;
+    syncState = "synced";
+  } catch { /* เก็บ dirty ไว้ รอบหน้า retry */ }
+}
+document.addEventListener("visibilitychange", () => { if (document.hidden) flushCloudSave(); });
+window.addEventListener("pagehide", flushCloudSave);
+
+function connectCloud() {
+  const url = (document.getElementById("sbUrl")?.value || "").trim().replace(/\/+$/, "");
+  const key = (document.getElementById("sbKey")?.value || "").trim();
+  if (!/^https:\/\/.+\.supabase\.co$/.test(url) || key.length < 20) {
+    showToast("❌ Check the Project URL and anon key");
+    return;
+  }
+  localStorage.setItem(SB_CFG_KEY, JSON.stringify({ url, key }));
+  location.reload();
+}
+function disconnectCloud() {
+  if (!confirm("Disconnect cloud sync? Data stays on this device and in the cloud.")) return;
+  localStorage.setItem(SB_CFG_KEY, JSON.stringify({ off: true }));
+  location.reload();
+}
+
+// กลับมาที่แท็บ → ดึงข้อมูลล่าสุด (เผื่อแก้จากเครื่องอื่น)
+document.addEventListener("visibilitychange", () => {
+  if (!document.hidden && sb && sbUser) pullCloud().then(() => render());
+});
+
+/* ---------- auth (mock + cloud) ---------- */
+const USER_KEY = "task-studio-user";
+let user = null;
+try { user = JSON.parse(localStorage.getItem(USER_KEY)); } catch { user = null; }
+
+let authView = "login"; // login | signup | setup
+let pendingUser = null; // เก็บข้อมูลระหว่าง signup → setup
+
+const SUGGESTED_CATS = [
+  { name: "Work", color: "#6366f1", icon: "briefcase" },
+  { name: "Personal", color: "#8b5cf6", icon: "user" },
+  { name: "Housework", color: "#f59e0b", icon: "home" },
+  { name: "Workout", color: "#10b981", icon: "dumbbell" },
+  { name: "Health", color: "#ef4444", icon: "heart" },
+  { name: "Study", color: "#06b6d4", icon: "book" },
+];
+const SUGGESTED_ROUTINES = ["Drink water", "Morning stretch", "Read 10 minutes", "Plan tomorrow"];
+let setupCats = ["Work", "Personal", "Housework", "Workout"];
+let setupRoutines = ["Drink water", "Morning stretch"];
+
+async function doLogin(provider) {
+  // ---- โหมด cloud: บัญชีจริงผ่าน Supabase ----
+  if (cloudConfigured() && sb) {
+    if (provider === "google") {
+      if (location.protocol === "file:") {
+        showToast("⚠️ Google sign-in needs the app hosted on a URL (not file://) — use email for now");
+        return;
+      }
+      const { error } = await sb.auth.signInWithOAuth({
+        provider: "google",
+        options: { redirectTo: location.origin + location.pathname },
+      });
+      if (error) showToast("❌ Google sign-in failed: " + error.message);
+      return; // browser จะ redirect ไป Google
+    }
+    const email = (document.getElementById("loginEmail")?.value || "").trim();
+    const password = document.getElementById("loginPass")?.value || "";
+    if (!email || !password) { showToast("❌ Enter email and password"); return; }
+    const { error } = await sb.auth.signInWithPassword({ email, password });
+    if (error) { showToast("❌ " + error.message); return; }
+    return; // onAuthStateChange จัดการต่อ
+  }
+  // cloud ตั้งค่าไว้แต่เชื่อมไม่ได้ (ออฟไลน์/CDN ล่ม) → ไม่หลุดไป demo เพื่อกันงงว่าข้อมูลหาย
+  if (cloudConfigured() && !sb) {
+    showToast("⚠️ Cloud unreachable — check your internet, then reload the page");
+    return;
+  }
+  // ---- โหมด local (mock) เหมือนเดิม ----
+  if (provider === "google") {
+    pendingUser = { name: "Google User", email: "user@gmail.com", provider: "google" };
+  } else {
+    const email = (document.getElementById("loginEmail")?.value || "").trim() || "demo@taskstudio.app";
+    pendingUser = { name: email.split("@")[0], email, provider: "email" };
+  }
+  switchAccount(pendingUser); // สลับไปกล่องข้อมูลของบัญชีนี้ก่อน (setupDone เช็คจาก state ของบัญชีนั้น)
+  authView = state.meta.setupDone ? "done" : "setup";
+  if (authView === "done") commitLogin();
+  else { viewTransition = true; render(); }
+}
+async function doSignup() {
+  const name = (document.getElementById("suName")?.value || "").trim() || "Friend";
+  const email = (document.getElementById("suEmail")?.value || "").trim();
+  // ---- โหมด cloud: สมัครจริง ----
+  if (cloudConfigured() && sb) {
+    const password = document.getElementById("suPass")?.value || "";
+    if (!email || password.length < 6) { showToast("❌ Enter email and a password of 6+ characters"); return; }
+    const { data, error } = await sb.auth.signUp({
+      email, password,
+      options: { data: { display_name: name } },
+    });
+    if (error) { showToast("❌ " + error.message); return; }
+    if (!data.session) showToast("📧 Check your email to confirm, then sign in");
+    return; // มี session → onAuthStateChange พาเข้า setup เอง
+  }
+  if (cloudConfigured() && !sb) {
+    showToast("⚠️ Cloud unreachable — check your internet, then reload the page");
+    return;
+  }
+  // ---- โหมด local (mock) ----
+  pendingUser = { name, email: email || "demo@taskstudio.app", provider: "email" };
+  switchAccount(pendingUser);
+  authView = state.meta.setupDone ? "done" : "setup";
+  if (authView === "done") { commitLogin(); return; }
+  viewTransition = true;
+  render();
+}
+function toggleSetupCat(name) {
+  setupCats = setupCats.includes(name) ? setupCats.filter(c => c !== name) : [...setupCats, name];
+  render();
+}
+function toggleSetupRoutine(title) {
+  setupRoutines = setupRoutines.includes(title)
+    ? setupRoutines.filter(r => r !== title) : [...setupRoutines, title];
+  render();
+}
+function finishSetup() {
+  // สร้างหมวดตามที่เลือก (ถ้ายังไม่มีข้อมูลเก่า แทนที่ default ได้เลย)
+  const chosen = SUGGESTED_CATS.filter(c => setupCats.includes(c.name));
+  if (state.tasks.length === 0) {
+    state.categories = chosen.map(c => ({ id: uid(), ...c }));
+  } else {
+    for (const c of chosen) {
+      if (!state.categories.some(x => x.name.toLowerCase() === c.name.toLowerCase())) {
+        state.categories.push({ id: uid(), ...c });
+      }
+    }
+  }
+  for (const title of setupRoutines) {
+    if (!state.routines.some(r => r.title.toLowerCase() === title.toLowerCase())) {
+      state.routines.push({ id: uid(), title });
+    }
+  }
+  state.meta.setupDone = true;
+  save();
+  commitLogin();
+}
+function skipSetup() {
+  state.meta.setupDone = true;
+  save();
+  commitLogin();
+}
+function commitLogin() {
+  user = pendingUser;
+  pendingUser = null;
+  localStorage.setItem(USER_KEY, JSON.stringify(user));
+  switchAccount(user); // no-op ถ้าสลับไว้แล้วตอนเข้า setup
+  authView = "login";
+  viewTransition = true;
+  render();
+  setTimeout(autoCheckin, 450); // เข้าแอพแล้ว check-in ให้เลย
+}
+function showAuth(view) { authView = view; viewTransition = true; render(); }
+async function doSignOut() {
+  if (sb && sbUser) {
+    await sb.auth.signOut();
+    sbUser = null;
+  }
+  localStorage.removeItem(USER_KEY);
+  user = null;
+  switchAccount(null); // กลับไป state ว่างของ anonymous — ไม่เห็นข้อมูลบัญชีเดิม
+  currentTab = "home";
+  todayCat = null;
+  authView = "login";
+  viewTransition = true;
+  render();
+}
+
+/* ---------- category schedule ---------- */
+/** ตอนนี้อยู่ในช่วงเวลาของหมวดนี้ไหม (รองรับช่วงข้ามเที่ยงคืน เช่น 22:00-01:00) */
+function scheduleActive(c) {
+  const s = c.schedule;
+  if (!s || !Array.isArray(s.days) || !s.days.length || !s.start || !s.end) return false;
+  const now = new Date();
+  const t = String(now.getHours()).padStart(2, "0") + ":" + String(now.getMinutes()).padStart(2, "0");
+  if (s.start <= s.end) {
+    return s.days.includes(now.getDay()) && t >= s.start && t < s.end;
+  }
+  // ข้ามเที่ยงคืน: ช่วงแรกนับวันที่ตั้ง ช่วงหลังเที่ยงคืนนับวันถัดจากวันที่ตั้ง
+  const yesterday = (now.getDay() + 6) % 7;
+  return (s.days.includes(now.getDay()) && t >= s.start) ||
+         (s.days.includes(yesterday) && t < s.end);
+}
+const DAY_LETTERS = ["S", "M", "T", "W", "T", "F", "S"];
+function scheduleSummary(c) {
+  const s = c.schedule;
+  if (!s || !s.days?.length) return "";
+  const days = s.days.length === 7 ? "Every day"
+    : [...s.days].sort((a, b) => a - b).map(d => DOW[d]).join(" ");
+  return `${days} · ${s.start}–${s.end}`;
+}
+
+function toggleCategory(id) {
+  const c = catById(id);
+  if (!c) return;
+  c.enabled = c.enabled === false;
+  save(); render();
+}
+function toggleNotifications() {
+  if (!("Notification" in window)) return;
+  if (Notification.permission !== "granted") { enableNotify(); return; }
+  state.meta.notifOff = !state.meta.notifOff;
+  save(); render();
+}
+/** หมวดที่เปิดใช้อยู่ */
+function activeCategories() {
+  return state.categories.filter(c => c.enabled !== false);
+}
+
+let editingScheduleCat = null;
+function openSchedule(catId) {
+  editingScheduleCat = catId;
+  const c = catById(catId);
+  const s = c.schedule || { days: [], start: "09:00", end: "18:00" };
+  const dayBtns = DAY_LETTERS.map((l, d) => `
+    <button type="button" class="day-pill ${s.days.includes(d) ? "sel" : ""}" data-day="${d}"
+      aria-label="${DOW[d]}" onclick="this.classList.toggle('sel')">${l}</button>`).join("");
+  document.getElementById("modal").innerHTML = `
+  <div class="overlay" onclick="if(event.target===this)closeForm()">
+    <div class="sheet">
+      <div class="sheet-head">
+        <h2>${esc(c.name)} — Active hours</h2>
+        <button class="x-btn" aria-label="Close" onclick="closeForm()">✕</button>
+      </div>
+      <p class="hint" style="margin:0 0 .75rem">When this time comes, the ${esc(c.name)} card is featured at the top of Home.</p>
+      <div class="setup-label">Days of week</div>
+      <div class="day-pills" id="schDays">${dayBtns}</div>
+      <div class="row2" style="margin-top:.75rem">
+        <label class="fld">From<input type="time" id="schStart" value="${s.start}"></label>
+        <label class="fld">To<input type="time" id="schEnd" value="${s.end}"></label>
+      </div>
+      <button class="btn btn-primary" onclick="saveSchedule()">Save</button>
+      ${c.schedule ? `<button class="btn btn-danger-outline" onclick="clearSchedule()">Remove schedule</button>` : ""}
+    </div>
+  </div>`;
+}
+function saveSchedule() {
+  const c = catById(editingScheduleCat);
+  if (!c) return closeForm();
+  const days = [...document.querySelectorAll("#schDays .day-pill.sel")].map(b => Number(b.dataset.day));
+  const start = document.getElementById("schStart").value;
+  const end = document.getElementById("schEnd").value;
+  c.schedule = (days.length && start && end) ? { days, start, end } : null;
+  save(); closeForm(); render();
+}
+function clearSchedule() {
+  const c = catById(editingScheduleCat);
+  if (c) { c.schedule = null; save(); }
+  closeForm(); render();
+}
+
+/* ---------- gamification: check-in + pet + level ---------- */
+const XP_PER_LEVEL = 100;
+const PET_STAGES = [
+  { name: "Egg" },
+  { name: "Hatchling" },
+  { name: "Baby Tiel" },
+  { name: "Young Tiel" },
+  { name: "Cockatiel" },
+  { name: "Pearl Tiel" },
+  { name: "Phoenix Tiel" },
+];
+
+/** ไฟ streak แบบ TikTok — เปลวไล่สีเหลือง→ส้ม→แดง + ไส้ในสว่าง (lit=false = เทาซีด) */
+function flameSvg(size, lit, flick) {
+  const outer = "M12 22 C7.2 22 4.5 18.6 4.5 15 C4.5 11.9 6.3 9.9 7.8 7.7 C8.9 6 9.6 4.1 9.3 2 C12.6 3.6 14.4 6 15 8.3 C15.7 7.5 16.1 6.4 16.2 5.1 C18.6 7.4 19.5 10.8 19.5 13.5 C19.5 18 16.7 22 12 22z";
+  const inner = "M12 22 C9.7 22 8.1 20.3 8.1 18.2 C8.1 16.4 9.1 15.2 10 14 C10.8 13.1 11.4 12.1 11.5 10.8 C13.7 12.3 15.9 14.6 15.9 17.4 C15.9 20 14.3 22 12 22z";
+  if (!lit) {
+    return `<svg width="${size}" height="${size}" viewBox="0 0 24 24" aria-hidden="true">
+      <path d="${outer}" fill="var(--border)"/>
+      <path d="${inner}" fill="var(--card)" opacity=".65"/>
+    </svg>`;
+  }
+  return `<svg width="${size}" height="${size}" viewBox="0 0 24 24" aria-hidden="true" ${flick ? 'class="flame-anim"' : ""} style="overflow:visible">
+    <defs>
+      <linearGradient id="tkFlame" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0" stop-color="#ffd93b"/>
+        <stop offset=".45" stop-color="#ff9500"/>
+        <stop offset="1" stop-color="#ff3d1f"/>
+      </linearGradient>
+      <linearGradient id="tkFlameIn" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0" stop-color="#fff8d6"/>
+        <stop offset="1" stop-color="#ffc93b"/>
+      </linearGradient>
+    </defs>
+    <path d="${outer}" fill="url(#tkFlame)"/>
+    <path d="${inner}" fill="url(#tkFlameIn)"/>
+  </svg>`;
+}
+
+/** สัตว์เลี้ยงแบบ SVG การ์ตูน — ตัวเด้ง กะพริบตา ปีกขยับ (อนิเมชันอยู่ใน CSS) */
+function petSvg(level) {
+  const stage = Math.min(level, PET_STAGES.length);
+  const eyes = (y) => `
+    <g class="p-eye"><circle cx="41" cy="${y}" r="3.6" fill="#33261a"/><circle cx="42.4" cy="${y - 1.3}" r="1.2" fill="#fff"/></g>
+    <g class="p-eye"><circle cx="59" cy="${y}" r="3.6" fill="#33261a"/><circle cx="60.4" cy="${y - 1.3}" r="1.2" fill="#fff"/></g>`;
+  const cheeks = (y) => `
+    <circle cx="32" cy="${y}" r="4.2" fill="#fda4af" opacity=".75"/>
+    <circle cx="68" cy="${y}" r="4.2" fill="#fda4af" opacity=".75"/>`;
+  const beak = (y) => `<path d="M46 ${y} h8 l-4 6 z" fill="#f59e0b"/>`;
+  const feet = `<g class="p-feet">
+    <path d="M40 88 l-3 5 M40 88 l0 5.5 M40 88 l3 5" stroke="#f59e0b" stroke-width="2.2" stroke-linecap="round" fill="none"/>
+    <path d="M60 88 l-3 5 M60 88 l0 5.5 M60 88 l3 5" stroke="#f59e0b" stroke-width="2.2" stroke-linecap="round" fill="none"/></g>`;
+
+  let inner = "";
+  if (stage === 1) {
+    // ไข่ตาหลับ โยกไปมา
+    inner = `<g class="p-wobble">
+      <ellipse cx="50" cy="58" rx="27" ry="33" fill="#fef3c7" stroke="#f0d9a8" stroke-width="2"/>
+      <ellipse cx="42" cy="42" rx="7" ry="10" fill="#fffbeb" opacity=".8"/>
+      <path d="M36 58 q5 4 10 0 M54 58 q5 4 10 0" stroke="#33261a" stroke-width="2.4" fill="none" stroke-linecap="round"/>
+      ${cheeks(66)}
+    </g>`;
+  } else if (stage === 2) {
+    // หัวโผล่จากเปลือกไข่
+    inner = `<g class="p-body">
+      <circle cx="50" cy="45" r="22" fill="#fde68a"/>
+      <ellipse cx="43" cy="34" rx="6" ry="8" fill="#fef3c7" opacity=".7"/>
+      ${eyes(44)}${beak(51)}${cheeks(51)}
+      <path d="M46 24 q4 -6 8 0" stroke="#fbbf24" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+    </g>
+    <path d="M26 62 L34 54 L42 62 L50 54 L58 62 L66 54 L74 62 L74 74 Q74 90 50 90 Q26 90 26 74 Z"
+      fill="#fef3c7" stroke="#f0d9a8" stroke-width="2"/>`;
+  } else {
+    // ---- Cockatiel: หงอนเหลืองสูง หน้าเหลือง แก้มส้มกลม ตัวเทา หางยาว ----
+    const crest1 = (c) => `<path d="M50 34 C49 24 48 18 45 13" stroke="${c}" stroke-width="4" fill="none" stroke-linecap="round"/>`;
+    const crest2 = (c) => crest1(c) + `<path d="M53 34 C55 24 57 18 61 14" stroke="${c}" stroke-width="3.4" fill="none" stroke-linecap="round"/>`;
+    const crest3 = (c) => crest2(c) + `<path d="M47 35 C43 26 40 21 34 18" stroke="${c}" stroke-width="2.8" fill="none" stroke-linecap="round"/>`;
+    const flameCrest = `<g class="p-flame">
+        <path d="M50 34 C49 22 48 16 44 10 C50 14 51 20 52 24 C53 17 56 13 61 10 C58 17 57 24 55 30z" fill="#f97316"/>
+        <path d="M50 32 C50 24 50 19 48 15 C52 18 53 23 53 27z" fill="#fcd34d"/>
+      </g>`;
+    const cfg = {
+      3: { // ลูกนก: เทาอ่อน หน้าเหลืองจาง หงอนสั้น แก้มส้มอ่อน
+        body: "#d3d8e0", belly: "#eef0f4", wing: "#b6bdc9", face: "#fdf0b6", faceR: 15,
+        cheek: "#fdba74", cheekR: 3.6, crest: crest1("#fbbf24"), tail: "",
+      },
+      4: { // นกรุ่น: หงอน 2 เส้น หน้าเหลืองชัด หางสั้น
+        body: "#c9ced9", belly: "#e9ebf0", wing: "#a8b0bf", face: "#fde68a", faceR: 17,
+        cheek: "#fb923c", cheekR: 4.4, crest: crest2("#fbbf24"),
+        tail: `<path d="M68 78 q8 6 9 15 l-7 -3 q-4 -5 -7 -9z" fill="#a8b0bf"/>`,
+      },
+      5: { // ค็อกคาเทลเต็มวัย: หงอน 3 เส้น แก้มส้มกลมใหญ่ หางยาว + ผิวปาก ♪
+        body: "#c3c9d4", belly: "#e6e8ee", wing: "#9aa3b3", face: "#fde047", faceR: 19,
+        cheek: "#fb923c", cheekR: 5.2, crest: crest3("#facc15") +
+          `<text class="p-note" x="79" y="30" font-size="13" fill="#6366f1">♪</text>`,
+        tail: `<path d="M69 76 q11 7 13 21 l-8 -4 q-6 -8 -10 -13z" fill="#9aa3b3"/>
+               <path d="M72 79 q7 6 8 15 l-5 -3 q-3 -6 -6 -9z" fill="#fde047" opacity=".85"/>`,
+      },
+      6: { // Pearl Tiel: ลายมุกขาว-เทา หงอนฟู
+        body: "#e4e7ec", belly: "#f7f8fa", wing: "#c5cbd6", face: "#fef3c7", faceR: 18,
+        cheek: "#fdba74", cheekR: 5, crest: crest3("#e5c84f") +
+          `<circle cx="30" cy="70" r="2" fill="#fff" opacity=".9"/><circle cx="42" cy="76" r="2" fill="#fff" opacity=".9"/>
+           <circle cx="58" cy="76" r="2" fill="#fff" opacity=".9"/><circle cx="70" cy="70" r="2" fill="#fff" opacity=".9"/>`,
+        tail: `<path d="M69 76 q11 7 13 21 l-8 -4 q-6 -8 -10 -13z" fill="#c5cbd6"/>`,
+      },
+      7: { // Phoenix Tiel: หงอนไฟ หางไฟ
+        body: "#fdba74", belly: "#fef0d9", wing: "#f97316", face: "#fde047", faceR: 19,
+        cheek: "#ef4444", cheekR: 5.2, crest: flameCrest,
+        tail: `<g class="p-flame"><path d="M69 76 q12 7 14 20 l-8 -4 q-6 -7 -10 -12z" fill="#f97316"/>
+               <path d="M72 79 q7 6 8 14 l-5 -3 q-3 -5 -6 -8z" fill="#fcd34d"/></g>`,
+      },
+    }[stage];
+    inner = `<g class="p-body">
+      ${cfg.tail}
+      <ellipse cx="50" cy="60" rx="29" ry="27" fill="${cfg.body}"/>
+      <ellipse cx="50" cy="70" rx="16" ry="12" fill="${cfg.belly}"/>
+      <ellipse cx="50" cy="50" rx="${cfg.faceR}" ry="${cfg.faceR - 2}" fill="${cfg.face}"/>
+      <ellipse class="p-wing p-wing-l" cx="23" cy="60" rx="7.5" ry="13" fill="${cfg.wing}"/>
+      <ellipse class="p-wing p-wing-r" cx="77" cy="60" rx="7.5" ry="13" fill="${cfg.wing}"/>
+      ${cfg.crest}
+      ${eyes(50)}${beak(57)}
+      <circle cx="33" cy="58" r="${cfg.cheekR}" fill="${cfg.cheek}" opacity=".85"/>
+      <circle cx="67" cy="58" r="${cfg.cheekR}" fill="${cfg.cheek}" opacity=".85"/>
+    </g>${feet}`;
+  }
+  return `<svg class="pet-svg" viewBox="0 0 100 100" role="img" aria-label="${PET_STAGES[stage - 1].name}">${inner}</svg>`;
+}
+let justLeveled = false;
+let justCheckedIn = false;
+
+function levelInfo() {
+  const xp = state.game.xp;
+  const level = Math.floor(xp / XP_PER_LEVEL) + 1;
+  return { level, prog: xp % XP_PER_LEVEL, need: XP_PER_LEVEL };
+}
+function petForLevel(level) {
+  return PET_STAGES[Math.min(level - 1, PET_STAGES.length - 1)];
+}
+function addXp(n) {
+  const before = levelInfo().level;
+  state.game.xp = Math.max(0, state.game.xp + n);
+  if (levelInfo().level > before) {
+    justLeveled = true;
+    setTimeout(() => { justLeveled = false; }, 1600);
+  }
+}
+function checkedInToday() {
+  return !!state.game.checkins[dateKey(new Date())];
+}
+/** นับ streak ต่อเนื่องล่าสุด (จบที่วันนี้ หรือเมื่อวานถ้ายังไม่ได้ check-in วันนี้) */
+function currentStreak() {
+  const d = new Date();
+  if (!state.game.checkins[dateKey(d)]) d.setDate(d.getDate() - 1);
+  let n = 0;
+  while (state.game.checkins[dateKey(d)]) {
+    n++;
+    d.setDate(d.getDate() - 1);
+  }
+  return n;
+}
+/** check-in อัตโนมัติเมื่อเข้าแอพ (เรียกตอน init และตอน login) */
+/* ---------- pet page + focus session (สไตล์ Foku) ---------- */
+let petView = null;        // null | main | setup | running | done
+let focusCatId = null;     // หมวดที่เลือกโฟกัส
+let focusMin = 25;         // นาทีที่ตั้ง
+let focusEndsAt = null;    // timestamp จบ
+let focusTimer = null;     // interval อัปเดตนาฬิกา
+let focusEarnedXp = 0;
+
+const FOCUS_PRESETS = [5, 10, 15, 25, 30, 45, 60];
+const PET_LINES = [
+  "I'm ready to focus! Let's set up a timer!",
+  "Let's get one thing done together!",
+  "Pick a task — I'll cheer you on!",
+  "Focus time? I'm in!",
+];
+
+function openPet() { petView = "main"; viewTransition = true; render(); }
+function closePet() {
+  petView = null;
+  if (focusTimer) { clearInterval(focusTimer); focusTimer = null; }
+  focusEndsAt = null;
+  viewTransition = true;
+  render();
+}
+function petStats() {
+  const doneToday = state.tasks.filter(t => t.status === "done" && t.doneAt && isToday(new Date(t.doneAt))).length;
+  const rtDone = state.routines.filter(r => routineDone(r.id)).length;
+  const focusToday = state.game.focus[dateKey(new Date())] || 0;
+  const happiness = Math.min(100, 45 + currentStreak() * 8 + doneToday * 4);
+  const energy = Math.min(100, 35 + doneToday * 8 + rtDone * 10 + Math.round(focusToday / 5) * 5);
+  return { happiness, energy, focusToday };
+}
+function startFocusSetup() { petView = "setup"; if (!focusCatId) focusCatId = activeCategories()[0]?.id || null; viewTransition = true; render(); }
+function setFocusMin(n) { focusMin = Math.max(1, Math.min(180, n)); render(); }
+function startFocus() {
+  focusEndsAt = Date.now() + focusMin * 60000;
+  petView = "running";
+  viewTransition = true;
+  render();
+  focusTimer = setInterval(focusTick, 500);
+}
+function focusTick() {
+  if (petView !== "running" || !focusEndsAt) return;
+  const left = focusEndsAt - Date.now();
+  if (left <= 0) return finishFocus();
+  const m = Math.floor(left / 60000), s = Math.floor((left % 60000) / 1000);
+  const clock = document.getElementById("focusClock");
+  if (clock) clock.textContent = m + ":" + String(s).padStart(2, "0");
+  const bar = document.getElementById("focusBar");
+  if (bar) bar.style.width = (100 - left / (focusMin * 60000) * 100) + "%";
+}
+function finishFocus() {
+  clearInterval(focusTimer); focusTimer = null;
+  focusEndsAt = null;
+  const k = dateKey(new Date());
+  state.game.focus[k] = (state.game.focus[k] || 0) + focusMin;
+  focusEarnedXp = Math.max(5, focusMin); // +1 XP ต่อนาที (ขั้นต่ำ 5)
+  addXp(focusEarnedXp);
+  save();
+  petView = "done";
+  viewTransition = true;
+  render();
+  if ("Notification" in window && Notification.permission === "granted" && !state.meta.notifOff) {
+    new Notification("🎉 Focus complete!", { body: focusMin + " minutes — +" + focusEarnedXp + " XP" });
+  }
+}
+function giveUpFocus() {
+  if (!confirm("Give up this focus session? No XP will be earned.")) return;
+  clearInterval(focusTimer); focusTimer = null;
+  focusEndsAt = null;
+  petView = "main";
+  viewTransition = true;
+  render();
+}
+
+/* ---------- real pets (สัตว์เลี้ยงจริงที่บ้าน — เน้นนก) ---------- */
+let petsView = null; // null = list | petId = detail
+let petsRecFilter = null; // null = status overview | record type = ดูประวัติเรื่องนั้น
+let recFormType = "checkup";
+
+const SPECIES = [
+  { id: "cockatiel", label: "Cockatiel", emoji: "🦜" },
+  { id: "budgie", label: "Budgie", emoji: "🐦" },
+  { id: "lovebird", label: "Lovebird", emoji: "🐥" },
+  { id: "conure", label: "Conure", emoji: "🦜" },
+  { id: "parrot", label: "Parrot (other)", emoji: "🦜" },
+  { id: "bird", label: "Other bird", emoji: "🐦" },
+  { id: "dog", label: "Dog", emoji: "🐕" },
+  { id: "cat", label: "Cat", emoji: "🐈" },
+  { id: "other", label: "Other", emoji: "🐾" },
+];
+const REC_TYPES = {
+  checkup: { label: "Health check", icon: "heart", color: "#10b981" },
+  blood: { label: "Blood test", icon: "droplet", color: "#ef4444" },
+  treatment: { label: "Treatment", icon: "medcross", color: "#f59e0b" },
+  med: { label: "Medicine", icon: "plus", color: "#8b5cf6" },
+  weight: { label: "Weight", icon: "chart", color: "#06b6d4" },
+  note: { label: "Note", icon: "edit", color: "#64748b" },
+};
+function speciesOf(p) { return SPECIES.find(s => s.id === p.species) || SPECIES[SPECIES.length - 1]; }
+function petById(id) { return state.pets.find(p => p.id === id); }
+
+/** อายุจากวันเกิด/วันฟัก เช่น "2y 3m" หรือ "8m" */
+function ageText(hatchDate) {
+  if (!hatchDate) return "";
+  const b = new Date(hatchDate + "T00:00:00");
+  const now = new Date();
+  let months = (now.getFullYear() - b.getFullYear()) * 12 + (now.getMonth() - b.getMonth());
+  if (now.getDate() < b.getDate()) months--;
+  if (months < 0) return "";
+  const y = Math.floor(months / 12), m = months % 12;
+  if (y === 0) return m + "m old";
+  return y + "y" + (m ? " " + m + "m" : "") + " old";
+}
+function latestWeight(p) {
+  const w = p.records.filter(r => r.type === "weight" && r.grams).sort((a, b) => b.date.localeCompare(a.date));
+  return w[0] || null;
+}
+/** กราฟน้ำหนักย้อนหลัง (สูงสุด 12 จุด) */
+function weightChartSvg(p) {
+  const pts = p.records.filter(r => r.type === "weight" && r.grams)
+    .sort((a, b) => a.date.localeCompare(b.date)).slice(-12);
+  if (pts.length < 2) return "";
+  const w = 280, h = 64, pad = 6;
+  const vals = pts.map(r => Number(r.grams));
+  const min = Math.min(...vals), max = Math.max(...vals);
+  const span = (max - min) || 1;
+  const xy = vals.map((v, i) => [
+    pad + i * (w - pad * 2) / (vals.length - 1),
+    h - pad - (v - min) / span * (h - pad * 2),
+  ]);
+  const line = xy.map(c => c.map(n => n.toFixed(1)).join(",")).join(" ");
+  return `<svg viewBox="0 0 ${w} ${h}" class="wt-chart" aria-label="Weight history">
+    <polyline points="${line}" fill="none" stroke="#06b6d4" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+    ${xy.map((c, i) => `<circle cx="${c[0].toFixed(1)}" cy="${c[1].toFixed(1)}" r="${i === xy.length - 1 ? 3.5 : 2}" fill="#06b6d4"/>`).join("")}
+  </svg>
+  <div class="wt-range"><span>${min} g</span><span>${max} g</span></div>`;
+}
+
+/* ---- pet profile form ---- */
+function openPetForm(petId) {
+  const p = petId ? petById(petId) : null;
+  const spOpts = SPECIES.map(s =>
+    `<option value="${s.id}" ${p && p.species === s.id ? "selected" : ""}>${s.emoji} ${s.label}</option>`).join("");
+  document.getElementById("modal").innerHTML = `
+  <div class="overlay" onclick="if(event.target===this)closeForm()">
+    <div class="sheet">
+      <div class="sheet-head">
+        <h2>${p ? "Edit pet" : "Add pet"}</h2>
+        <button class="x-btn" aria-label="Close" onclick="closeForm()">✕</button>
+      </div>
+      <form onsubmit="savePet(event, '${petId || ""}')">
+        <label class="fld">Name
+          <input id="pfName" required maxlength="40" value="${p ? esc(p.name) : ""}" placeholder="e.g. Mango">
+        </label>
+        <div class="row2">
+          <label class="fld">Species<select id="pfSpecies">${spOpts}</select></label>
+          <label class="fld">Sex
+            <select id="pfSex">
+              ${["unknown", "male", "female"].map(x =>
+                `<option value="${x}" ${p && p.sex === x ? "selected" : ""}>${x[0].toUpperCase() + x.slice(1)}</option>`).join("")}
+            </select>
+          </label>
+        </div>
+        <label class="fld">Hatch / birth date
+          <input type="date" id="pfHatch" value="${p?.hatchDate || ""}">
+        </label>
+        <label class="fld">Notes (diet, band no., vet clinic…)
+          <textarea id="pfNotes" rows="2" maxlength="500">${p ? esc(p.notes || "") : ""}</textarea>
+        </label>
+        <button type="submit" class="btn btn-primary">Save</button>
+        ${p ? `<button type="button" class="btn btn-danger-outline" onclick="deletePet('${p.id}')">Delete pet</button>` : ""}
+      </form>
+    </div>
+  </div>`;
+  setTimeout(() => document.getElementById("pfName").focus(), 50);
+}
+function savePet(e, petId) {
+  e.preventDefault();
+  const data = {
+    name: document.getElementById("pfName").value.trim(),
+    species: document.getElementById("pfSpecies").value,
+    sex: document.getElementById("pfSex").value,
+    hatchDate: document.getElementById("pfHatch").value || null,
+    notes: document.getElementById("pfNotes").value.trim(),
+  };
+  if (!data.name) return;
+  if (petId) Object.assign(petById(petId), data);
+  else {
+    const p = { id: uid(), ...data, records: [] };
+    state.pets.push(p);
+    petsView = p.id;
+  }
+  save(); closeForm(); render();
+}
+function deletePet(id) {
+  const p = petById(id);
+  if (!confirm(`Delete ${p?.name || "this pet"} and all records?`)) return;
+  state.pets = state.pets.filter(x => x.id !== id);
+  petsView = null;
+  save(); closeForm(); render();
+}
+
+/* ---- record form ---- */
+function openRecordForm(petId, recId, preset) {
+  const p = petById(petId);
+  const r = recId ? p.records.find(x => x.id === recId) : null;
+  recFormType = r?.type || preset || "checkup";
+  document.getElementById("modal").innerHTML = `
+  <div class="overlay" onclick="if(event.target===this)closeForm()">
+    <div class="sheet">
+      <div class="sheet-head">
+        <h2>${r ? "Edit record" : "New record"} — ${esc(p.name)}</h2>
+        <button class="x-btn" aria-label="Close" onclick="closeForm()">✕</button>
+      </div>
+      <div class="setup-label">Type</div>
+      <div class="setup-chips" id="recTypes">${Object.entries(REC_TYPES).map(([t, cfg]) => `
+        <button type="button" class="setup-chip ${recFormType === t ? "sel" : ""}" data-type="${t}"
+          onclick="recFormType='${t}';refreshRecForm('${petId}','${recId || ""}')"
+          style="${recFormType === t ? `background:color-mix(in srgb, ${cfg.color} 16%, var(--card));border-color:${cfg.color};color:color-mix(in srgb, ${cfg.color} 55%, var(--fg))` : ""}">
+          ${icon(cfg.icon, 12)} ${cfg.label}</button>`).join("")}
+      </div>
+      <form onsubmit="saveRecord(event, '${petId}', '${recId || ""}')" style="margin-top:.75rem">
+        <div class="row2">
+          <label class="fld">Date<input type="date" id="rcDate" required value="${r?.date || dateKey(new Date())}"></label>
+          <label class="fld" id="rcWeightWrap" style="display:${recFormType === "weight" ? "" : "none"}">Weight (g)
+            <input type="number" id="rcGrams" step="0.1" min="0" value="${r?.grams || ""}" placeholder="e.g. 92.5">
+          </label>
+        </div>
+        <label class="fld">Title
+          <input id="rcTitle" maxlength="120" value="${r ? esc(r.title || "") : ""}"
+            placeholder="e.g. Annual checkup at Bird Hospital">
+        </label>
+        <div id="rcBloodWrap" style="display:${recFormType === "blood" ? "" : "none"}">
+          <div class="setup-label">Test results (name · value)</div>
+          <div id="bloodRows">${(r?.values?.length ? r.values : [{ k: "", v: "" }]).map(row => `
+            <div class="bl-row">
+              <input class="bl-k" placeholder="e.g. PCV / Uric acid" value="${esc(row.k || "")}" list="bloodPresets">
+              <input class="bl-v" placeholder="value + unit" value="${esc(row.v || "")}">
+              <button type="button" class="rt-del" aria-label="Remove row" onclick="this.parentElement.remove()">${icon("x", 12)}</button>
+            </div>`).join("")}
+          </div>
+          <datalist id="bloodPresets">
+            ${["PCV / Hematocrit", "RBC", "WBC", "Hemoglobin", "Glucose", "Uric acid", "AST (SGOT)", "CK", "Total protein", "Albumin", "Calcium", "Phosphorus", "Bile acids"].map(x => `<option value="${x}">`).join("")}
+          </datalist>
+          <button type="button" class="link-primary" style="margin:.35rem 0 .6rem" onclick="addBloodRow()">+ Add row</button>
+        </div>
+        <label class="fld">Details (vet, meds, dosage, findings…)
+          <textarea id="rcDetails" rows="3" maxlength="2000">${r ? esc(r.details || "") : ""}</textarea>
+        </label>
+        <button type="submit" class="btn btn-primary">Save record</button>
+        ${r ? `<button type="button" class="btn btn-danger-outline" onclick="deleteRecord('${petId}','${r.id}')">Delete record</button>` : ""}
+      </form>
+    </div>
+  </div>`;
+}
+function refreshRecForm(petId, recId) {
+  // อัปเดตเฉพาะส่วนที่ขึ้นกับ type โดยไม่ทิ้งค่าที่พิมพ์ไว้
+  document.getElementById("rcWeightWrap").style.display = recFormType === "weight" ? "" : "none";
+  document.getElementById("rcBloodWrap").style.display = recFormType === "blood" ? "" : "none";
+  document.querySelectorAll("#recTypes .setup-chip").forEach(b => {
+    const t = b.dataset.type, cfg = REC_TYPES[t];
+    const sel = t === recFormType;
+    b.classList.toggle("sel", sel);
+    b.style.cssText = sel ? `background:color-mix(in srgb, ${cfg.color} 16%, var(--card));border-color:${cfg.color};color:color-mix(in srgb, ${cfg.color} 55%, var(--fg))` : "";
+  });
+}
+function addBloodRow() {
+  const div = document.createElement("div");
+  div.className = "bl-row";
+  div.innerHTML = `<input class="bl-k" placeholder="e.g. PCV / Uric acid" list="bloodPresets">
+    <input class="bl-v" placeholder="value + unit">
+    <button type="button" class="rt-del" aria-label="Remove row" onclick="this.parentElement.remove()">${icon("x", 12)}</button>`;
+  document.getElementById("bloodRows").appendChild(div);
+}
+function saveRecord(e, petId, recId) {
+  e.preventDefault();
+  const p = petById(petId);
+  if (!p) return closeForm();
+  const rec = {
+    id: recId || uid(),
+    type: recFormType,
+    date: document.getElementById("rcDate").value,
+    title: document.getElementById("rcTitle").value.trim(),
+    details: document.getElementById("rcDetails").value.trim(),
+    values: recFormType === "blood"
+      ? [...document.querySelectorAll("#bloodRows .bl-row")].map(row => ({
+          k: row.querySelector(".bl-k").value.trim(),
+          v: row.querySelector(".bl-v").value.trim(),
+        })).filter(x => x.k || x.v)
+      : [],
+    grams: recFormType === "weight" ? Number(document.getElementById("rcGrams").value) || null : null,
+  };
+  if (recFormType === "weight" && !rec.grams) { showToast("❌ Enter the weight in grams"); return; }
+  if (recId) {
+    const i = p.records.findIndex(x => x.id === recId);
+    if (i >= 0) p.records[i] = rec;
+  } else {
+    p.records.push(rec);
+  }
+  p.records.sort((a, b) => b.date.localeCompare(a.date));
+  save(); closeForm(); render();
+}
+function deleteRecord(petId, recId) {
+  if (!confirm("Delete this record?")) return;
+  const p = petById(petId);
+  if (p) p.records = p.records.filter(r => r.id !== recId);
+  save(); closeForm(); render();
+}
+
+/* ---- pets views ---- */
+function renderPets() {
+  if (petsView) {
+    const p = petById(petsView);
+    if (p) return renderPetDetail(p);
+    petsView = null;
+  }
+  const cards = state.pets.map(p => {
+    const sp = speciesOf(p);
+    const w = latestWeight(p);
+    const lastRec = p.records[0];
+    return `<button class="petr-card" onclick="petsView='${p.id}';petsRecFilter=null;viewTransition=true;render()">
+      <span class="petr-avatar">${sp.emoji}</span>
+      <span class="petr-info">
+        <b>${esc(p.name)}</b>
+        <span class="petr-sub">${sp.label}${p.hatchDate ? " · " + ageText(p.hatchDate) : ""}${w ? " · " + w.grams + " g" : ""}</span>
+        ${lastRec ? `<span class="petr-sub">${REC_TYPES[lastRec.type]?.label || ""} · ${fmtDate(new Date(lastRec.date + "T00:00:00"))}</span>` : ""}
+      </span>
+      ${icon("right", 15)}
+    </button>`;
+  }).join("");
+  return `<h1>My Pets</h1>
+    ${cards || `<p class="empty" style="margin-top:2.5rem">No pets yet — add your bird 🦜</p>`}
+    <button class="ov-card rt-card cl-new" style="margin-top:.6rem" onclick="openPetForm()">
+      ${icon("plus", 15)} Add pet</button>`;
+}
+
+function recCardHtml(p, r) {
+  const cfg = REC_TYPES[r.type] || REC_TYPES.note;
+  const vals = (r.values || []).filter(x => x.k || x.v);
+  return `<button class="petr-rec" onclick="openRecordForm('${p.id}','${r.id}')">
+    <span class="set-ico" style="background:color-mix(in srgb, ${cfg.color} 16%, var(--card));color:color-mix(in srgb, ${cfg.color} 55%, var(--fg))">${icon(cfg.icon, 14)}</span>
+    <span class="petr-rec-body">
+      <span class="petr-rec-head"><b>${esc(r.title || cfg.label)}</b>
+        <span class="petr-sub">${fmtDate(new Date(r.date + "T00:00:00"))}</span></span>
+      ${r.type === "weight" && r.grams ? `<span class="petr-sub">⚖️ ${r.grams} g</span>` : ""}
+      ${vals.length ? `<span class="bl-table">${vals.map(x =>
+        `<span class="bl-cell"><i>${esc(x.k)}</i><b>${esc(x.v)}</b></span>`).join("")}</span>` : ""}
+      ${r.details ? `<span class="petr-sub" style="white-space:pre-wrap">${esc(r.details)}</span>` : ""}
+    </span>
+  </button>`;
+}
+
+function renderPetDetail(p) {
+  const sp = speciesOf(p);
+
+  // ---- ดูประวัติของเรื่องเดียว (กดจากการ์ด status) ----
+  if (petsRecFilter) {
+    const cfg = REC_TYPES[petsRecFilter];
+    const recs = p.records.filter(r => r.type === petsRecFilter);
+    return `<button class="back-btn" onclick="petsRecFilter=null;viewTransition=true;render()">${icon("left", 15)} ${esc(p.name)}</button>
+      <div class="petr-head" style="margin-bottom:.75rem">
+        <span class="set-ico" style="width:2.5rem;height:2.5rem;background:color-mix(in srgb, ${cfg.color} 16%, var(--card));color:color-mix(in srgb, ${cfg.color} 55%, var(--fg))">${icon(cfg.icon, 18)}</span>
+        <span style="flex:1;min-width:0">
+          <h1 style="font-size:1.2rem">${cfg.label}</h1>
+          <span class="petr-sub">${recs.length} record${recs.length === 1 ? "" : "s"} · newest first</span>
+        </span>
+      </div>
+      ${petsRecFilter === "weight" && recs.length >= 2 ? `<div class="pp-card" style="max-width:none;margin-bottom:.75rem">${weightChartSvg(p)}</div>` : ""}
+      ${recs.map(r => recCardHtml(p, r)).join("") || `<p class="empty-sm">No records yet — tap + to add one</p>`}`;
+  }
+
+  // ---- status overview: เฉพาะรายการล่าสุดของแต่ละเรื่อง ----
+  const statusCards = Object.entries(REC_TYPES).map(([t, cfg]) => {
+    const list = p.records.filter(r => r.type === t);
+    if (!list.length) return "";
+    const last = list[0]; // records เรียงใหม่→เก่าอยู่แล้ว
+    const vals = (last.values || []).filter(x => x.k || x.v);
+    let summary = "";
+    if (t === "weight" && last.grams) summary = `<span class="petr-status-big">${last.grams} g</span>`;
+    else if (t === "blood") summary = `<span class="petr-sub">${vals.length} values · ${esc(last.title || "latest panel")}</span>`;
+    else summary = `<span class="petr-sub">${esc(last.title || last.details || cfg.label)}</span>`;
+    return `<button class="petr-status" onclick="petsRecFilter='${t}';viewTransition=true;render()">
+      <span class="petr-status-head">
+        <span class="set-ico" style="background:color-mix(in srgb, ${cfg.color} 16%, var(--card));color:color-mix(in srgb, ${cfg.color} 55%, var(--fg))">${icon(cfg.icon, 14)}</span>
+        <span class="name">${cfg.label}</span>
+        ${list.length > 1 ? `<span class="petr-count">${list.length}</span>` : ""}
+      </span>
+      ${summary}
+      <span class="petr-sub">${fmtDate(new Date(last.date + "T00:00:00"))} ${icon("right", 10)}</span>
+      ${t === "weight" ? `<span class="petr-chart-mini">${weightChartSvg(p)}</span>` : ""}
+    </button>`;
+  }).join("");
+
+  return `<button class="back-btn" onclick="petsView=null;viewTransition=true;render()">${icon("left", 15)} My Pets</button>
+    <div class="petr-head">
+      <span class="petr-avatar big">${sp.emoji}</span>
+      <span style="flex:1;min-width:0">
+        <h1 style="font-size:1.3rem">${esc(p.name)}</h1>
+        <span class="petr-sub">${sp.label} · ${p.sex !== "unknown" ? p.sex + " · " : ""}${p.hatchDate ? ageText(p.hatchDate) : "age unknown"}</span>
+      </span>
+      <button class="ov-more" aria-label="Edit ${esc(p.name)}" onclick="openPetForm('${p.id}')">${icon("edit", 15)}</button>
+    </div>
+    ${p.notes ? `<p class="petr-notes">${esc(p.notes)}</p>` : ""}
+    <h2 class="section-title">Status</h2>
+    ${statusCards
+      ? `<div class="ov-grid">${statusCards}</div>`
+      : `<p class="empty" style="margin-top:1.5rem">No records yet — tap <b>+</b> to add the first one<br><span class="petr-sub">health check · blood test · weight…</span></p>`}`;
+}
+
+/* ---------- pet journal ---------- */
+function addJournalSubmit(e) {
+  e.preventDefault();
+  const input = document.getElementById("jrText");
+  const text = input.value.trim();
+  if (!text) return;
+  const today = dateKey(new Date());
+  const firstToday = !state.journal.some(j => j.date === today);
+  state.journal.unshift({ id: uid(), date: today, text, createdAt: new Date().toISOString() });
+  if (firstToday) { addXp(2); showToast("📔 Journal saved — +2 XP"); }
+  save(); render();
+  const again = document.getElementById("jrText");
+  if (again) again.focus();
+}
+function deleteJournal(id) {
+  if (!confirm("Delete this note?")) return;
+  state.journal = state.journal.filter(j => j.id !== id);
+  save(); render();
+}
+
+function renderPetPage() {
+  const { level } = levelInfo();
+  const pet = petForLevel(level);
+  const stats = petStats();
+
+  if (petView === "journal") return renderJournal(level, pet);
+
+  if (petView === "setup") {
+    const chips = activeCategories().map(c => {
+      const sel = focusCatId === c.id;
+      return `<button class="setup-chip ${sel ? "sel" : ""}" onclick="focusCatId='${c.id}';render()"
+        style="${sel ? `background:color-mix(in srgb, ${c.color} 16%, var(--card));border-color:${c.color};color:color-mix(in srgb, ${c.color} 55%, var(--fg))` : ""}">
+        ${icon(c.icon || "tag", 13)} ${esc(c.name)}</button>`;
+    }).join("");
+    const presets = FOCUS_PRESETS.map(n =>
+      `<button class="fp-pill ${focusMin === n ? "sel" : ""}" onclick="setFocusMin(${n})">${n}m</button>`).join("");
+    return `<button class="back-btn" onclick="petView='main';viewTransition=true;render()">${icon("left", 15)} Back</button>
+      <div class="pet-page">
+        <h1 style="font-size:1.2rem;text-align:center">Focus Session</h1>
+        <p class="pp-hint">${esc(pet.name)} is ready to focus with you!</p>
+        <div class="pp-pet small">${petSvg(level)}</div>
+        <div class="pp-card">
+          <h2 class="pp-q">What are you focusing on?</h2>
+          <div class="setup-chips" style="justify-content:center">${chips}</div>
+        </div>
+        <div class="pp-card">
+          <h2 class="pp-q">Focus time</h2>
+          <div class="fp-stepper">
+            <button class="fp-step" aria-label="Less time" onclick="setFocusMin(focusMin - 5)">−</button>
+            <div class="fp-num">${focusMin}<span>minutes</span></div>
+            <button class="fp-step" aria-label="More time" onclick="setFocusMin(focusMin + 5)">+</button>
+          </div>
+          <div class="fp-presets">${presets}</div>
+        </div>
+        <button class="btn btn-primary pp-start" onclick="startFocus()">Start focus session</button>
+      </div>`;
+  }
+
+  if (petView === "running") {
+    const cat = catById(focusCatId);
+    return `<div class="pet-page">
+      <p class="pp-hint" style="margin-top:2rem">Focusing on
+        <b>${cat ? esc(cat.name) : "your task"}</b> — ${esc(pet.name)} is with you</p>
+      <div class="pp-pet">${petSvg(level)}</div>
+      <div class="pp-clock" id="focusClock">${focusMin}:00</div>
+      <div class="pp-bar"><span id="focusBar" style="width:0%"></span></div>
+      <button class="btn btn-danger-outline" style="max-width:14rem" onclick="giveUpFocus()">Give up</button>
+    </div>`;
+  }
+
+  if (petView === "done") {
+    return `<div class="pet-page">
+      <p class="pp-hint" style="margin-top:2rem">🎉 Session complete!</p>
+      <div class="pp-pet"><span class="pet-emoji bounce" style="width:100%;height:100%">${petSvg(level)}</span></div>
+      <div class="pp-clock" style="font-size:1.6rem">+${focusEarnedXp} XP</div>
+      <p class="pp-hint">${esc(pet.name)} is proud of you — ${petStats().focusToday} min focused today</p>
+      <button class="btn btn-primary" style="max-width:14rem" onclick="petView='main';viewTransition=true;render()">Nice!</button>
+      <button class="btn btn-outline" style="max-width:14rem" onclick="startFocusSetup()">Go again</button>
+    </div>`;
+  }
+
+  // main
+  const line = PET_LINES[new Date().getDate() % PET_LINES.length];
+  return `<button class="back-btn" onclick="closePet()">${icon("left", 15)} Home</button>
+    <div class="pet-page">
+      <div class="pp-head"><h1>${esc(pet.name)}</h1><span class="pet-level">Lv ${levelInfo().level}</span></div>
+      <div class="pp-bubble">${esc(line)}</div>
+      <div class="pp-pet">${petSvg(level)}
+        <span class="pp-spark s1">✦</span><span class="pp-spark s2">✦</span><span class="pp-spark s3">✦</span>
+      </div>
+      <div class="pp-stats">
+        <div class="pp-stat">
+          <span class="pp-stat-label">💚 Energy</span>
+          <b>${stats.energy}%</b>
+          <span class="ov-bar"><span style="width:${stats.energy}%;background:var(--success)"></span></span>
+        </div>
+        <div class="pp-stat">
+          <span class="pp-stat-label">❤️ Happiness</span>
+          <b>${stats.happiness}%</b>
+          <span class="ov-bar"><span style="width:${stats.happiness}%;background:#ef4444"></span></span>
+        </div>
+      </div>
+      <button class="btn btn-primary pp-start" onclick="startFocusSetup()">Start focus session</button>
+      <p class="pp-hint">${focusMin} min · customizable${stats.focusToday ? ` · ${stats.focusToday} min focused today` : ""}</p>
+      <button class="btn btn-outline pp-start" onclick="petView='journal';viewTransition=true;render()">
+        📔 Journal${state.journal.length ? ` · ${state.journal.length}` : ""}</button>
+    </div>`;
+}
+
+function renderJournal(level, pet) {
+  const today = dateKey(new Date());
+  // จัดกลุ่มตามวัน (เรียงใหม่→เก่า ตามลำดับใน array อยู่แล้ว)
+  const groups = [];
+  for (const j of state.journal) {
+    const last = groups[groups.length - 1];
+    if (last && last.date === j.date) last.items.push(j);
+    else groups.push({ date: j.date, items: [j] });
+  }
+  const entries = groups.map(g => `
+    <h2 class="section-title" style="margin:.9rem 0 .4rem">${fmtDate(new Date(g.date + "T00:00:00"))}</h2>
+    ${g.items.map(j => `
+      <div class="jr-entry">
+        <p class="jr-text">${esc(j.text)}</p>
+        <div class="jr-meta">
+          <span>${fmtTime(new Date(j.createdAt))}</span>
+          <button class="rt-del" aria-label="Delete note" onclick="deleteJournal('${j.id}')">${icon("x", 12)}</button>
+        </div>
+      </div>`).join("")}`).join("");
+  return `<button class="back-btn" onclick="petView='main';viewTransition=true;render()">${icon("left", 15)} ${esc(pet.name)}</button>
+    <div class="pet-page" style="align-items:stretch">
+      <div style="display:flex;align-items:center;gap:.6rem;justify-content:center">
+        <span class="pp-pet" style="width:3.2rem;height:3.2rem">${petSvg(level)}</span>
+        <h1 style="font-size:1.2rem">Journal</h1>
+      </div>
+      <p class="pp-hint">${state.journal.some(j => j.date === today) ? "Noted today ✓" : "How was your day? Tell " + esc(pet.name) + " (+2 XP)"}</p>
+      <form class="jr-add" onsubmit="addJournalSubmit(event)">
+        <textarea id="jrText" rows="3" placeholder="Write anything — wins, thoughts, how you feel…" maxlength="1000"></textarea>
+        <button class="btn btn-primary" type="submit">Save note</button>
+      </form>
+      ${entries || `<p class="empty-sm">No notes yet — your first one earns +2 XP</p>`}
+    </div>`;
+}
+
+function autoCheckin() {
+  if (!user || checkedInToday()) return;
+  state.game.checkins[dateKey(new Date())] = true;
+  const streak = currentStreak();
+  if (streak > state.game.best) state.game.best = streak;
+  addXp(10);
+  justCheckedIn = true;
+  setTimeout(() => { justCheckedIn = false; }, 1600);
+  save(); render();
+  showToast(`🔥 Checked in — ${streak} day${streak === 1 ? "" : "s"} streak! +10 XP`);
+}
+
+function showToast(msg) {
+  document.querySelector(".toast")?.remove();
+  const el = document.createElement("div");
+  el.className = "toast";
+  el.setAttribute("role", "status");
+  el.setAttribute("aria-live", "polite");
+  el.textContent = msg;
+  document.body.appendChild(el);
+  setTimeout(() => el.classList.add("show"), 30);
+  setTimeout(() => { el.classList.remove("show"); setTimeout(() => el.remove(), 350); }, 2800);
+}
+
+/* ---------- checklist ops ---------- */
+let editingChecklist = null; // id ที่กำลังแก้ | "new"
+
+function checklistById(id) { return state.checklists.find(c => c.id === id); }
+
+function toggleChecklistItem(clId, itemId) {
+  const cl = checklistById(clId);
+  const item = cl?.items.find(i => i.id === itemId);
+  if (!item) return;
+  item.checked = !item.checked;
+  lastToggled = itemId;
+  save(); render();
+  setTimeout(() => { lastToggled = null; }, 400);
+}
+
+function addChecklistItemSubmit(e, clId) {
+  e.preventDefault();
+  const input = document.getElementById("clNew-" + clId);
+  const text = input.value.trim();
+  if (!text) return;
+  checklistById(clId)?.items.push({ id: uid(), text, checked: false });
+  save(); render();
+  const again = document.getElementById("clNew-" + clId);
+  if (again) again.focus();
+}
+
+function deleteChecklistItem(clId, itemId) {
+  const cl = checklistById(clId);
+  if (!cl) return;
+  cl.items = cl.items.filter(i => i.id !== itemId);
+  save(); render();
+}
+
+function resetChecklist(clId) {
+  checklistById(clId)?.items.forEach(i => { i.checked = false; });
+  save(); render();
+}
+
+function deleteChecklist(clId) {
+  if (!confirm("Delete this checklist?")) return;
+  state.checklists = state.checklists.filter(c => c.id !== clId);
+  save(); render();
+}
+
+function openChecklistForm(clId) {
+  editingChecklist = clId;
+  const cl = clId === "new" ? null : checklistById(clId);
+  const rem = cl?.reminder || { days: [], time: "" };
+  const dayBtns = DAY_LETTERS.map((l, d) => `
+    <button type="button" class="day-pill ${rem.days.includes(d) ? "sel" : ""}" data-day="${d}"
+      aria-label="${DOW[d]}" onclick="this.classList.toggle('sel')">${l}</button>`).join("");
+  document.getElementById("modal").innerHTML = `
+  <div class="overlay" onclick="if(event.target===this)closeForm()">
+    <div class="sheet">
+      <div class="sheet-head">
+        <h2>${cl ? "Edit checklist" : "New checklist"}</h2>
+        <button class="x-btn" aria-label="Close" onclick="closeForm()">✕</button>
+      </div>
+      <label class="fld">Name
+        <input id="clTitle" required placeholder="e.g. Before leaving the room" value="${cl ? esc(cl.title) : ""}" maxlength="80">
+      </label>
+      <div class="setup-label">Remind on (optional)</div>
+      <div class="day-pills" id="clDays">${dayBtns}</div>
+      <label class="fld" style="margin-top:.75rem">Time
+        <input type="time" id="clTime" value="${rem.time}">
+      </label>
+      <p class="hint" style="margin:0 0 .75rem">At that time the list resets and you get a notification to run through it.</p>
+      <button class="btn btn-primary" onclick="saveChecklist()">Save</button>
+      ${cl ? `<button class="btn btn-danger-outline" onclick="closeForm();deleteChecklist('${cl.id}')">Delete checklist</button>` : ""}
+    </div>
+  </div>`;
+  setTimeout(() => document.getElementById("clTitle").focus(), 50);
+}
+
+function saveChecklist() {
+  const title = document.getElementById("clTitle").value.trim();
+  if (!title) return;
+  const days = [...document.querySelectorAll("#clDays .day-pill.sel")].map(b => Number(b.dataset.day));
+  const time = document.getElementById("clTime").value;
+  const reminder = (days.length && time) ? { days, time } : null;
+  if (editingChecklist === "new") {
+    state.checklists.push({ id: uid(), title, items: [], reminder });
+  } else {
+    const cl = checklistById(editingChecklist);
+    if (cl) { cl.title = title; cl.reminder = reminder; }
+  }
+  editingChecklist = null;
+  save(); closeForm(); render();
+}
+
+/* ---------- routine ops ---------- */
+function routineDone(id) {
+  const log = state.routineLog[dateKey(new Date())];
+  return !!(log && log[id]);
+}
+function toggleRoutine(id) {
+  const k = dateKey(new Date());
+  const log = state.routineLog[k] = state.routineLog[k] || {};
+  if (log[id]) { delete log[id]; addXp(-2); }
+  else { log[id] = true; addXp(2); }
+  lastToggled = id;
+  save(); render();
+  setTimeout(() => { lastToggled = null; }, 400);
+}
+function addRoutineSubmit(e) {
+  e.preventDefault();
+  const input = document.getElementById("rtNew");
+  const title = input.value.trim();
+  if (!title) return;
+  state.routines.push({ id: uid(), title });
+  save(); render();
+  // คงโฟกัสไว้ให้พิมพ์รายการถัดไปต่อได้เลย
+  const again = document.getElementById("rtNew");
+  if (again) again.focus();
+}
+function deleteRoutine(id) {
+  if (!confirm("Remove this routine?")) return;
+  state.routines = state.routines.filter(r => r.id !== id);
+  save(); render();
+}
+
+/* ---------- task ops ---------- */
+function toggleDone(id) {
+  const t = state.tasks.find(x => x.id === id);
+  if (!t) return;
+  const nowDone = t.status === "open";
+  t.status = nowDone ? "done" : "open";
+  t.doneAt = nowDone ? new Date().toISOString() : null;
+  if (nowDone && t.recurrence !== "none" && t.dueAt) {
+    const next = nextDueDate(new Date(t.dueAt), t.recurrence);
+    if (next) {
+      state.tasks.push({
+        ...t, id: uid(), dueAt: next.toISOString(),
+        status: "open", doneAt: null, notifiedAt: null,
+        createdAt: new Date().toISOString(),
+      });
+    }
+  }
+  addXp(nowDone ? 5 : -5);
+  lastToggled = id;
+  save(); render();
+  setTimeout(() => { lastToggled = null; }, 400);
+}
+
+/* ---------- shared rendering ---------- */
+function esc(s) {
+  return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
+}
+function catById(id) { return state.categories.find(c => c.id === id); }
+
+function taskHtml(t, hideCat) {
+  const cat = catById(t.categoryId);
+  const due = t.dueAt ? new Date(t.dueAt) : null;
+  const overdue = t.status === "open" && due && due.getTime() < Date.now();
+  return `<div class="task ${t.status === "done" ? "is-done" : ""} ${t.id === lastToggled ? "just-done" : ""}" onclick="toggleDone('${t.id}')"
+    role="button" tabindex="0"
+    onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();toggleDone('${t.id}')}"
+    aria-label="${esc(t.title)} — ${t.status === "done" ? "done, press to reopen" : "press to mark as done"}">
+    <span class="task-status">${t.status === "done" ? "✓" : ""}</span>
+    <div class="task-body">
+      <div class="task-title ${t.status === "done" ? "done" : ""}">${esc(t.title)}</div>
+      <div class="task-meta">
+        ${due ? `<span class="${overdue ? "overdue" : ""}">${fmtDateTime(due)}</span>` : ""}
+        ${t.recurrence !== "none" ? `<span>${icon("repeat", 11)} ${RECURRENCE_LABELS[t.recurrence]}</span>` : ""}
+        ${cat && !hideCat ? `<span class="chip" style="background:color-mix(in srgb, ${cat.color} 16%, var(--card));color:color-mix(in srgb, ${cat.color} 55%, var(--fg))">${esc(cat.name)}</span>` : ""}
+      </div>
+    </div>
+    <button class="edit-btn" aria-label="Edit task" onclick="event.stopPropagation();openForm('${t.id}')"
+      onkeydown="event.stopPropagation()">${icon("edit", 15)}</button>
+  </div>`;
+}
+
+function sectionsHtml(sections, emptyText) {
+  const nonEmpty = sections.filter(s => s.tasks.length > 0);
+  if (nonEmpty.length === 0) return `<p class="empty">${emptyText}</p>`;
+  return nonEmpty.map(s =>
+    (s.title ? `<h2 class="section-title">${esc(s.title)}</h2>` : "") +
+    s.tasks.map(taskHtml).join("")
+  ).join("");
+}
+
+function sortByDue(tasks) {
+  return [...tasks].sort((a, b) => new Date(a.dueAt || 0) - new Date(b.dueAt || 0));
+}
+
+/* ---------- views ---------- */
+let todayCat = null; // null = overview, "none" = no-category group, otherwise category id
+
+/** งานของ "วันนี้": เลยกำหนด, ครบกำหนดวันนี้, ไม่มีกำหนด, หรือเสร็จแล้ววันนี้ */
+function todayTasksOf(catKey) {
+  const todayStart = startOfDay(new Date());
+  return state.tasks.filter(t => {
+    const inCat = catKey === "none"
+      ? (!t.categoryId || !catById(t.categoryId))
+      : t.categoryId === catKey;
+    if (!inCat) return false;
+    if (t.status === "done") return t.doneAt && isToday(new Date(t.doneAt));
+    return !t.dueAt || new Date(t.dueAt) < todayStart || isToday(new Date(t.dueAt));
+  });
+}
+
+/** การ์ดสัตว์เลี้ยง + streak + check-in */
+function petCardHtml() {
+  const { level, prog, need } = levelInfo();
+  const pet = petForLevel(level);
+  const next = PET_STAGES[Math.min(level, PET_STAGES.length - 1)];
+  const streak = currentStreak();
+  const doneToday = checkedInToday();
+  return `<div class="pet-card ${justLeveled ? "level-up" : ""}">
+    <button class="pet-emoji ${justCheckedIn || justLeveled ? "bounce" : ""}" aria-label="Pet your ${pet.name}"
+      onclick="this.classList.add('bounce');openPet()">${petSvg(level)}</button>
+    <div class="pet-info">
+      <div class="pet-name">${pet.name}
+        <span class="pet-level">Lv ${level}</span>
+        ${justLeveled ? `<span class="pet-levelup">LEVEL UP!</span>` : ""}
+      </div>
+      <div class="pet-streak">${flameSvg(15, streak > 0, streak > 0)} <b>${streak}</b> day${streak === 1 ? "" : "s"} streak${state.game.best > 1 ? ` · best ${state.game.best}` : ""}</div>
+      <div class="pet-xp">
+        <span class="ov-bar" style="flex:1"><span style="width:${Math.round(prog / need * 100)}%;background:var(--primary)"></span></span>
+        <span class="pet-xp-num">${prog}/${need} XP</span>
+      </div>
+      ${level < PET_STAGES.length ? `<div class="pet-next">Next: ${next.name}</div>` : ""}
+    </div>
+    <div class="pet-week">
+      ${(() => {
+        // 7 วันล่าสุด (จบที่วันนี้) — โชว์ว่าวันไหนเข้าแอพบ้าง
+        const cells = [];
+        const d = new Date();
+        d.setDate(d.getDate() - 6);
+        for (let i = 0; i < 7; i++) {
+          const k = dateKey(d);
+          const inDay = !!state.game.checkins[k];
+          const today = isToday(d);
+          cells.push(`<span class="pw-cell ${today ? "today" : ""}" title="${k}">
+            <span class="pw-dow">${DOW[d.getDay()][0]}</span>
+            <span class="pw-dot ${inDay ? "in" : ""}">${flameSvg(inDay ? 17 : 14, inDay)}</span>
+            <span class="pw-num">${d.getDate()}</span>
+          </span>`);
+          d.setDate(d.getDate() + 1);
+        }
+        return cells.join("");
+      })()}
+    </div>
+  </div>`;
+}
+
+const MINI_LIMIT = 4;
+
+function miniTaskHtml(t) {
+  const due = t.dueAt ? new Date(t.dueAt) : null;
+  const overdue = t.status === "open" && due && due.getTime() < Date.now();
+  const time = due
+    ? (due.getHours() !== 0 || due.getMinutes() !== 0 ? fmtTime(due) : fmtDate(due))
+    : "";
+  return `<button class="mini-task ${t.status === "done" ? "done" : ""} ${t.id === lastToggled ? "just-done" : ""}"
+    onclick="toggleDone('${t.id}')"
+    aria-label="${esc(t.title)} — ${t.status === "done" ? "done, press to reopen" : "press to mark as done"}">
+    <span class="mini-dot">${t.status === "done" ? "✓" : ""}</span>
+    <span class="mini-title">${esc(t.title)}
+      ${time ? `<span class="mini-time ${overdue ? "overdue" : ""}">${overdue && due ? fmtDateTime(due) : time}</span>` : ""}
+    </span>
+  </button>`;
+}
+
+function renderHome() {
+  const d = new Date();
+  if (todayCat !== null) return renderTodayDetail();
+
+  const groups = activeCategories().map(c => ({ key: c.id, name: c.name, color: c.color, icon: c.icon || "tag" }));
+  if (todayTasksOf("none").length) groups.push({ key: "none", name: "No category", color: "#94a3b8", icon: "tag" });
+
+  // สรุปรวมด้านบน
+  const allOpen = state.tasks.filter(t => t.status === "open");
+  const overdueCount = allOpen.filter(t => t.dueAt && new Date(t.dueAt) < startOfDay(new Date())).length;
+  const dueTodayCount = allOpen.filter(t => t.dueAt && isToday(new Date(t.dueAt))).length;
+  const doneTodayCount = state.tasks.filter(t => t.status === "done" && t.doneAt && isToday(new Date(t.doneAt))).length;
+
+  function buildCard(g, featured) {
+    const tasks = todayTasksOf(g.key);
+    const open = sortByDue(tasks.filter(t => t.status === "open"));
+    const done = tasks.filter(t => t.status === "done");
+    const total = open.length + done.length;
+    const pct = total ? Math.round(done.length / total * 100) : 0;
+    const limit = featured ? 6 : MINI_LIMIT;
+    const shown = [...open, ...done].slice(0, limit);
+    const moreCount = total - shown.length;
+    const list = total === 0
+      ? `<span class="mini-empty">No tasks today</span>`
+      : shown.map(miniTaskHtml).join("") +
+        (moreCount > 0 ? `<button class="mini-task" onclick="goCat('${g.key}')">
+          <span class="mini-dot" style="border-style:dashed"></span>
+          <span class="mini-title" style="color:var(--muted)">+${moreCount} more…</span></button>` : "");
+    const cat = g.key !== "none" ? catById(g.key) : null;
+    const nowBadge = featured
+      ? `<span class="now-badge" style="background:${g.color}">● Now</span>` : "";
+    const schedText = featured && cat ? `<span class="ov-sub" style="margin-left:auto">${scheduleSummary(cat)}</span>` : "";
+    return `<div class="ov-card ${featured ? "featured" : ""}" ${featured ? `style="border-color:${g.color}"` : ""}>
+      <div class="ov-head">
+        <span class="cat-ico" style="background:color-mix(in srgb, ${g.color} 16%, var(--card));color:color-mix(in srgb, ${g.color} 55%, var(--fg))">${icon(g.icon, featured ? 17 : 15)}</span>
+        <span class="name">${esc(g.name)}</span>
+        ${nowBadge}
+        <button class="ov-more" aria-label="Open ${esc(g.name)}" onclick="goCat('${g.key}')">${icon("right", 14)}</button>
+      </div>
+      ${featured ? `<div style="display:flex">${schedText}</div>` : ""}
+      <div class="mini-list">${list}</div>
+      <span class="ov-sub">${total ? `${done.length}/${total} done` : "&nbsp;"}</span>
+      <span class="ov-bar"><span style="width:${pct}%;background:${g.color}"></span></span>
+    </div>`;
+  }
+
+  // หมวดที่ "ถึงเวลา" ตอนนี้ → ชูเด่นอันเดียวด้านบน ที่เหลือต่อด้านล่าง
+  const activeCat = activeCategories().find(scheduleActive);
+  const featuredHtml = activeCat
+    ? buildCard(groups.find(g => g.key === activeCat.id), true) : "";
+  const cards = groups
+    .filter(g => !activeCat || g.key !== activeCat.id)
+    .map(g => buildCard(g, false)).join("");
+
+  // กราฟ done 7 วันล่าสุด
+  const weekAgo = startOfDay(new Date());
+  weekAgo.setDate(weekAgo.getDate() - 6);
+  const doneWeek = state.tasks.filter(t => t.status === "done" && t.doneAt && new Date(t.doneAt) >= weekAgo);
+  const dayCounts = [];
+  for (let i = 6; i >= 0; i--) {
+    const day = startOfDay(new Date());
+    day.setDate(day.getDate() - i);
+    const k = dateKey(day);
+    dayCounts.push({ label: DOW[day.getDay()][0], count: doneWeek.filter(t => dateKey(new Date(t.doneAt)) === k).length });
+  }
+  const maxCount = Math.max(1, ...dayCounts.map(x => x.count));
+  const weekChart = dayCounts.map(x =>
+    `<div class="week-col">
+      <div class="week-bar ${x.count === 0 ? "zero" : ""}" style="height:${Math.round(x.count / maxCount * 100)}%"></div>
+      <span class="week-label">${x.label}</span>
+    </div>`).join("");
+
+  // Daily Routine card — ติ๊กจากหน้านี้ จัดการรายการใน Settings
+  const rtDoneCount = state.routines.filter(r => routineDone(r.id)).length;
+  const rtPct = state.routines.length ? Math.round(rtDoneCount / state.routines.length * 100) : 0;
+  const rtRows = state.routines.map(r => `
+      <button class="mini-task ${routineDone(r.id) ? "done" : ""} ${r.id === lastToggled ? "just-done" : ""}" onclick="toggleRoutine('${r.id}')"
+        aria-label="${esc(r.title)} — ${routineDone(r.id) ? "done today, press to undo" : "press to mark done today"}">
+        <span class="mini-dot">${routineDone(r.id) ? "✓" : ""}</span>
+        <span class="mini-title">${esc(r.title)}</span>
+      </button>`).join("");
+  const routineCard = `<div class="ov-card rt-card">
+    <div class="ov-head">
+      <span class="cat-ico" style="background:var(--primary-soft);color:var(--primary)">${icon("repeat", 15)}</span>
+      <span class="name">Daily Routine</span>
+      <span class="ov-sub">${state.routines.length ? `${rtDoneCount}/${state.routines.length} today` : ""}</span>
+    </div>
+    <div class="mini-list">
+      ${rtRows || `<span class="mini-empty">No routines yet — add them in Settings › Daily Routines</span>`}
+    </div>
+    ${state.routines.length ? `<span class="ov-bar"><span style="width:${rtPct}%;background:var(--primary)"></span></span>` : ""}
+  </div>`;
+
+  // Tomorrow preview — เตรียมตัวสำหรับพรุ่งนี้
+  const tmStart = startOfDay(new Date()); tmStart.setDate(tmStart.getDate() + 1);
+  const tmEnd = new Date(tmStart); tmEnd.setDate(tmEnd.getDate() + 1);
+  const tomorrowTasks = sortByDue(state.tasks.filter(t =>
+    t.status === "open" && t.dueAt && new Date(t.dueAt) >= tmStart && new Date(t.dueAt) < tmEnd));
+  const tomorrowCard = tomorrowTasks.length ? `<div class="ov-card rt-card tm-card">
+    <div class="ov-head">
+      <span class="cat-ico" style="background:color-mix(in srgb, #f97316 16%, var(--card));color:color-mix(in srgb, #f97316 55%, var(--fg))">${icon("sunrise", 15)}</span>
+      <span class="name">Prepare for tomorrow</span>
+      <span class="ov-sub">${tomorrowTasks.length} task${tomorrowTasks.length > 1 ? "s" : ""}</span>
+    </div>
+    <div class="mini-list">
+      ${tomorrowTasks.slice(0, 4).map(t => {
+        const due = new Date(t.dueAt);
+        const cat = catById(t.categoryId);
+        return `<div class="mini-task" style="cursor:default">
+          <span class="mini-dot" style="border-style:dashed"></span>
+          <span class="mini-title">${esc(t.title)}
+            <span class="mini-time">${fmtTime(due)}${cat ? " · " + esc(cat.name) : ""}</span>
+          </span>
+        </div>`;
+      }).join("")}
+      ${tomorrowTasks.length > 4 ? `<span class="mini-empty">+${tomorrowTasks.length - 4} more in Calendar</span>` : ""}
+    </div>
+  </div>` : "";
+
+  // Checklists — โน้ตแบบติ๊กก่อนออกจากห้อง / เตรียมของ
+  const checklistCards = state.checklists.map(cl => {
+    const total = cl.items.length;
+    const doneN = cl.items.filter(i => i.checked).length;
+    const pct = total ? Math.round(doneN / total * 100) : 0;
+    const rows = cl.items.map(i => `
+      <div class="rt-row">
+        <button class="mini-task ${i.checked ? "done" : ""} ${i.id === lastToggled ? "just-done" : ""}"
+          onclick="toggleChecklistItem('${cl.id}','${i.id}')"
+          aria-label="${esc(i.text)} — ${i.checked ? "checked, press to uncheck" : "press to check"}">
+          <span class="mini-dot">${i.checked ? "✓" : ""}</span>
+          <span class="mini-title">${esc(i.text)}</span>
+        </button>
+        <button class="rt-del" aria-label="Remove item ${esc(i.text)}" onclick="deleteChecklistItem('${cl.id}','${i.id}')">${icon("x", 12)}</button>
+      </div>`).join("");
+    const remChip = cl.reminder
+      ? `<span class="ov-sub">${icon("bell", 10)} ${cl.reminder.days.length === 7 ? "Every day" : [...cl.reminder.days].sort((a,b)=>a-b).map(d => DOW[d]).join(" ")} · ${cl.reminder.time}</span>`
+      : "";
+    return `<div class="ov-card rt-card ${total && doneN === total ? "cl-complete" : ""}">
+      <div class="ov-head">
+        <span class="cat-ico" style="background:color-mix(in srgb, #0ea5e9 16%, var(--card));color:color-mix(in srgb, #0ea5e9 55%, var(--fg))">${icon("checksquare", 15)}</span>
+        <span class="name">${esc(cl.title)}</span>
+        ${total ? `<span class="ov-sub">${doneN}/${total}${doneN === total ? " ✓" : ""}</span>` : ""}
+        <button class="ov-more" aria-label="Reset ${esc(cl.title)}" onclick="resetChecklist('${cl.id}')">${icon("refresh", 13)}</button>
+        <button class="ov-more" aria-label="Edit ${esc(cl.title)}" onclick="openChecklistForm('${cl.id}')">${icon("edit", 13)}</button>
+      </div>
+      ${remChip ? `<div style="display:flex">${remChip}</div>` : ""}
+      <div class="mini-list">
+        ${rows || `<span class="mini-empty">Add the things to check off below</span>`}
+        <form class="rt-add" onsubmit="addChecklistItemSubmit(event, '${cl.id}')">
+          <input id="clNew-${cl.id}" placeholder="Add an item, e.g. Keys, wallet, charger" maxlength="80">
+          <button type="submit" aria-label="Add item">${icon("plus", 15)}</button>
+        </form>
+      </div>
+      ${total ? `<span class="ov-bar"><span style="width:${pct}%;background:#0ea5e9"></span></span>` : ""}
+    </div>`;
+  }).join("");
+  const newChecklistBtn = `<button class="ov-card rt-card cl-new" onclick="openChecklistForm('new')">
+    ${icon("plus", 15)} New checklist — e.g. Before leaving the room
+  </button>`;
+
+  const g = greeting();
+  return `<h1 class="greet"><span class="greet-ico" style="color:${g.color}">${icon(g.icon, 26)}</span>${g.text}${user?.name ? ", " + esc(user.name.split(" ")[0]) : ""}</h1>
+    <div class="today-date">${DOW[d.getDay()]}, ${d.getDate()} ${MONTHS[d.getMonth()]} ${d.getFullYear()}</div>
+    <div class="stat-row">
+      <div class="stat-card">
+        <span class="stat-ico" style="background:color-mix(in srgb, #ef4444 14%, var(--card));color:var(--danger-text)">${icon("bell", 13)}</span>
+        <div class="stat-num ${overdueCount ? "danger" : ""}">${overdueCount}</div><div class="stat-label">Overdue</div>
+      </div>
+      <div class="stat-card">
+        <span class="stat-ico" style="background:var(--primary-soft);color:var(--primary)">${icon("calendar", 13)}</span>
+        <div class="stat-num">${dueTodayCount}</div><div class="stat-label">Due today</div>
+      </div>
+      <div class="stat-card">
+        <span class="stat-ico" style="background:color-mix(in srgb, #10b981 14%, var(--card));color:var(--success)">${icon("checksquare", 13)}</span>
+        <div class="stat-num success">${doneTodayCount}</div><div class="stat-label">Done today</div>
+      </div>
+    </div>
+    ${petCardHtml()}
+    ${featuredHtml ? `<h2 class="section-title">Right now</h2><div class="ov-grid">${featuredHtml}</div>` : ""}
+    <h2 class="section-title">Daily routine</h2>
+    <div class="ov-grid">${routineCard}</div>
+    <h2 class="section-title">Checklists</h2>
+    <div class="ov-grid">${checklistCards}${newChecklistBtn}</div>
+    <h2 class="section-title">${featuredHtml ? "Other categories" : "By category"}</h2>
+    <div class="ov-grid">${cards}</div>
+    ${tomorrowCard ? `<h2 class="section-title">Tomorrow</h2><div class="ov-grid">${tomorrowCard}</div>` : ""}
+    <h2 class="section-title">Completed — last 7 days</h2>
+    <div class="card"><div class="week-chart">${weekChart}</div></div>`;
+}
+
+function renderTodayDetail() {
+  const isNone = todayCat === "none";
+  const cat = isNone ? null : catById(todayCat);
+  if (!isNone && !cat) { todayCat = null; return renderToday(); }
+  const name = isNone ? "No category" : cat.name;
+  const color = isNone ? "var(--muted)" : cat.color;
+
+  const tasks = todayTasksOf(todayCat);
+  const open = sortByDue(tasks.filter(t => t.status === "open"));
+  const done = tasks.filter(t => t.status === "done");
+
+  const catIcon = isNone ? "tag" : (cat.icon || "tag");
+  return `<button class="back-btn" onclick="goHome()">${icon("left", 15)} Home</button>
+    <div class="page-head" style="margin-bottom:.75rem">
+      <h1 class="cat-head" style="font-size:1.25rem">
+        <span class="cat-ico" style="background:color-mix(in srgb, ${color} 16%, var(--card));color:color-mix(in srgb, ${color} 55%, var(--fg))">${icon(catIcon, 15)}</span>
+        ${esc(name)}</h1>
+    </div>
+    ${open.length === 0 && done.length === 0 ? `<p class="empty">No tasks today</p>` : ""}
+    ${open.map(t => taskHtml(t, true)).join("")}
+    ${done.length ? `<h2 class="section-title">Done today</h2>` + done.map(t => taskHtml(t, true)).join("") : ""}`;
+}
+
+function renderCalendar() {
+  const y = calMonth.getFullYear(), m = calMonth.getMonth();
+  const first = new Date(y, m, 1);
+  const gridStart = new Date(first);
+  gridStart.setDate(1 - first.getDay());
+
+  // เตรียม map วัน -> tasks (เฉพาะที่มี due)
+  const byDay = {};
+  for (const t of state.tasks) {
+    if (!t.dueAt) continue;
+    const k = dateKey(new Date(t.dueAt));
+    (byDay[k] = byDay[k] || []).push(t);
+  }
+
+  const selDate = new Date(calSelected + "T00:00:00");
+  const seg = `<div class="cal-seg" role="tablist">
+    ${["day", "week", "month"].map(mo =>
+      `<button role="tab" aria-selected="${calMode === mo}" class="cal-seg-btn ${calMode === mo ? "sel" : ""}"
+        onclick="calMode='${mo}';render()">${mo[0].toUpperCase() + mo.slice(1)}</button>`).join("")}
+  </div>`;
+
+  /* ----- Month ----- */
+  if (calMode === "month") {
+    let cells = "";
+    const d = new Date(gridStart);
+    for (let i = 0; i < 42; i++) {
+      const k = dateKey(d);
+      const inMonth = d.getMonth() === m;
+      const dayTasks = sortByDue(byDay[k] || []);
+      // ชื่องานแบบย่อในช่อง (2 รายการแรก)
+      const labels = dayTasks.slice(0, 2).map(t => {
+        const cat = catById(t.categoryId);
+        const col = cat ? cat.color : "#94a3b8";
+        return `<span class="cal-lbl" style="background:color-mix(in srgb, ${col} 18%, var(--card));color:color-mix(in srgb, ${col} 58%, var(--fg))">${esc(t.title)}</span>`;
+      }).join("");
+      cells += `<button class="cal-day ${inMonth ? "" : "other"} ${isToday(d) ? "today" : ""} ${k === calSelected ? "sel" : ""}"
+        onclick="calSelected='${k}';render()">
+        <span class="cal-num">${d.getDate()}</span>
+        ${labels}${dayTasks.length > 2 ? `<span class="cal-more">+${dayTasks.length - 2}</span>` : ""}
+      </button>`;
+      d.setDate(d.getDate() + 1);
+    }
+    const selTasks = sortByDue(byDay[calSelected] || []);
+    return `<div class="page-head"><h1>Calendar</h1>${seg}</div>
+      <div class="cal-head">
+        <button class="cal-nav" aria-label="Previous month" onclick="calShift(-1)">${icon("left")}</button>
+        <span class="cal-title"><h2>${MONTHS[m]} ${y}</h2>${calTodayBtn()}</span>
+        <button class="cal-nav" aria-label="Next month" onclick="calShift(1)">${icon("right")}</button>
+      </div>
+      <div class="cal-grid month">
+        ${DOW.map(dw => `<span class="cal-dow">${dw}</span>`).join("")}
+        ${cells}
+      </div>
+      <h2 class="section-title">${fmtDate(selDate)}</h2>
+      ${selTasks.length ? selTasks.map(taskHtml).join("") : `<p class="empty-sm">No tasks on this day</p>`}`;
+  }
+
+  /* ----- Week ----- */
+  if (calMode === "week") {
+    const weekStart = new Date(selDate);
+    weekStart.setDate(weekStart.getDate() - weekStart.getDay());
+    const weekEnd = new Date(weekStart); weekEnd.setDate(weekEnd.getDate() + 6);
+    let rows = "";
+    const d = new Date(weekStart);
+    for (let i = 0; i < 7; i++) {
+      const k = dateKey(d);
+      const dayTasks = sortByDue(byDay[k] || []);
+      rows += `<div class="wk-row ${isToday(d) ? "today" : ""}">
+        <button class="wk-date" onclick="calSelected='${k}';calMode='day';render()">
+          <span class="wk-dow">${DOW[d.getDay()]}</span>
+          <span class="wk-num">${d.getDate()}</span>
+        </button>
+        <div class="wk-list">
+          ${dayTasks.length ? dayTasks.map(t => {
+            const cat = catById(t.categoryId);
+            const col = cat ? cat.color : "#94a3b8";
+            const due = new Date(t.dueAt);
+            return `<button class="wk-item ${t.status === "done" ? "done" : ""}" onclick="toggleDone('${t.id}')">
+              <span class="cal-dot" style="background:${col}"></span>
+              <span class="wk-title">${esc(t.title)}</span>
+              <span class="wk-time">${fmtTime(due)}</span>
+            </button>`;
+          }).join("") : `<span class="mini-empty">—</span>`}
+        </div>
+      </div>`;
+      d.setDate(d.getDate() + 1);
+    }
+    return `<div class="page-head"><h1>Calendar</h1>${seg}</div>
+      <div class="cal-head">
+        <button class="cal-nav" aria-label="Previous week" onclick="calShiftDays(-7)">${icon("left")}</button>
+        <span class="cal-title"><h2>${weekStart.getDate()} ${MONTHS_SHORT[weekStart.getMonth()]} – ${weekEnd.getDate()} ${MONTHS_SHORT[weekEnd.getMonth()]}</h2>${calTodayBtn()}</span>
+        <button class="cal-nav" aria-label="Next week" onclick="calShiftDays(7)">${icon("right")}</button>
+      </div>
+      ${rows}`;
+  }
+
+  /* ----- Day ----- */
+  const dayTasks = sortByDue(byDay[calSelected] || []);
+  const openT = dayTasks.filter(t => t.status === "open");
+  const doneT = dayTasks.filter(t => t.status === "done");
+  return `<div class="page-head"><h1>Calendar</h1>${seg}</div>
+    <div class="cal-head">
+      <button class="cal-nav" aria-label="Previous day" onclick="calShiftDays(-1)">${icon("left")}</button>
+      <span class="cal-title"><h2>${fmtDate(selDate)} · ${selDate.getDate()} ${MONTHS_SHORT[selDate.getMonth()]}</h2>${calTodayBtn()}</span>
+      <button class="cal-nav" aria-label="Next day" onclick="calShiftDays(1)">${icon("right")}</button>
+    </div>
+    ${dayTasks.length === 0 ? `<p class="empty-sm">No tasks on this day</p>` : ""}
+    ${openT.map(t => taskHtml(t)).join("")}
+    ${doneT.length ? `<h2 class="section-title">Done</h2>` + doneT.map(t => taskHtml(t)).join("") : ""}`;
+}
+
+function calShift(n) {
+  calMonth = new Date(calMonth.getFullYear(), calMonth.getMonth() + n, 1);
+  render();
+}
+function calToday() {
+  calSelected = dateKey(new Date());
+  calMonth = startOfMonth(new Date());
+  render();
+}
+/** ปุ่มกลับวันนี้ — โชว์เมื่อเลื่อนออกไปจากวันปัจจุบัน */
+function calTodayBtn() {
+  const now = new Date();
+  const off = calSelected !== dateKey(now) ||
+    calMonth.getMonth() !== now.getMonth() || calMonth.getFullYear() !== now.getFullYear();
+  return off ? `<button class="cal-today-btn" onclick="calToday()">Today</button>` : "";
+}
+function calShiftDays(n) {
+  const d = new Date(calSelected + "T00:00:00");
+  d.setDate(d.getDate() + n);
+  calSelected = dateKey(d);
+  calMonth = startOfMonth(d);
+  render();
+}
+
+function renderAll() {
+  const filtered = allFilter ? state.tasks.filter(t => t.categoryId === allFilter) : state.tasks;
+  const open = sortByDue(filtered.filter(t => t.status === "open"));
+  const done = filtered.filter(t => t.status === "done");
+  const options = activeCategories().map(c =>
+    `<option value="${c.id}" ${allFilter === c.id ? "selected" : ""}>${esc(c.name)}</option>`).join("");
+  return `<div class="page-head">
+      <h1>All Tasks</h1>
+      <select class="filter-sel" onchange="allFilter=this.value;render()">
+        <option value="">All categories</option>${options}
+      </select>
+    </div>` + sectionsHtml([
+      { title: "Open", tasks: open },
+      { title: "Done", tasks: done },
+    ], "No tasks yet");
+}
+
+function renderSettings() {
+  const initial = (user?.name || "?").charAt(0).toUpperCase();
+  const notifOn = ("Notification" in window) && Notification.permission === "granted";
+
+  const routineRows = state.routines.map(r => `
+    <div class="set-row static">
+      <span class="set-ico" style="background:var(--primary-soft);color:var(--primary)">${icon("repeat", 14)}</span>
+      <span class="set-label">${esc(r.title)}</span>
+      <button class="rt-del" aria-label="Remove routine ${esc(r.title)}" onclick="deleteRoutine('${r.id}')">${icon("x", 13)}</button>
+    </div>`).join("");
+
+  const catRows = state.categories.map(c => {
+    const on = c.enabled !== false;
+    return `
+    <div class="set-row static" style="${on ? "" : "opacity:.55"}">
+      <span class="set-ico" style="background:color-mix(in srgb, ${c.color} 16%, var(--card));color:color-mix(in srgb, ${c.color} 55%, var(--fg))">${icon(c.icon || "tag", 14)}</span>
+      <span class="set-label">${esc(c.name)}
+        ${c.schedule ? `<span class="set-sub">${icon("clock", 10)} ${scheduleSummary(c)}</span>` : ""}
+      </span>
+      <button class="rt-del" style="color:${c.schedule ? "var(--primary)" : "var(--muted)"}"
+        aria-label="Set active hours for ${esc(c.name)}" onclick="openSchedule('${c.id}')">${icon("clock", 14)}</button>
+      <button class="rt-del" aria-label="Delete category ${esc(c.name)}" onclick="deleteCategory('${c.id}')">${icon("x", 13)}</button>
+      <button class="switch" role="switch" aria-checked="${on}" aria-label="${on ? "Disable" : "Enable"} ${esc(c.name)}"
+        onclick="toggleCategory('${c.id}')"></button>
+    </div>`;
+  }).join("");
+
+  return `<h1>Settings</h1>
+
+    <div class="set-profile">
+      <span class="set-avatar">${esc(initial)}</span>
+      <span style="flex:1;min-width:0">
+        <span style="display:block;font-size:.95rem;font-weight:700">${esc(user?.name || "")}</span>
+        <span style="display:block;font-size:.72rem;color:var(--muted)">${esc(user?.email || "")}${user?.provider === "google" ? " · Google" : ""}</span>
+      </span>
+    </div>
+
+    <h2 class="section-title">Preferences</h2>
+    <div class="set-group">
+      <div class="set-row static">
+        <span class="set-ico" style="background:color-mix(in srgb, #f59e0b 16%, var(--card));color:color-mix(in srgb, #f59e0b 55%, var(--fg))">${icon("bell", 14)}</span>
+        <span class="set-label">Notifications
+          <span class="set-sub">Task reminders + tomorrow digest, while this page is open</span>
+        </span>
+        <button class="switch" role="switch" aria-checked="${notifOn && !state.meta.notifOff}"
+          aria-label="Toggle notifications" onclick="toggleNotifications()"></button>
+      </div>
+      <div class="set-row static">
+        <span class="set-ico" style="background:color-mix(in srgb, #8b5cf6 16%, var(--card));color:color-mix(in srgb, #8b5cf6 55%, var(--fg))">${icon("sun", 14)}</span>
+        <span class="set-label">Theme
+          <span class="set-sub">Follows the time of day automatically</span>
+        </span>
+        <span class="set-value">${document.documentElement.dataset.theme === "night" ? "Night" : "Day"}</span>
+      </div>
+    </div>
+
+    <h2 class="section-title">Daily Routines</h2>
+    <div class="set-group">
+      ${routineRows || `<div class="set-row static"><span class="set-label" style="color:var(--muted);font-size:.78rem">Things you do every day — they reset each morning</span></div>`}
+      <form class="set-add" onsubmit="addRoutineSubmit(event)">
+        <span class="set-ico" style="background:var(--primary-soft);color:var(--primary)">${icon("plus", 14)}</span>
+        <input id="rtNew" placeholder="Add a routine, e.g. Drink water" maxlength="80">
+        <button class="link-primary" type="submit">Add</button>
+      </form>
+    </div>
+
+    <h2 class="section-title">Categories</h2>
+    <div class="set-group">
+      ${catRows}
+      <form class="set-add" onsubmit="event.preventDefault();addCategory()">
+        <span class="set-ico" style="background:var(--primary-soft);color:var(--primary)">${icon("plus", 14)}</span>
+        <input id="newCatName" placeholder="New category e.g. Health">
+        <button class="link-primary" type="submit">Add</button>
+      </form>
+      <div class="set-row static" style="flex-wrap:wrap;gap:.5rem">
+        <span id="iconPick" style="display:flex;gap:.3rem;flex-wrap:wrap"></span>
+        <span id="colorPick" style="display:flex;gap:.35rem;margin-left:auto"></span>
+      </div>
+    </div>
+
+    <h2 class="section-title">Cloud Sync</h2>
+    <div class="set-group">
+      ${cloudConfigured() ? `
+      <div class="set-row static">
+        <span class="set-ico" style="background:color-mix(in srgb, #10b981 16%, var(--card));color:color-mix(in srgb, #10b981 55%, var(--fg))">${icon("upload", 14)}</span>
+        <span class="set-label">${cloudStatus === "ready"
+            ? (sbUser
+                ? (syncState === "synced" ? "Connected — all changes synced ✓"
+                  : syncState === "pending" ? "Connected — syncing…"
+                  : "Connected — sync error, will retry")
+                : "Connected — sign in to sync")
+            : cloudStatus === "connecting" ? "Connecting…" : "Connection error — check internet"}
+          <span class="set-sub">${esc((sbCfg?.url || "").replace("https://", ""))}</span>
+        </span>
+        <button class="link-danger" onclick="disconnectCloud()">Disconnect</button>
+      </div>` : `
+      <div class="set-row static">
+        <span class="set-ico" style="background:color-mix(in srgb, #64748b 16%, var(--card));color:color-mix(in srgb, #64748b 60%, var(--fg))">${icon("upload", 14)}</span>
+        <span class="set-label">Local only
+          <span class="set-sub">Connect a free Supabase project to sync across devices + real sign-in</span>
+        </span>
+      </div>
+      <form class="set-add" onsubmit="event.preventDefault();connectCloud()" style="flex-wrap:wrap;gap:.4rem">
+        <input id="sbUrl" placeholder="Project URL — https://xxxx.supabase.co" style="flex-basis:100%">
+        <input id="sbKey" placeholder="anon public key" style="flex:1;min-width:0">
+        <button class="link-primary" type="submit">Connect</button>
+      </form>`}
+    </div>
+
+    <h2 class="section-title">Data</h2>
+    <div class="set-group">
+      <button class="set-row" onclick="exportData()">
+        <span class="set-ico" style="background:color-mix(in srgb, #10b981 16%, var(--card));color:color-mix(in srgb, #10b981 55%, var(--fg))">${icon("download", 14)}</span>
+        <span class="set-label">Export data
+          <span class="set-sub">Save a .json backup of everything</span>
+        </span>
+        <span class="set-value">${icon("right", 13)}</span>
+      </button>
+      <button class="set-row" onclick="document.getElementById('importFile').click()">
+        <span class="set-ico" style="background:color-mix(in srgb, #06b6d4 16%, var(--card));color:color-mix(in srgb, #06b6d4 55%, var(--fg))">${icon("upload", 14)}</span>
+        <span class="set-label">Import data
+          <span class="set-sub">Restore from a backup file</span>
+        </span>
+        <span class="set-value">${icon("right", 13)}</span>
+      </button>
+      <input type="file" id="importFile" accept=".json" style="display:none" onchange="importData(this)">
+    </div>
+
+    <div class="set-group">
+      <button class="set-row danger" onclick="doSignOut()">
+        <span class="set-ico" style="background:color-mix(in srgb, #ef4444 14%, var(--card));color:var(--danger-text)">${icon("logout", 14)}</span>
+        <span class="set-label">Sign out</span>
+      </button>
+    </div>
+    <p class="hint" style="text-align:center">Data stays on this device — use Export / Import to move it</p>`;
+}
+
+const COLORS = ["#6366f1", "#f59e0b", "#10b981", "#ef4444", "#8b5cf6", "#06b6d4", "#ec4899"];
+let newCatColor = COLORS[0];
+let newCatIcon = CAT_ICONS[0];
+
+function renderColorPick() {
+  const el = document.getElementById("colorPick");
+  if (el) {
+    el.innerHTML = COLORS.slice(0, 5).map(c =>
+      `<button class="color-opt ${newCatColor === c ? "sel" : ""}" style="background:${c}"
+        aria-label="Color ${c}" onclick="newCatColor='${c}';renderColorPick()"></button>`).join("");
+  }
+  const ip = document.getElementById("iconPick");
+  if (ip) {
+    ip.innerHTML = CAT_ICONS.map(name =>
+      `<button class="icon-opt ${newCatIcon === name ? "sel" : ""}" aria-label="Icon ${name}"
+        onclick="newCatIcon='${name}';renderColorPick()">${icon(name, 14)}</button>`).join("");
+  }
+}
+
+const TABS = [
+  ["home", "home", "Home", renderHome],
+  ["calendar", "calendar", "Calendar", renderCalendar],
+  ["pets", "feather", "Pets", renderPets],
+  ["all", "list", "All", renderAll],
+  ["settings", "gear", "Settings", renderSettings],
+];
+
+function renderLogin() {
+  const hero = `<div class="login-hero" aria-hidden="true">
+    <svg viewBox="0 0 400 300" preserveAspectRatio="xMidYMid slice">
+      <defs>
+        <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stop-color="#1e1b6b"/><stop offset=".38" stop-color="#5b4be8"/>
+          <stop offset=".68" stop-color="#a78bfa"/><stop offset=".88" stop-color="#fda4af"/>
+          <stop offset="1" stop-color="#fcd34d"/>
+        </linearGradient>
+        <radialGradient id="glow" cx=".5" cy=".5" r=".5">
+          <stop offset="0" stop-color="#fef3c7" stop-opacity=".95"/>
+          <stop offset=".45" stop-color="#fcd34d" stop-opacity=".5"/>
+          <stop offset="1" stop-color="#fcd34d" stop-opacity="0"/>
+        </radialGradient>
+        <linearGradient id="m1" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stop-color="#7c6cf5"/><stop offset="1" stop-color="#5b4be8"/>
+        </linearGradient>
+        <linearGradient id="m2" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stop-color="#4c3fd6"/><stop offset="1" stop-color="#37309e"/>
+        </linearGradient>
+        <linearGradient id="m3" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stop-color="#2f2a8f"/><stop offset="1" stop-color="#1e1b6b"/>
+        </linearGradient>
+        <linearGradient id="lake" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stop-color="#c4b5fd"/><stop offset="1" stop-color="#4338ca"/>
+        </linearGradient>
+      </defs>
+      <rect width="400" height="300" fill="url(#sky)"/>
+      <circle cx="200" cy="176" r="120" fill="url(#glow)"/>
+      <circle cx="200" cy="176" r="30" fill="#fef3c7"/>
+      <circle cx="200" cy="176" r="30" fill="#fcd34d" opacity=".6"/>
+      <g stroke="#e0e7ff" stroke-width="1.4" fill="none" stroke-linecap="round" opacity=".8">
+        <path d="M96 78 q5 -6 10 0 q5 -6 10 0"/>
+        <path d="M300 58 q4 -5 8 0 q4 -5 8 0"/>
+        <path d="M132 44 q4 -5 8 0 q4 -5 8 0"/>
+      </g>
+      <circle cx="62" cy="40" r="1.4" fill="#fff" opacity=".9"/>
+      <circle cx="342" cy="26" r="1.1" fill="#fff" opacity=".7"/>
+      <circle cx="258" cy="40" r="1.2" fill="#fff" opacity=".8"/>
+      <circle cx="30" cy="86" r="1" fill="#fff" opacity=".6"/>
+      <path d="M0 190 L70 120 L128 178 L180 138 L240 196 L400 150 V300 H0 Z" fill="url(#m3)" opacity=".9"/>
+      <path d="M0 214 L96 152 L170 210 L260 158 L336 214 L400 186 V300 H0 Z" fill="url(#m2)"/>
+      <path d="M0 244 L84 200 L200 240 L320 198 L400 232 V300 H0 Z" fill="url(#m1)"/>
+      <rect y="252" width="400" height="48" fill="url(#lake)" opacity=".95"/>
+      <g opacity=".55" stroke="#fef3c7" stroke-linecap="round">
+        <line x1="184" y1="262" x2="216" y2="262" stroke-width="2.5"/>
+        <line x1="176" y1="270" x2="224" y2="270" stroke-width="2"/>
+        <line x1="188" y1="278" x2="212" y2="278" stroke-width="1.6"/>
+        <line x1="182" y1="286" x2="218" y2="286" stroke-width="1.2"/>
+      </g>
+      <g transform="translate(46 84) rotate(-5)">
+        <rect width="112" height="32" rx="9" fill="#ffffff" opacity=".95"/>
+        <circle cx="17" cy="16" r="7.5" fill="#10b981"/>
+        <path d="M13.8 16 l2.3 2.3 4.6-5" stroke="#fff" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+        <rect x="30" y="10" width="62" height="5" rx="2.5" fill="#c7d2fe"/>
+        <rect x="30" y="19" width="42" height="4" rx="2" fill="#e0e7ff"/>
+      </g>
+      <g transform="translate(252 96) rotate(4)">
+        <rect width="112" height="32" rx="9" fill="#ffffff" opacity=".9"/>
+        <circle cx="17" cy="16" r="7.5" fill="#6366f1"/>
+        <path d="M13.8 16 l2.3 2.3 4.6-5" stroke="#fff" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+        <rect x="30" y="10" width="54" height="5" rx="2.5" fill="#c7d2fe"/>
+        <rect x="30" y="19" width="64" height="4" rx="2" fill="#e0e7ff"/>
+      </g>
+    </svg>
+  </div>`;
+
+  if (authView === "setup") {
+    const catChips = SUGGESTED_CATS.map(c => {
+      const sel = setupCats.includes(c.name);
+      return `<button class="setup-chip ${sel ? "sel" : ""}" onclick="toggleSetupCat('${c.name}')"
+        style="${sel ? `background:color-mix(in srgb, ${c.color} 16%, var(--card));border-color:${c.color};color:color-mix(in srgb, ${c.color} 55%, var(--fg))` : ""}">
+        ${icon(c.icon, 14)} ${c.name}</button>`;
+    }).join("");
+    const rtChips = SUGGESTED_ROUTINES.map(r => {
+      const sel = setupRoutines.includes(r);
+      return `<button class="setup-chip ${sel ? "sel sel-primary" : ""}" onclick="toggleSetupRoutine('${r}')">
+        ${sel ? "✓ " : ""}${r}</button>`;
+    }).join("");
+    return `<div class="login setup">
+      <div class="login-logo">${icon("chart", 26)}</div>
+      <h1>Almost there, ${esc(pendingUser?.name || "")}!</h1>
+      <p class="tagline">Quick setup — so the app fits your day from the start</p>
+      <div class="setup-q">
+        <div class="setup-label">Which areas do you want to track?</div>
+        <div class="setup-chips">${catChips}</div>
+      </div>
+      <div class="setup-q">
+        <div class="setup-label">Daily routines to start with?</div>
+        <div class="setup-chips">${rtChips}</div>
+      </div>
+      <button class="btn btn-primary" onclick="finishSetup()" ${setupCats.length ? "" : "disabled"}>Get started</button>
+      <button class="btn btn-outline" onclick="skipSetup()">Skip for now</button>
+    </div>`;
+  }
+
+  if (authView === "signup") {
+    return `<div class="login-wrap">${hero}<div class="login">
+      <h1>Create account</h1>
+      <p class="tagline">Your day, organised — work, life and routines</p>
+      <input id="suName" placeholder="Your name" autocomplete="name">
+      <input id="suEmail" type="email" placeholder="Email" autocomplete="email">
+      <input id="suPass" type="password" placeholder="Password" autocomplete="new-password">
+      <button class="btn btn-primary" onclick="doSignup()">Sign up</button>
+      <div class="login-or">or</div>
+      <button class="btn btn-google" onclick="doLogin('google')">${GOOGLE_G} Continue with Google</button>
+      <button class="link-primary" onclick="showAuth('login')">Already have an account? Sign in</button>
+      <p class="demo-note">${cloudConfigured()
+        ? "Real account — you'll get a confirmation email, then sign in"
+        : "Demo mode — nothing is sent anywhere"}</p>
+    </div></div>`;
+  }
+
+  return `<div class="login-wrap">${hero}<div class="login">
+    <h1>Welcome back</h1>
+    <p class="tagline">Track your day — work, life and routines</p>
+    <input id="loginEmail" type="email" placeholder="Email" autocomplete="email">
+    <input id="loginPass" type="password" placeholder="Password" autocomplete="current-password">
+    <button class="btn btn-primary" onclick="doLogin('email')">Sign in</button>
+    <div class="login-or">or</div>
+    <button class="btn btn-google" onclick="doLogin('google')">${GOOGLE_G} Continue with Google</button>
+    <button class="link-primary" onclick="showAuth('signup')">New here? Create an account</button>
+    <p class="demo-note">${cloudConfigured()
+      ? "Cloud sync on — your real account, synced across devices"
+      : "Demo mode — any email works. Connect Supabase in Settings for real sign-in + sync"}</p>
+  </div></div>`;
+}
+
+function render() {
+  const nav = document.querySelector("nav");
+  const fabEl = document.getElementById("fabBtn");
+  if (!user) {
+    document.getElementById("view").innerHTML = renderLogin();
+    nav.style.display = "none";
+    fabEl.style.display = "none";
+    return;
+  }
+  nav.style.display = "";
+  const view = document.getElementById("view");
+  if (petView) {
+    view.innerHTML = renderPetPage();
+    fabEl.style.display = "none";
+    if (viewTransition) {
+      viewTransition = false;
+      view.classList.remove("anim"); void view.offsetWidth; view.classList.add("anim");
+    }
+    return;
+  }
+  const tab = TABS.find(t => t[0] === currentTab);
+  view.innerHTML = tab[3]();
+  // เล่น view transition เฉพาะตอนเปลี่ยนหน้า ไม่ใช่ทุกการติ๊ก
+  if (viewTransition) {
+    viewTransition = false;
+    view.classList.remove("anim");
+    void view.offsetWidth;
+    view.classList.add("anim");
+  } else {
+    view.classList.remove("anim");
+  }
+  document.getElementById("navBar").innerHTML = TABS.map(([id, ico, label]) =>
+    `<button class="nav-btn ${id === currentTab ? "active" : ""}" onclick="switchTab('${id}')"
+      aria-current="${id === currentTab ? "page" : "false"}">
+      <span class="ico">${icon(ico, 19)}</span>${label}</button>`).join("");
+  document.getElementById("fabBtn").style.display =
+    currentTab === "settings" ? "none" : "";
+  if (currentTab === "settings") renderColorPick();
+}
+
+function switchTab(id) {
+  currentTab = id;
+  // ออกจากหน้า pet ก่อน (ยกเว้นกำลังจับเวลาอยู่ — ให้จับต่อเบื้องหลังไม่ได้ เลยกันสลับพลาดด้วย confirm)
+  if (petView === "running") {
+    if (!confirm("Leave the focus session? It will be cancelled.")) return;
+    clearInterval(focusTimer); focusTimer = null; focusEndsAt = null;
+  }
+  petView = null;
+  viewTransition = true;
+  render();
+}
+
+/* ---------- category ops ---------- */
+function addCategory() {
+  const input = document.getElementById("newCatName");
+  const name = input.value.trim();
+  if (!name) return;
+  state.categories.push({ id: uid(), name, color: newCatColor, icon: newCatIcon });
+  save(); render();
+}
+function deleteCategory(id) {
+  if (!confirm("Delete this category? Its tasks will be kept without a category.")) return;
+  state.categories = state.categories.filter(c => c.id !== id);
+  state.tasks.forEach(t => { if (t.categoryId === id) t.categoryId = null; });
+  save(); render();
+}
+
+/* ---------- form modal ---------- */
+function openForm(taskId) {
+  const t = taskId ? state.tasks.find(x => x.id === taskId) : null;
+  // ถ้าเปิดจากหน้า calendar และเป็น task ใหม่ ให้ default วันที่เป็นวันที่เลือกไว้
+  let defaultDue = "";
+  if (!t && currentTab === "calendar") {
+    const d = new Date(calSelected + "T09:00:00");
+    defaultDue = toInputValue(d);
+  }
+  const formCats = activeCategories();
+  if (t && t.categoryId && !formCats.some(c => c.id === t.categoryId)) {
+    const cur = catById(t.categoryId);
+    if (cur) formCats.push(cur); // หมวดที่ปิดอยู่แต่ task นี้ยังสังกัด
+  }
+  const catOpts = `<option value="">No category</option>` + formCats.map(c => {
+    const sel = t ? t.categoryId === c.id
+      : (currentTab === "home" && todayCat === c.id); // เปิดจากหน้า detail → default หมวดนั้น
+    return `<option value="${c.id}" ${sel ? "selected" : ""}>${esc(c.name)}</option>`;
+  }).join("");
+  const remOpts = REMINDER_OPTIONS.map(([v, l]) =>
+    `<option value="${v}" ${t && String(t.reminderMin ?? "") === v ? "selected" : ""}>${l}</option>`).join("");
+  const recOpts = Object.entries(RECURRENCE_LABELS).map(([v, l]) =>
+    `<option value="${v}" ${t && t.recurrence === v ? "selected" : ""}>${l}</option>`).join("");
+  document.getElementById("modal").innerHTML = `
+  <div class="overlay" onclick="if(event.target===this)closeForm()">
+    <div class="sheet">
+      <div class="sheet-head">
+        <h2>${t ? "Edit Task" : "New Task"}</h2>
+        <button class="x-btn" aria-label="Close" onclick="closeForm()">✕</button>
+      </div>
+      <form onsubmit="submitForm(event, '${taskId || ""}')">
+        <label class="fld">What needs to be done?
+          <input id="fTitle" required value="${t ? esc(t.title) : ""}" placeholder="e.g. Send report">
+        </label>
+        <label class="fld">Notes (optional)
+          <textarea id="fNote" rows="2">${t ? esc(t.note || "") : ""}</textarea>
+        </label>
+        <div class="row2">
+          <label class="fld">Category<select id="fCat">${catOpts}</select></label>
+          <label class="fld">Due date
+            <input type="datetime-local" id="fDue" value="${t && t.dueAt ? toInputValue(new Date(t.dueAt)) : defaultDue}">
+          </label>
+        </div>
+        <div class="row2">
+          <label class="fld">Reminder<select id="fRem">${remOpts}</select></label>
+          <label class="fld">Repeat<select id="fRec">${recOpts}</select></label>
+        </div>
+        <button type="submit" class="btn btn-primary">Save</button>
+        ${t ? `<button type="button" class="btn btn-danger-outline" onclick="deleteTask('${t.id}')">Delete Task</button>` : ""}
+      </form>
+    </div>
+  </div>`;
+  setTimeout(() => document.getElementById("fTitle").focus(), 50);
+}
+
+function closeForm() { document.getElementById("modal").innerHTML = ""; }
+
+function submitForm(e, taskId) {
+  e.preventDefault();
+  const title = document.getElementById("fTitle").value.trim();
+  if (!title) return;
+  const dueRaw = document.getElementById("fDue").value;
+  const remRaw = document.getElementById("fRem").value;
+  const data = {
+    title,
+    note: document.getElementById("fNote").value.trim(),
+    categoryId: document.getElementById("fCat").value || null,
+    dueAt: dueRaw ? new Date(dueRaw).toISOString() : null,
+    reminderMin: remRaw === "" ? null : Number(remRaw),
+    recurrence: document.getElementById("fRec").value,
+  };
+  if (taskId) {
+    const t = state.tasks.find(x => x.id === taskId);
+    Object.assign(t, data, { notifiedAt: null });
+  } else {
+    state.tasks.push({
+      ...data, id: uid(), status: "open", doneAt: null, notifiedAt: null,
+      createdAt: new Date().toISOString(),
+    });
+  }
+  save(); closeForm(); render();
+}
+
+function deleteTask(id) {
+  if (!confirm("Delete this task?")) return;
+  state.tasks = state.tasks.filter(t => t.id !== id);
+  save(); closeForm(); render();
+}
+
+/* ---------- notifications (while page is open) ---------- */
+function enableNotify() {
+  Notification.requestPermission().then(() => render());
+}
+function checkReminders() {
+  if (!("Notification" in window) || Notification.permission !== "granted" || state.meta.notifOff) return;
+  const now = Date.now();
+  let fired = false;
+  for (const t of state.tasks) {
+    if (t.status !== "open" || !t.dueAt || t.reminderMin == null || t.notifiedAt) continue;
+    const remindAt = new Date(t.dueAt).getTime() - t.reminderMin * 60000;
+    if (remindAt <= now) {
+      new Notification("⏰ " + t.title, { body: "Due " + fmtDateTime(new Date(t.dueAt)) });
+      t.notifiedAt = new Date().toISOString();
+      fired = true;
+    }
+  }
+  // checklist ที่ตั้งเวลาไว้: ถึงเวลา → รีเซ็ตรายการ + แจ้งเตือนให้ไล่ติ๊ก
+  {
+    const now2 = new Date();
+    const t2 = String(now2.getHours()).padStart(2, "0") + ":" + String(now2.getMinutes()).padStart(2, "0");
+    const k2 = dateKey(now2);
+    for (const cl of state.checklists) {
+      if (!cl.reminder || !cl.reminder.days.includes(now2.getDay())) continue;
+      if (t2 < cl.reminder.time) continue;
+      if (cl.lastNotified === k2) continue;
+      cl.items.forEach(i => { i.checked = false; });
+      cl.lastNotified = k2;
+      new Notification("✅ " + cl.title, {
+        body: cl.items.length
+          ? `${cl.items.length} things to check: ` + cl.items.slice(0, 4).map(i => i.text).join(", ") + (cl.items.length > 4 ? "…" : "")
+          : "Time to run through your checklist",
+      });
+      fired = true;
+    }
+  }
+  // สรุปงานพรุ่งนี้ทุกเย็น (หลัง 18:00 วันละครั้ง) — เตรียมตัวล่วงหน้า
+  const todayKey = dateKey(new Date());
+  if (new Date().getHours() >= 18 && state.meta.lastDigest !== todayKey) {
+    const tmStart = startOfDay(new Date()); tmStart.setDate(tmStart.getDate() + 1);
+    const tmEnd = new Date(tmStart); tmEnd.setDate(tmEnd.getDate() + 1);
+    const tomorrow = state.tasks
+      .filter(t => t.status === "open" && t.dueAt && new Date(t.dueAt) >= tmStart && new Date(t.dueAt) < tmEnd)
+      .sort((a, b) => new Date(a.dueAt) - new Date(b.dueAt));
+    if (tomorrow.length) {
+      const titles = tomorrow.slice(0, 3).map(t => t.title).join(", ");
+      new Notification(`📋 Tomorrow: ${tomorrow.length} task${tomorrow.length > 1 ? "s" : ""}`, {
+        body: titles + (tomorrow.length > 3 ? ` +${tomorrow.length - 3} more` : "") +
+          ` — first at ${fmtTime(new Date(tomorrow[0].dueAt))}`,
+      });
+    }
+    state.meta.lastDigest = todayKey;
+    fired = true;
+  }
+  // เซฟเฉพาะเมื่อมีการเปลี่ยนแปลงจริง — กันแท็บเก่าที่เปิดค้างเขียนทับข้อมูลใหม่
+  if (fired) save();
+}
+setInterval(checkReminders, 30000);
+setInterval(applyTheme, 60000);
+
+/* ---------- export / import ---------- */
+function exportData() {
+  const blob = new Blob([JSON.stringify(state, null, 2)], { type: "application/json" });
+  const a = document.createElement("a");
+  const d = new Date();
+  const p = n => String(n).padStart(2, "0");
+  a.href = URL.createObjectURL(blob);
+  a.download = `solo-task-backup-${d.getFullYear()}${p(d.getMonth()+1)}${p(d.getDate())}.json`;
+  a.click();
+  URL.revokeObjectURL(a.href);
+}
+function importData(input) {
+  const file = input.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = () => {
+    try {
+      const data = JSON.parse(reader.result);
+      if (!Array.isArray(data.tasks) || !Array.isArray(data.categories)) throw new Error("bad format");
+      if (!confirm(`Import ${data.tasks.length} tasks and ${data.categories.length} categories? Current data will be replaced.`)) return;
+      // รับทุก field (รวม routines / checklists / pet-XP) — migrate เติมส่วนที่ไฟล์เก่าไม่มี
+      const imported = migrate(data);
+      for (const k of ["categories", "tasks", "routines", "routineLog", "checklists", "game", "meta", "journal", "pets"]) {
+        state[k] = imported[k];
+      }
+      save(); render();
+      alert("Import complete ✅");
+    } catch (e) {
+      alert("Invalid file — must be a Solo Task export");
+    }
+  };
+  reader.readAsText(file);
+  input.value = "";
+}
+
+/* ---------- init ---------- */
+// Esc ปิด modal + focus trap ภายใน sheet
+document.addEventListener("keydown", (e) => {
+  const overlay = document.querySelector(".overlay");
+  if (!overlay) return;
+  if (e.key === "Escape") { closeForm(); return; }
+  if (e.key === "Tab") {
+    const focusables = [...overlay.querySelectorAll("input, select, textarea, button")]
+      .filter(el => !el.disabled && el.offsetParent !== null);
+    if (!focusables.length) return;
+    const first = focusables[0], last = focusables[focusables.length - 1];
+    if (e.shiftKey && document.activeElement === first) { last.focus(); e.preventDefault(); }
+    else if (!e.shiftKey && document.activeElement === last) { first.focus(); e.preventDefault(); }
+  }
+});
+
+// ถ้าแท็บอื่นแก้ข้อมูล ให้ sync ตาม
+window.addEventListener("storage", (e) => {
+  if (e.key !== stateKey || !e.newValue) return;
+  try {
+    const data = JSON.parse(e.newValue);
+    state.categories = data.categories;
+    state.tasks = data.tasks;
+    render();
+  } catch { /* ข้อมูลไม่ถูกต้อง ไม่ต้องทำอะไร */ }
+});
+
+applyTheme();
+initCloud(); // เชื่อม Supabase ถ้าตั้งค่าไว้ (async — local โหลดไปก่อน)
+const fab = document.getElementById("fabBtn");
+fab.innerHTML = icon("plus", 26);
+fab.onclick = () => {
+  // ปุ่ม + ทำตามบริบท: หน้า Pets = เพิ่มสัตว์เลี้ยง/record, หน้าอื่น = เพิ่ม task
+  if (currentTab === "pets" && !petView) {
+    if (petsView) openRecordForm(petsView, "", petsRecFilter || "checkup");
+    else openPetForm();
+    return;
+  }
+  openForm(null);
+};
+render();
+checkReminders();
+setTimeout(autoCheckin, 1400); // เปิดแอพ (หลัง splash) = check-in วันนี้อัตโนมัติ
+
+// splash แบบเปิดแอพมือถือ แล้วค่อยเผยหน้า login/home
+{
+  const splash = document.getElementById("splash");
+  const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const delay = reduced ? 150 : 1100;
+  setTimeout(() => {
+    splash.classList.add("hide");
+    setTimeout(() => splash.remove(), 400);
+  }, delay);
+}
+</script>
+</body>
+</html>
