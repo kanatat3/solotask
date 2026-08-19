@@ -25,6 +25,10 @@
   }
   html { transition: background .4s ease-out; }
   :focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
+  .sr-only {
+    position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+    overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0;
+  }
   @media (prefers-reduced-motion: reduce) {
     * { transition: none !important; animation: none !important; }
   }
@@ -189,32 +193,59 @@
   }
   .pet-svg { width: 100%; height: 100%; overflow: visible; }
   .pet-emoji.bounce { animation: petBounce .9s cubic-bezier(.22, 1.4, .36, 1); }
-  /* อนิเมชันสัตว์เลี้ยง: ตัวเด้ง กะพริบตา ปีกขยับ ไข่โยก โน้ตลอย ไฟวูบวาบ */
-  .p-body { animation: petBob 2.6s ease-in-out infinite; transform-origin: 50% 85%; }
+  /* อนิเมชันสัตว์เลี้ยง: หายใจ+เด้งเบาๆ, เอียงหัวมองไปมา, กะพริบตา, สะบัดปีก/หาง เป็นครั้งคราว, ไข่โยก, โน้ตลอย, ไฟวูบวาบ */
+  /* ใช้ translate/scale/rotate แบบ property แยก (ไม่ใช่ transform รวม) เพื่อให้ bob + look ทำงานพร้อมกันบน element เดียวได้โดยไม่ตีกัน */
+  .p-body {
+    animation: petBob 2.7s ease-in-out infinite, petLook 7.4s ease-in-out infinite;
+    transform-origin: 50% 85%;
+  }
   @keyframes petBob {
-    0%, 100% { transform: translateY(0) scale(1); }
-    50% { transform: translateY(-2.5px) scale(1.015, .985); }
+    0%, 100% { translate: 0 0; scale: 1 1; }
+    50% { translate: 0 -2.5px; scale: 1.015 .985; }
+  }
+  /* เอียงหัว/ตัวมองไปมาเป็นระยะ เหมือนนกสังเกตสิ่งรอบตัว จังหวะไม่สม่ำเสมอตั้งใจให้ดูไม่เหมือนหุ่นยนต์ */
+  @keyframes petLook {
+    0%, 12%, 100% { rotate: 0deg; }
+    22%, 38% { rotate: -4deg; }
+    50% { rotate: 0deg; }
+    68%, 84% { rotate: 5deg; }
+    94% { rotate: 0deg; }
+  }
+  .p-belly { animation: petBreathe 3.15s ease-in-out infinite; transform-origin: 50% 68%; transform-box: fill-box; }
+  @keyframes petBreathe {
+    0%, 100% { scale: 1 1; }
+    50% { scale: 1.035 1.06; }
   }
   .p-eye { animation: petBlink 4.2s infinite; transform-origin: 50% 52%; transform-box: fill-box; }
   @keyframes petBlink {
-    0%, 93%, 100% { transform: scaleY(1); }
-    95%, 97% { transform: scaleY(.08); }
+    0%, 89%, 100% { transform: scaleY(1); }
+    91%, 93% { transform: scaleY(.08); }
+    94%, 96% { transform: scaleY(1); }
+    97%, 98% { transform: scaleY(.08); }
   }
-  .p-wing { animation: petFlap 3.4s ease-in-out infinite; transform-box: fill-box; }
+  /* ปีกพักนิ่งเป็นส่วนใหญ่ สะบัดสั้นๆ เป็นครั้งคราวแทนกระพือรัวตลอดเวลา */
+  .p-wing { animation: petFlap 5.8s ease-in-out infinite; transform-box: fill-box; }
   .p-wing-l { transform-origin: 90% 15%; }
-  .p-wing-r { transform-origin: 10% 15%; animation-delay: .1s; }
+  .p-wing-r { transform-origin: 10% 15%; animation-delay: .15s; }
   @keyframes petFlap {
-    0%, 74%, 100% { transform: rotate(0deg); }
-    80% { transform: rotate(-16deg); }
-    86% { transform: rotate(4deg); }
-    92% { transform: rotate(-10deg); }
+    0%, 85%, 100% { transform: rotate(0deg); }
+    89% { transform: rotate(-14deg); }
+    93% { transform: rotate(3deg); }
+    96% { transform: rotate(-8deg); }
   }
   .p-wing-r { animation-name: petFlapR; }
   @keyframes petFlapR {
-    0%, 74%, 100% { transform: rotate(0deg); }
-    80% { transform: rotate(16deg); }
-    86% { transform: rotate(-4deg); }
-    92% { transform: rotate(10deg); }
+    0%, 85%, 100% { transform: rotate(0deg); }
+    89% { transform: rotate(14deg); }
+    93% { transform: rotate(-3deg); }
+    96% { transform: rotate(8deg); }
+  }
+  /* หางสะบัดเบาๆ นานๆ ครั้ง */
+  .p-tail { animation: petTailFlick 6.6s ease-in-out infinite; transform-origin: 95% 25%; transform-box: fill-box; }
+  @keyframes petTailFlick {
+    0%, 90%, 100% { rotate: 0deg; }
+    94% { rotate: -7deg; }
+    97% { rotate: 3deg; }
   }
   .p-wobble { animation: petWobble 3s ease-in-out infinite; transform-origin: 50% 90%; }
   @keyframes petWobble {
@@ -478,16 +509,26 @@
     to { opacity: 1; transform: scale(1) translateY(0); }
   }
 
-  /* login */
-  .login-wrap { min-height: 100dvh; display: flex; flex-direction: column; }
-  .login-hero { height: 15rem; overflow: hidden; flex-shrink: 0; }
-  .login-hero svg { width: 100%; height: 100%; display: block; }
-  .login-wrap .login { min-height: 0; flex: 1; justify-content: flex-start; padding-top: 1.75rem; }
-  @media (min-width: 1024px) {
-    .login-wrap { flex-direction: row; }
-    .login-hero { height: auto; flex: 1.1; }
-    .login-wrap .login { flex: 1; justify-content: center; }
+  /* login — บล็อบสีเป็นพื้นหลังเต็มจอ ฟอร์มลอยอยู่บนพื้นหลังตรงๆ ไม่มีการ์ดขาวซ้อน (แบบ reference) */
+  .login-wrap {
+    position: relative; min-height: 100dvh; display: flex; flex-direction: column;
+    align-items: center; padding: 1.5rem; padding-top: max(4rem, 29vh); padding-bottom: 5rem;
   }
+  /* บล็อบมุมบนขวา + คลื่นล่าง แยกเป็นชิ้นยึดมุม/ขอบตัวเอง ขนาดอิง vh (ไม่ใช่ vmax) เพื่อคุมว่ากินพื้นที่กลางจอแค่ไหน
+     ให้คงที่ไม่ว่าจอจะแคบทรงตั้ง (มือถือ) หรือกว้างทรงเตี้ย (เดสก์ท็อป) และเหลือพื้นที่กลางจอโล่งพอให้ตัวหนังสืออ่านได้ */
+  /* absolute (ไม่ใช่ fixed) — ยืดตามความสูงจริงของเนื้อหา คลื่นด้านล่างจะได้อยู่ท้ายเนื้อหาเสมอ
+     แม้ฟอร์มจะยาวเกินจอเดียว (เช่น signup ที่มีช่องเยอะกว่า) ไม่ทับตัวหนังสือท้ายฟอร์ม */
+  .login-hero { position: absolute; inset: 0; z-index: 0; overflow: hidden; }
+  .login-blob-1 {
+    position: absolute; top: -22vh; right: -18vh; width: 46vh; height: 46vh;
+    border-radius: 50%; background: var(--primary);
+  }
+  .login-blob-2 {
+    position: absolute; top: 1vh; right: -3vh; width: 23vh; height: 23vh;
+    border-radius: 50%; background: var(--primary-dark); opacity: .5;
+  }
+  .login-wave { position: absolute; inset: auto 0 0 0; width: 100%; height: 11vh; min-height: 5.5rem; }
+  .login-wave svg { width: 100%; height: 100%; display: block; }
   .setup-q { width: 100%; margin-bottom: .35rem; }
   .setup-label { font-size: .8rem; font-weight: 600; margin-bottom: .5rem; }
   .setup-chips { display: flex; flex-wrap: wrap; gap: .45rem; }
@@ -500,9 +541,15 @@
   .setup-chip:active { transform: scale(.95); }
   .setup-chip.sel-primary { background: var(--primary-soft); border-color: var(--primary); color: var(--primary); }
   .login {
-    min-height: 100dvh; display: flex; flex-direction: column; align-items: center; justify-content: center;
-    padding: 2rem 1.5rem; max-width: 22rem; margin: 0 auto; gap: .75rem;
+    display: flex; flex-direction: column; align-items: center;
+    padding: 2rem 1.5rem; max-width: 22rem; width: 100%; margin: 0 auto; gap: .75rem;
     animation: loginIn .45s cubic-bezier(.16, 1, .3, 1) both;
+  }
+  .login.setup { min-height: 100dvh; justify-content: center; }
+  .login-wrap .login { position: relative; z-index: 1; }
+  /* input มีพื้นทึบของตัวเองอยู่แล้วเลยยังอ่านง่ายแม้ไม่มีการ์ดขาวรองด้านหลัง */
+  .login-wrap .login input, .login-wrap .login .btn-google {
+    box-shadow: 0 2px 10px -4px rgba(0,0,0,.25);
   }
   @keyframes loginIn {
     from { opacity: 0; transform: translateY(22px); }
@@ -516,6 +563,18 @@
   .login .tagline { font-size: .8rem; color: var(--muted); margin-bottom: .75rem; }
   .login input { margin: 0; }
   .login .btn { margin: 0; }
+  .ic-field { position: relative; width: 100%; }
+  .ic-field .ic-lead {
+    position: absolute; left: .9rem; top: 50%; transform: translateY(-50%);
+    color: var(--muted); line-height: 0; pointer-events: none;
+  }
+  .ic-field input { padding-left: 2.6rem; }
+  .ic-field.has-toggle input { padding-right: 2.6rem; }
+  .ic-toggle {
+    position: absolute; right: .6rem; top: 50%; transform: translateY(-50%);
+    background: none; border: none; color: var(--muted); padding: .4rem;
+    display: flex; line-height: 0; cursor: pointer; border-radius: .4rem;
+  }
   .login-or {
     display: flex; align-items: center; gap: .75rem; width: 100%;
     color: var(--muted); font-size: .7rem; margin: .25rem 0;
@@ -824,6 +883,10 @@ const ICONS = {
   sunset: '<path d="M17 18a5 5 0 0 0-10 0"/><line x1="12" y1="9" x2="12" y2="2"/><line x1="4.22" y1="10.22" x2="5.64" y2="11.64"/><line x1="1" y1="18" x2="3" y2="18"/><line x1="21" y1="18" x2="23" y2="18"/><line x1="18.36" y1="11.64" x2="19.78" y2="10.22"/><line x1="23" y1="22" x2="1" y2="22"/><polyline points="16 5 12 9 8 5"/>',
   moon: '<path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>',
   bell: '<path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/>',
+  mail: '<path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22 6 12 13 2 6"/>',
+  lock: '<rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>',
+  eye: '<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>',
+  eyeOff: '<path d="M17.94 17.94A10.94 10.94 0 0 1 12 20c-7 0-11-8-11-8a18.5 18.5 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/>',
 };
 /** คำทักทาย + ไอคอนตามช่วงเวลาจริง */
 function greeting() {
@@ -1392,8 +1455,8 @@ function openSchedule(catId) {
       <div class="setup-label">Days of week</div>
       <div class="day-pills" id="schDays">${dayBtns}</div>
       <div class="row2" style="margin-top:.75rem">
-        <label class="fld">From<input type="time" id="schStart" value="${s.start}"></label>
-        <label class="fld">To<input type="time" id="schEnd" value="${s.end}"></label>
+        <label class="fld">From<input type="time" id="schStart" value="${s.start}" onkeydown="submitOnEnter(event)"></label>
+        <label class="fld">To<input type="time" id="schEnd" value="${s.end}" onkeydown="submitOnEnter(event)"></label>
       </div>
       <button class="btn btn-primary" onclick="saveSchedule()">Save</button>
       ${c.schedule ? `<button class="btn btn-danger-outline" onclick="clearSchedule()">Remove schedule</button>` : ""}
@@ -1504,21 +1567,23 @@ function petSvg(level) {
       4: { // นกรุ่น: หงอน 2 เส้น หน้าเหลืองชัด หางสั้น
         body: "#c9ced9", belly: "#e9ebf0", wing: "#a8b0bf", face: "#fde68a", faceR: 17,
         cheek: "#fb923c", cheekR: 4.4, crest: crest2("#fbbf24"),
-        tail: `<path d="M68 78 q8 6 9 15 l-7 -3 q-4 -5 -7 -9z" fill="#a8b0bf"/>`,
+        tail: `<g class="p-tail"><path d="M68 78 q8 6 9 15 l-7 -3 q-4 -5 -7 -9z" fill="#a8b0bf"/></g>`,
       },
       5: { // ค็อกคาเทลเต็มวัย: หงอน 3 เส้น แก้มส้มกลมใหญ่ หางยาว + ผิวปาก ♪
         body: "#c3c9d4", belly: "#e6e8ee", wing: "#9aa3b3", face: "#fde047", faceR: 19,
         cheek: "#fb923c", cheekR: 5.2, crest: crest3("#facc15") +
           `<text class="p-note" x="79" y="30" font-size="13" fill="#6366f1">♪</text>`,
-        tail: `<path d="M69 76 q11 7 13 21 l-8 -4 q-6 -8 -10 -13z" fill="#9aa3b3"/>
-               <path d="M72 79 q7 6 8 15 l-5 -3 q-3 -6 -6 -9z" fill="#fde047" opacity=".85"/>`,
+        tail: `<g class="p-tail">
+               <path d="M69 76 q11 7 13 21 l-8 -4 q-6 -8 -10 -13z" fill="#9aa3b3"/>
+               <path d="M72 79 q7 6 8 15 l-5 -3 q-3 -6 -6 -9z" fill="#fde047" opacity=".85"/>
+               </g>`,
       },
       6: { // Pearl Tiel: ลายมุกขาว-เทา หงอนฟู
         body: "#e4e7ec", belly: "#f7f8fa", wing: "#c5cbd6", face: "#fef3c7", faceR: 18,
         cheek: "#fdba74", cheekR: 5, crest: crest3("#e5c84f") +
           `<circle cx="30" cy="70" r="2" fill="#fff" opacity=".9"/><circle cx="42" cy="76" r="2" fill="#fff" opacity=".9"/>
            <circle cx="58" cy="76" r="2" fill="#fff" opacity=".9"/><circle cx="70" cy="70" r="2" fill="#fff" opacity=".9"/>`,
-        tail: `<path d="M69 76 q11 7 13 21 l-8 -4 q-6 -8 -10 -13z" fill="#c5cbd6"/>`,
+        tail: `<g class="p-tail"><path d="M69 76 q11 7 13 21 l-8 -4 q-6 -8 -10 -13z" fill="#c5cbd6"/></g>`,
       },
       7: { // Phoenix Tiel: หงอนไฟ หางไฟ
         body: "#fdba74", belly: "#fef0d9", wing: "#f97316", face: "#fde047", faceR: 19,
@@ -1530,7 +1595,7 @@ function petSvg(level) {
     inner = `<g class="p-body">
       ${cfg.tail}
       <ellipse cx="50" cy="60" rx="29" ry="27" fill="${cfg.body}"/>
-      <ellipse cx="50" cy="70" rx="16" ry="12" fill="${cfg.belly}"/>
+      <ellipse class="p-belly" cx="50" cy="70" rx="16" ry="12" fill="${cfg.belly}"/>
       <ellipse cx="50" cy="50" rx="${cfg.faceR}" ry="${cfg.faceR - 2}" fill="${cfg.face}"/>
       <ellipse class="p-wing p-wing-l" cx="23" cy="60" rx="7.5" ry="13" fill="${cfg.wing}"/>
       <ellipse class="p-wing p-wing-r" cx="77" cy="60" rx="7.5" ry="13" fill="${cfg.wing}"/>
@@ -1741,7 +1806,7 @@ function openPetForm(petId) {
           </label>
         </div>
         <label class="fld">Hatch / birth date
-          <input type="date" id="pfHatch" value="${p?.hatchDate || ""}">
+          <input type="date" id="pfHatch" value="${p?.hatchDate || ""}" onkeydown="submitOnEnter(event)">
         </label>
         <label class="fld">Notes (diet, band no., vet clinic…)
           <textarea id="pfNotes" rows="2" maxlength="500">${p ? esc(p.notes || "") : ""}</textarea>
@@ -1751,7 +1816,7 @@ function openPetForm(petId) {
       </form>
     </div>
   </div>`;
-  setTimeout(() => document.getElementById("pfName").focus(), 50);
+  setTimeout(() => document.getElementById("pfName")?.focus(), 50);
 }
 function savePet(e, petId) {
   e.preventDefault();
@@ -1800,7 +1865,7 @@ function openRecordForm(petId, recId, preset) {
       </div>
       <form onsubmit="saveRecord(event, '${petId}', '${recId || ""}')" style="margin-top:.75rem">
         <div class="row2">
-          <label class="fld">Date<input type="date" id="rcDate" required value="${r?.date || dateKey(new Date())}"></label>
+          <label class="fld">Date<input type="date" id="rcDate" required value="${r?.date || dateKey(new Date())}" onkeydown="submitOnEnter(event)"></label>
           <label class="fld" id="rcWeightWrap" style="display:${recFormType === "weight" ? "" : "none"}">Weight (g)
             <input type="number" id="rcGrams" step="0.1" min="0" value="${r?.grams || ""}" placeholder="e.g. 92.5">
           </label>
@@ -2074,7 +2139,7 @@ function renderPetPage() {
       <div class="pp-head"><h1>${esc(pet.name)}</h1><span class="pet-level">Lv ${levelInfo().level}</span></div>
       <div class="pp-bubble">${esc(line)}</div>
       <div class="pp-pet">${petSvg(level)}
-        <span class="pp-spark s1">✦</span><span class="pp-spark s2">✦</span><span class="pp-spark s3">✦</span>
+        <span class="pp-spark s1" aria-hidden="true">✦</span><span class="pp-spark s2" aria-hidden="true">✦</span><span class="pp-spark s3" aria-hidden="true">✦</span>
       </div>
       <div class="pp-stats">
         <div class="pp-stat">
@@ -2122,6 +2187,7 @@ function renderJournal(level, pet) {
       </div>
       <p class="pp-hint">${state.journal.some(j => j.date === today) ? "Noted today ✓" : "How was your day? Tell " + esc(pet.name) + " (+2 XP)"}</p>
       <form class="jr-add" onsubmit="addJournalSubmit(event)">
+        <label class="sr-only" for="jrText">Journal note</label>
         <textarea id="jrText" rows="3" placeholder="Write anything — wins, thoughts, how you feel…" maxlength="1000"></textarea>
         <button class="btn btn-primary" type="submit">Save note</button>
       </form>
@@ -2212,19 +2278,19 @@ function openChecklistForm(clId) {
         <button class="x-btn" aria-label="Close" onclick="closeForm()">✕</button>
       </div>
       <label class="fld">Name
-        <input id="clTitle" required placeholder="e.g. Before leaving the room" value="${cl ? esc(cl.title) : ""}" maxlength="80">
+        <input id="clTitle" required placeholder="e.g. Before leaving the room" value="${cl ? esc(cl.title) : ""}" maxlength="80" onkeydown="submitOnEnter(event)">
       </label>
       <div class="setup-label">Remind on (optional)</div>
       <div class="day-pills" id="clDays">${dayBtns}</div>
       <label class="fld" style="margin-top:.75rem">Time
-        <input type="time" id="clTime" value="${rem.time}">
+        <input type="time" id="clTime" value="${rem.time}" onkeydown="submitOnEnter(event)">
       </label>
       <p class="hint" style="margin:0 0 .75rem">At that time the list resets and you get a notification to run through it.</p>
       <button class="btn btn-primary" onclick="saveChecklist()">Save</button>
       ${cl ? `<button class="btn btn-danger-outline" onclick="closeForm();deleteChecklist('${cl.id}')">Delete checklist</button>` : ""}
     </div>
   </div>`;
-  setTimeout(() => document.getElementById("clTitle").focus(), 50);
+  setTimeout(() => document.getElementById("clTitle")?.focus(), 50);
 }
 
 function saveChecklist() {
@@ -2298,6 +2364,14 @@ function toggleDone(id) {
 }
 
 /* ---------- shared rendering ---------- */
+/** date/time/datetime-local inputs ไม่ submit ฟอร์มเองตอนกด Enter (พฤติกรรม default ของ Chrome) — เลย submit เองแทน
+ * บาง sheet (schedule, checklist) ไม่มี <form> ครอบ ก็กดปุ่ม Save หลักของ sheet นั้นแทน */
+function submitOnEnter(e) {
+  if (e.key !== "Enter") return;
+  e.preventDefault();
+  if (e.target.form) { e.target.form.requestSubmit(); return; }
+  e.target.closest(".sheet")?.querySelector(".btn-primary")?.click();
+}
 function esc(s) {
   return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
 }
@@ -2566,6 +2640,7 @@ function renderHome() {
       <div class="mini-list">
         ${rows || `<span class="mini-empty">Add the things to check off below</span>`}
         <form class="rt-add" onsubmit="addChecklistItemSubmit(event, '${cl.id}')">
+          <label class="sr-only" for="clNew-${cl.id}">Add checklist item</label>
           <input id="clNew-${cl.id}" placeholder="Add an item, e.g. Keys, wallet, charger" maxlength="80">
           <button type="submit" aria-label="Add item">${icon("plus", 15)}</button>
         </form>
@@ -2843,6 +2918,7 @@ function renderSettings() {
       ${routineRows || `<div class="set-row static"><span class="set-label" style="color:var(--muted);font-size:.78rem">Things you do every day — they reset each morning</span></div>`}
       <form class="set-add" onsubmit="addRoutineSubmit(event)">
         <span class="set-ico" style="background:var(--primary-soft);color:var(--primary)">${icon("plus", 14)}</span>
+        <label class="sr-only" for="rtNew">Add a routine</label>
         <input id="rtNew" placeholder="Add a routine, e.g. Drink water" maxlength="80">
         <button class="link-primary" type="submit">Add</button>
       </form>
@@ -2853,6 +2929,7 @@ function renderSettings() {
       ${catRows}
       <form class="set-add" onsubmit="event.preventDefault();addCategory()">
         <span class="set-ico" style="background:var(--primary-soft);color:var(--primary)">${icon("plus", 14)}</span>
+        <label class="sr-only" for="newCatName">New category name</label>
         <input id="newCatName" placeholder="New category e.g. Health">
         <button class="link-primary" type="submit">Add</button>
       </form>
@@ -2946,71 +3023,35 @@ const TABS = [
   ["settings", "gear", "Settings", renderSettings],
 ];
 
+/** ช่องกรอกมีไอคอนนำหน้า (+ ปุ่มโชว์/ซ่อนถ้าเป็นรหัสผ่าน) */
+function icField(iconName, inputHtml, withToggle) {
+  return `<div class="ic-field${withToggle ? " has-toggle" : ""}">
+    <span class="ic-lead">${icon(iconName, 16)}</span>
+    ${inputHtml}
+    ${withToggle ? `<button type="button" class="ic-toggle" aria-label="Show password" onclick="togglePwd(this)">${icon("eye", 16)}</button>` : ""}
+  </div>`;
+}
+function togglePwd(btn) {
+  const input = btn.previousElementSibling;
+  const showing = input.type === "text";
+  input.type = showing ? "password" : "text";
+  btn.innerHTML = icon(showing ? "eye" : "eyeOff", 16);
+  btn.setAttribute("aria-label", showing ? "Show password" : "Hide password");
+}
+
 function renderLogin() {
+  // บล็อบสีโค้งมนเต็มจอ (สไตล์เดียวกับ reference) แต่ใช้โทนสีของแอพเราเอง — ปรับตามธีมกลางวัน/กลางคืนอัตโนมัติผ่าน CSS var
+  // บล็อบมุมบนขวาใช้ div วงกลม CSS ยึดมุม + คลื่นล่างเป็น SVG แถบยึดขอบล่างของตัวเอง — ยังเห็นครบไม่ว่าจอจะทรงตั้งหรือกว้าง
   const hero = `<div class="login-hero" aria-hidden="true">
-    <svg viewBox="0 0 400 300" preserveAspectRatio="xMidYMid slice">
-      <defs>
-        <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0" stop-color="#1e1b6b"/><stop offset=".38" stop-color="#5b4be8"/>
-          <stop offset=".68" stop-color="#a78bfa"/><stop offset=".88" stop-color="#fda4af"/>
-          <stop offset="1" stop-color="#fcd34d"/>
-        </linearGradient>
-        <radialGradient id="glow" cx=".5" cy=".5" r=".5">
-          <stop offset="0" stop-color="#fef3c7" stop-opacity=".95"/>
-          <stop offset=".45" stop-color="#fcd34d" stop-opacity=".5"/>
-          <stop offset="1" stop-color="#fcd34d" stop-opacity="0"/>
-        </radialGradient>
-        <linearGradient id="m1" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0" stop-color="#7c6cf5"/><stop offset="1" stop-color="#5b4be8"/>
-        </linearGradient>
-        <linearGradient id="m2" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0" stop-color="#4c3fd6"/><stop offset="1" stop-color="#37309e"/>
-        </linearGradient>
-        <linearGradient id="m3" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0" stop-color="#2f2a8f"/><stop offset="1" stop-color="#1e1b6b"/>
-        </linearGradient>
-        <linearGradient id="lake" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0" stop-color="#c4b5fd"/><stop offset="1" stop-color="#4338ca"/>
-        </linearGradient>
-      </defs>
-      <rect width="400" height="300" fill="url(#sky)"/>
-      <circle cx="200" cy="176" r="120" fill="url(#glow)"/>
-      <circle cx="200" cy="176" r="30" fill="#fef3c7"/>
-      <circle cx="200" cy="176" r="30" fill="#fcd34d" opacity=".6"/>
-      <g stroke="#e0e7ff" stroke-width="1.4" fill="none" stroke-linecap="round" opacity=".8">
-        <path d="M96 78 q5 -6 10 0 q5 -6 10 0"/>
-        <path d="M300 58 q4 -5 8 0 q4 -5 8 0"/>
-        <path d="M132 44 q4 -5 8 0 q4 -5 8 0"/>
-      </g>
-      <circle cx="62" cy="40" r="1.4" fill="#fff" opacity=".9"/>
-      <circle cx="342" cy="26" r="1.1" fill="#fff" opacity=".7"/>
-      <circle cx="258" cy="40" r="1.2" fill="#fff" opacity=".8"/>
-      <circle cx="30" cy="86" r="1" fill="#fff" opacity=".6"/>
-      <path d="M0 190 L70 120 L128 178 L180 138 L240 196 L400 150 V300 H0 Z" fill="url(#m3)" opacity=".9"/>
-      <path d="M0 214 L96 152 L170 210 L260 158 L336 214 L400 186 V300 H0 Z" fill="url(#m2)"/>
-      <path d="M0 244 L84 200 L200 240 L320 198 L400 232 V300 H0 Z" fill="url(#m1)"/>
-      <rect y="252" width="400" height="48" fill="url(#lake)" opacity=".95"/>
-      <g opacity=".55" stroke="#fef3c7" stroke-linecap="round">
-        <line x1="184" y1="262" x2="216" y2="262" stroke-width="2.5"/>
-        <line x1="176" y1="270" x2="224" y2="270" stroke-width="2"/>
-        <line x1="188" y1="278" x2="212" y2="278" stroke-width="1.6"/>
-        <line x1="182" y1="286" x2="218" y2="286" stroke-width="1.2"/>
-      </g>
-      <g transform="translate(46 84) rotate(-5)">
-        <rect width="112" height="32" rx="9" fill="#ffffff" opacity=".95"/>
-        <circle cx="17" cy="16" r="7.5" fill="#10b981"/>
-        <path d="M13.8 16 l2.3 2.3 4.6-5" stroke="#fff" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
-        <rect x="30" y="10" width="62" height="5" rx="2.5" fill="#c7d2fe"/>
-        <rect x="30" y="19" width="42" height="4" rx="2" fill="#e0e7ff"/>
-      </g>
-      <g transform="translate(252 96) rotate(4)">
-        <rect width="112" height="32" rx="9" fill="#ffffff" opacity=".9"/>
-        <circle cx="17" cy="16" r="7.5" fill="#6366f1"/>
-        <path d="M13.8 16 l2.3 2.3 4.6-5" stroke="#fff" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
-        <rect x="30" y="10" width="54" height="5" rx="2.5" fill="#c7d2fe"/>
-        <rect x="30" y="19" width="64" height="4" rx="2" fill="#e0e7ff"/>
-      </g>
-    </svg>
+    <div class="login-blob-1"></div>
+    <div class="login-blob-2"></div>
+    <div class="login-wave">
+      <svg viewBox="0 0 400 160" preserveAspectRatio="none">
+        <path d="M0 160 V70 Q100 10 220 60 T400 40 V160 Z" fill="var(--primary-dark)"/>
+        <path d="M0 78 Q100 18 220 66 T400 46" fill="none" stroke="var(--primary)" stroke-width="4" opacity=".7" stroke-linecap="round"/>
+        <g opacity=".95" transform="translate(296 10)">${petSvg(3).replace('class="pet-svg"', 'width="74" height="74"')}</g>
+      </svg>
+    </div>
   </div>`;
 
   if (authView === "setup") {
@@ -3046,9 +3087,9 @@ function renderLogin() {
     return `<div class="login-wrap">${hero}<div class="login">
       <h1>Create account</h1>
       <p class="tagline">Your day, organised — work, life and routines</p>
-      <input id="suName" placeholder="Your name" autocomplete="name">
-      <input id="suEmail" type="email" placeholder="Email" autocomplete="email">
-      <input id="suPass" type="password" placeholder="Password" autocomplete="new-password">
+      ${icField("user", `<input id="suName" placeholder="Your name" autocomplete="name">`)}
+      ${icField("mail", `<input id="suEmail" type="email" placeholder="Email" autocomplete="email">`)}
+      ${icField("lock", `<input id="suPass" type="password" placeholder="Password" autocomplete="new-password">`, true)}
       <button class="btn btn-primary" onclick="doSignup()">Sign up</button>
       <div class="login-or">or</div>
       <button class="btn btn-google" onclick="doLogin('google')">${GOOGLE_G} Continue with Google</button>
@@ -3062,8 +3103,8 @@ function renderLogin() {
   return `<div class="login-wrap">${hero}<div class="login">
     <h1>Welcome back</h1>
     <p class="tagline">Track your day — work, life and routines</p>
-    <input id="loginEmail" type="email" placeholder="Email" autocomplete="email">
-    <input id="loginPass" type="password" placeholder="Password" autocomplete="current-password">
+    ${icField("mail", `<input id="loginEmail" type="email" placeholder="Email" autocomplete="email">`)}
+    ${icField("lock", `<input id="loginPass" type="password" placeholder="Password" autocomplete="current-password">`, true)}
     <button class="btn btn-primary" onclick="doLogin('email')">Sign in</button>
     <div class="login-or">or</div>
     <button class="btn btn-google" onclick="doLogin('google')">${GOOGLE_G} Continue with Google</button>
@@ -3181,7 +3222,7 @@ function openForm(taskId) {
         <div class="row2">
           <label class="fld">Category<select id="fCat">${catOpts}</select></label>
           <label class="fld">Due date
-            <input type="datetime-local" id="fDue" value="${t && t.dueAt ? toInputValue(new Date(t.dueAt)) : defaultDue}">
+            <input type="datetime-local" id="fDue" value="${t && t.dueAt ? toInputValue(new Date(t.dueAt)) : defaultDue}" onkeydown="submitOnEnter(event)">
           </label>
         </div>
         <div class="row2">
@@ -3193,7 +3234,7 @@ function openForm(taskId) {
       </form>
     </div>
   </div>`;
-  setTimeout(() => document.getElementById("fTitle").focus(), 50);
+  setTimeout(() => document.getElementById("fTitle")?.focus(), 50);
 }
 
 function closeForm() { document.getElementById("modal").innerHTML = ""; }
