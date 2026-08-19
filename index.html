@@ -4,6 +4,12 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Solo Task">
+<meta name="theme-color" content="#6366f1">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="icon" href="icon-192.png">
 <title>Solo Task</title>
 <style>
   /* กฎสี 60-30-10: 60% พื้นหลังตามช่วงเวลา · 30% พื้นผิวการ์ด/เมนู · 10% สี accent (indigo) */
@@ -656,6 +662,13 @@
   .x-btn { background: none; border: none; font-size: 1.25rem; color: var(--muted); cursor: pointer; }
 
   label.fld { display: block; font-size: .7rem; color: var(--muted); margin-bottom: .75rem; }
+  label.fld-check {
+    display: flex; align-items: center; gap: .5rem; font-size: .8rem; color: var(--fg);
+    margin-bottom: .75rem; cursor: pointer;
+  }
+  label.fld-check input[type="checkbox"] {
+    width: 1.15rem; height: 1.15rem; margin: 0; accent-color: var(--primary); flex-shrink: 0; cursor: pointer;
+  }
   input, select, textarea, .btn { font-family: inherit; font-size: .875rem; color: var(--fg); }
   input, select, textarea {
     width: 100%; background: var(--card); border: 1px solid var(--border);
@@ -1009,6 +1022,8 @@ function migrate(s) {
   // สัตว์เลี้ยงจริงที่บ้าน: [{id, name, species, sex, hatchDate, notes, records: [...]}]
   // record: {id, type: checkup|blood|treatment|med|weight|note, date, title, details, values: [{k,v}], grams}
   if (!Array.isArray(s.pets)) s.pets = [];
+  // task แบบช่วงวัน (range): endDate = "YYYY-MM-DD" | null — งานที่กินหลายวัน เช่น ทริปทำงาน
+  s.tasks.forEach(t => { if (t.endDate === undefined) t.endDate = null; });
   // เก็บ log แค่ 30 วันล่าสุด
   const cutoff = new Date(); cutoff.setDate(cutoff.getDate() - 30);
   for (const k of Object.keys(s.routineLog)) {
@@ -2350,8 +2365,15 @@ function toggleDone(id) {
   if (nowDone && t.recurrence !== "none" && t.dueAt) {
     const next = nextDueDate(new Date(t.dueAt), t.recurrence);
     if (next) {
+      // งานแบบช่วงวัน (range) ที่ทำซ้ำ — เลื่อน endDate ตามไปด้วยเท่าจำนวนวันเดิม เพื่อคงความยาวช่วงเท่าเดิม
+      let nextEndDate = null;
+      if (t.endDate) {
+        const spanDays = Math.round((new Date(t.endDate + "T00:00:00") - startOfDay(new Date(t.dueAt))) / 86400000);
+        const nextEnd = new Date(next); nextEnd.setDate(nextEnd.getDate() + spanDays);
+        nextEndDate = dateKey(nextEnd);
+      }
       state.tasks.push({
-        ...t, id: uid(), dueAt: next.toISOString(),
+        ...t, id: uid(), dueAt: next.toISOString(), endDate: nextEndDate,
         status: "open", doneAt: null, notifiedAt: null,
         createdAt: new Date().toISOString(),
       });
@@ -2380,7 +2402,9 @@ function catById(id) { return state.categories.find(c => c.id === id); }
 function taskHtml(t, hideCat) {
   const cat = catById(t.categoryId);
   const due = t.dueAt ? new Date(t.dueAt) : null;
-  const overdue = t.status === "open" && due && due.getTime() < Date.now();
+  const span = taskSpan(t);
+  const isRange = isRangeTask(t);
+  const overdue = t.status === "open" && span && span.end.getTime() < startOfDay(new Date()).getTime();
   return `<div class="task ${t.status === "done" ? "is-done" : ""} ${t.id === lastToggled ? "just-done" : ""}" onclick="toggleDone('${t.id}')"
     role="button" tabindex="0"
     onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();toggleDone('${t.id}')}"
@@ -2389,7 +2413,7 @@ function taskHtml(t, hideCat) {
     <div class="task-body">
       <div class="task-title ${t.status === "done" ? "done" : ""}">${esc(t.title)}</div>
       <div class="task-meta">
-        ${due ? `<span class="${overdue ? "overdue" : ""}">${fmtDateTime(due)}</span>` : ""}
+        ${due ? `<span class="${overdue ? "overdue" : ""}">${isRange ? icon("calendar", 11) + " " : ""}${fmtSpan(t)}</span>` : ""}
         ${t.recurrence !== "none" ? `<span>${icon("repeat", 11)} ${RECURRENCE_LABELS[t.recurrence]}</span>` : ""}
         ${cat && !hideCat ? `<span class="chip" style="background:color-mix(in srgb, ${cat.color} 16%, var(--card));color:color-mix(in srgb, ${cat.color} 55%, var(--fg))">${esc(cat.name)}</span>` : ""}
       </div>
@@ -2412,10 +2436,32 @@ function sortByDue(tasks) {
   return [...tasks].sort((a, b) => new Date(a.dueAt || 0) - new Date(b.dueAt || 0));
 }
 
+/* ---------- multi-day (range) tasks ---------- */
+function isRangeTask(t) {
+  return !!(t.dueAt && t.endDate && t.endDate !== dateKey(new Date(t.dueAt)));
+}
+/** วันเริ่ม/จบของ task (ทั้งคู่เป็น Date เที่ยงคืนของวันนั้น) — task ปกติ start=end=วันครบกำหนด */
+function taskSpan(t) {
+  if (!t.dueAt) return null;
+  const start = startOfDay(new Date(t.dueAt));
+  const end = t.endDate ? startOfDay(new Date(t.endDate + "T00:00:00")) : start;
+  return end < start ? { start, end: start } : { start, end };
+}
+/** อ่านง่าย: "Aug 20" ปกติ, "Aug 20 – Aug 25" ถ้าเป็นช่วง */
+function fmtSpanDate(d) {
+  return MONTHS_SHORT[d.getMonth()] + " " + d.getDate();
+}
+function fmtSpan(t) {
+  const span = taskSpan(t);
+  if (!span) return "";
+  if (!isRangeTask(t)) return fmtDateTime(new Date(t.dueAt));
+  return `${fmtSpanDate(span.start)} – ${fmtSpanDate(span.end)}`;
+}
+
 /* ---------- views ---------- */
 let todayCat = null; // null = overview, "none" = no-category group, otherwise category id
 
-/** งานของ "วันนี้": เลยกำหนด, ครบกำหนดวันนี้, ไม่มีกำหนด, หรือเสร็จแล้ววันนี้ */
+/** งานของ "วันนี้": เลยกำหนด(ยังไม่จบช่วง), ช่วง/วันนี้อยู่ในกำหนด, ไม่มีกำหนด, หรือเสร็จแล้ววันนี้ */
 function todayTasksOf(catKey) {
   const todayStart = startOfDay(new Date());
   return state.tasks.filter(t => {
@@ -2424,7 +2470,9 @@ function todayTasksOf(catKey) {
       : t.categoryId === catKey;
     if (!inCat) return false;
     if (t.status === "done") return t.doneAt && isToday(new Date(t.doneAt));
-    return !t.dueAt || new Date(t.dueAt) < todayStart || isToday(new Date(t.dueAt));
+    if (!t.dueAt) return true;
+    const span = taskSpan(t);
+    return span.end < todayStart || (span.start <= todayStart && todayStart <= span.end);
   });
 }
 
@@ -2477,16 +2525,18 @@ const MINI_LIMIT = 4;
 
 function miniTaskHtml(t) {
   const due = t.dueAt ? new Date(t.dueAt) : null;
-  const overdue = t.status === "open" && due && due.getTime() < Date.now();
+  const span = taskSpan(t);
+  const isRange = isRangeTask(t);
+  const overdue = t.status === "open" && span && span.end.getTime() < startOfDay(new Date()).getTime();
   const time = due
-    ? (due.getHours() !== 0 || due.getMinutes() !== 0 ? fmtTime(due) : fmtDate(due))
+    ? (isRange ? fmtSpan(t) : (due.getHours() !== 0 || due.getMinutes() !== 0 ? fmtTime(due) : fmtDate(due)))
     : "";
   return `<button class="mini-task ${t.status === "done" ? "done" : ""} ${t.id === lastToggled ? "just-done" : ""}"
     onclick="toggleDone('${t.id}')"
     aria-label="${esc(t.title)} — ${t.status === "done" ? "done, press to reopen" : "press to mark as done"}">
     <span class="mini-dot">${t.status === "done" ? "✓" : ""}</span>
     <span class="mini-title">${esc(t.title)}
-      ${time ? `<span class="mini-time ${overdue ? "overdue" : ""}">${overdue && due ? fmtDateTime(due) : time}</span>` : ""}
+      ${time ? `<span class="mini-time ${overdue ? "overdue" : ""}">${overdue && due && !isRange ? fmtDateTime(due) : time}</span>` : ""}
     </span>
   </button>`;
 }
@@ -2599,10 +2649,11 @@ function renderHome() {
       ${tomorrowTasks.slice(0, 4).map(t => {
         const due = new Date(t.dueAt);
         const cat = catById(t.categoryId);
+        const timeLabel = isRangeTask(t) ? fmtSpan(t) : fmtTime(due);
         return `<div class="mini-task" style="cursor:default">
           <span class="mini-dot" style="border-style:dashed"></span>
           <span class="mini-title">${esc(t.title)}
-            <span class="mini-time">${fmtTime(due)}${cat ? " · " + esc(cat.name) : ""}</span>
+            <span class="mini-time">${timeLabel}${cat ? " · " + esc(cat.name) : ""}</span>
           </span>
         </div>`;
       }).join("")}
@@ -2682,6 +2733,11 @@ function renderHome() {
     <div class="card"><div class="week-chart">${weekChart}</div></div>`;
 }
 
+/** เมื่อกดเข้าหมวดหมู่จาก Home: "today" = เฉพาะที่เกี่ยวกับวันนี้ (ค่าตั้งต้นเดิม), "all" = ทุก task ในหมวดไม่ว่าวันไหน */
+let todayDetailScope = "all";
+function allTasksOf(catKey) {
+  return state.tasks.filter(t => catKey === "none" ? (!t.categoryId || !catById(t.categoryId)) : t.categoryId === catKey);
+}
 function renderTodayDetail() {
   const isNone = todayCat === "none";
   const cat = isNone ? null : catById(todayCat);
@@ -2689,20 +2745,27 @@ function renderTodayDetail() {
   const name = isNone ? "No category" : cat.name;
   const color = isNone ? "var(--muted)" : cat.color;
 
-  const tasks = todayTasksOf(todayCat);
+  const tasks = todayDetailScope === "today" ? todayTasksOf(todayCat) : allTasksOf(todayCat);
   const open = sortByDue(tasks.filter(t => t.status === "open"));
-  const done = tasks.filter(t => t.status === "done");
+  const done = sortByDue(tasks.filter(t => t.status === "done")).reverse();
 
   const catIcon = isNone ? "tag" : (cat.icon || "tag");
+  const scopeToggle = `<div class="cal-seg" role="tablist" style="margin-bottom:.75rem">
+    ${["today", "all"].map(s => `<button role="tab" aria-selected="${todayDetailScope === s}"
+      class="cal-seg-btn ${todayDetailScope === s ? "sel" : ""}"
+      onclick="todayDetailScope='${s}';render()">${s === "today" ? "Today" : "All"}</button>`).join("")}
+  </div>`;
+  const emptyMsg = todayDetailScope === "today" ? "Nothing due today in this category" : "No tasks in this category yet";
   return `<button class="back-btn" onclick="goHome()">${icon("left", 15)} Home</button>
-    <div class="page-head" style="margin-bottom:.75rem">
+    <div class="page-head" style="margin-bottom:.5rem">
       <h1 class="cat-head" style="font-size:1.25rem">
         <span class="cat-ico" style="background:color-mix(in srgb, ${color} 16%, var(--card));color:color-mix(in srgb, ${color} 55%, var(--fg))">${icon(catIcon, 15)}</span>
         ${esc(name)}</h1>
     </div>
-    ${open.length === 0 && done.length === 0 ? `<p class="empty">No tasks today</p>` : ""}
+    ${scopeToggle}
+    ${open.length === 0 && done.length === 0 ? `<p class="empty">${emptyMsg}</p>` : ""}
     ${open.map(t => taskHtml(t, true)).join("")}
-    ${done.length ? `<h2 class="section-title">Done today</h2>` + done.map(t => taskHtml(t, true)).join("") : ""}`;
+    ${done.length ? `<h2 class="section-title">Done</h2>` + done.map(t => taskHtml(t, true)).join("") : ""}`;
 }
 
 function renderCalendar() {
@@ -2711,12 +2774,20 @@ function renderCalendar() {
   const gridStart = new Date(first);
   gridStart.setDate(1 - first.getDay());
 
-  // เตรียม map วัน -> tasks (เฉพาะที่มี due)
+  // เตรียม map วัน -> tasks (เฉพาะที่มี due) — งานแบบช่วงวัน (range) จะถูกใส่ในทุกวันที่ครอบคลุม ไม่ใช่แค่วันเริ่ม
   const byDay = {};
+  const MAX_SPAN_DAYS = 60; // กันช่วงวันยาวผิดปกติทำให้ค้าง
   for (const t of state.tasks) {
     if (!t.dueAt) continue;
-    const k = dateKey(new Date(t.dueAt));
-    (byDay[k] = byDay[k] || []).push(t);
+    const span = taskSpan(t);
+    const d = new Date(span.start);
+    let n = 0;
+    while (d <= span.end && n < MAX_SPAN_DAYS) {
+      const k = dateKey(d);
+      (byDay[k] = byDay[k] || []).push(t);
+      d.setDate(d.getDate() + 1);
+      n++;
+    }
   }
 
   const selDate = new Date(calSelected + "T00:00:00");
@@ -2782,10 +2853,11 @@ function renderCalendar() {
             const cat = catById(t.categoryId);
             const col = cat ? cat.color : "#94a3b8";
             const due = new Date(t.dueAt);
+            const label = isRangeTask(t) ? fmtSpan(t) : fmtTime(due);
             return `<button class="wk-item ${t.status === "done" ? "done" : ""}" onclick="toggleDone('${t.id}')">
               <span class="cal-dot" style="background:${col}"></span>
               <span class="wk-title">${esc(t.title)}</span>
-              <span class="wk-time">${fmtTime(due)}</span>
+              <span class="wk-time">${label}</span>
             </button>`;
           }).join("") : `<span class="mini-empty">—</span>`}
         </div>
@@ -3221,10 +3293,17 @@ function openForm(taskId) {
         </label>
         <div class="row2">
           <label class="fld">Category<select id="fCat">${catOpts}</select></label>
-          <label class="fld">Due date
+          <label class="fld"><span id="fDueLabelText">${t?.endDate ? "Start date" : "Due date"}</span>
             <input type="datetime-local" id="fDue" value="${t && t.dueAt ? toInputValue(new Date(t.dueAt)) : defaultDue}" onkeydown="submitOnEnter(event)">
           </label>
         </div>
+        <label class="fld-check">
+          <input type="checkbox" id="fRangeOn" ${t?.endDate ? "checked" : ""} onchange="toggleFormRange()">
+          Multi-day task (spans a date range)
+        </label>
+        <label class="fld" id="fEndWrap" style="display:${t?.endDate ? "" : "none"}">End date
+          <input type="date" id="fEnd" value="${t?.endDate || ""}" onkeydown="submitOnEnter(event)">
+        </label>
         <div class="row2">
           <label class="fld">Reminder<select id="fRem">${remOpts}</select></label>
           <label class="fld">Repeat<select id="fRec">${recOpts}</select></label>
@@ -3237,6 +3316,18 @@ function openForm(taskId) {
   setTimeout(() => document.getElementById("fTitle")?.focus(), 50);
 }
 
+/** สลับโหมด multi-day: โชว์/ซ่อนช่อง End date + เปลี่ยน label ช่องแรกเป็น "Start date" */
+function toggleFormRange() {
+  const on = document.getElementById("fRangeOn").checked;
+  document.getElementById("fEndWrap").style.display = on ? "" : "none";
+  document.getElementById("fDueLabelText").textContent = on ? "Start date" : "Due date";
+  if (on && !document.getElementById("fEnd").value) {
+    // ตั้งค่าเริ่มต้น End date = วันเดียวกับ Due date ให้กรอกต่อง่ายๆ
+    const dueVal = document.getElementById("fDue").value;
+    if (dueVal) document.getElementById("fEnd").value = dueVal.slice(0, 10);
+  }
+}
+
 function closeForm() { document.getElementById("modal").innerHTML = ""; }
 
 function submitForm(e, taskId) {
@@ -3245,11 +3336,18 @@ function submitForm(e, taskId) {
   if (!title) return;
   const dueRaw = document.getElementById("fDue").value;
   const remRaw = document.getElementById("fRem").value;
+  const rangeOn = document.getElementById("fRangeOn").checked;
+  const endRaw = rangeOn ? document.getElementById("fEnd").value : "";
+  if (rangeOn && endRaw && dueRaw && endRaw < dueRaw.slice(0, 10)) {
+    showToast("❌ End date can't be before the start date");
+    return;
+  }
   const data = {
     title,
     note: document.getElementById("fNote").value.trim(),
     categoryId: document.getElementById("fCat").value || null,
     dueAt: dueRaw ? new Date(dueRaw).toISOString() : null,
+    endDate: (rangeOn && dueRaw && endRaw) ? endRaw : null,
     reminderMin: remRaw === "" ? null : Number(remRaw),
     recurrence: document.getElementById("fRec").value,
   };
@@ -3330,6 +3428,13 @@ function checkReminders() {
 }
 setInterval(checkReminders, 30000);
 setInterval(applyTheme, 60000);
+
+/* ---------- PWA install (installed home-screen app = notifications work on iOS, more reliable on Android) ---------- */
+if ("serviceWorker" in navigator) {
+  window.addEventListener("load", () => {
+    navigator.serviceWorker.register("sw.js").catch(() => {});
+  });
+}
 
 /* ---------- export / import ---------- */
 function exportData() {
