@@ -10,24 +10,33 @@
 <link rel="manifest" href="manifest.json">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="icon" href="icon-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;600;700;800&display=swap">
 <title>Solo Task</title>
 <style>
   /* กฎสี 60-30-10: 60% พื้นหลังตามช่วงเวลา · 30% พื้นผิวการ์ด/เมนู · 10% สี accent (indigo) */
   :root, :root[data-theme="day"] {
-    /* กลางวัน: พื้นเหลืองอบอุ่น */
-    --bg: #faf1da; --fg: #2d2416; --card: #fffdf7; --border: #eaddbd;
-    --muted: #77684a; --primary: #6366f1; --primary-dark: #4f46e5;
-    --primary-soft: #eef0ff;
+    /* กลางวัน: พื้นเทาอมฟ้าอ่อนสะอาดๆ การ์ดขาว hero สี indigo เข้ม (แบบ reference) */
+    --bg: #f3f4f9; --fg: #15172b; --card: #ffffff; --border: #e5e7f0; --edge: transparent;
+    --muted: #676c86; --primary: #6366f1; --primary-dark: #4f46e5;
+    --primary-soft: #eceefe;
+    --hero: #6366f1; --hero-2: #7c6cf5; --hero-fg: #ffffff;
     --danger: #ef4444; --danger-text: #c2410c; --success: #059669;
     --switch-on: #0f8a3d;
+    --shadow: 0 1px 2px rgba(21, 23, 43, .04), 0 8px 24px -16px rgba(21, 23, 43, .16);
+    --r-lg: 1.5rem; --r-md: 1.15rem; --r-sm: .8rem;
   }
   :root[data-theme="night"] {
-    /* กลางคืน: น้ำเงินเข้ม */
-    --bg: #0b1630; --fg: #edf2fc; --card: #17244a; --border: #2a3a63;
-    --muted: #9daecd; --primary: #818cf8; --primary-dark: #6366f1;
-    --primary-soft: #2b3170;
+    /* กลางคืน: น้ำเงินเข้ม การ์ดมีขอบบางๆ แทนเงา */
+    --bg: #0e1020; --fg: #eef0fb; --card: #181b30; --border: #2a2e4a; --edge: var(--border);
+    --muted: #a3a8c6; --primary: #818cf8; --primary-dark: #6366f1;
+    --primary-soft: #272b52;
+    --hero: #4338ca; --hero-2: #5b4bd6; --hero-fg: #ffffff;
     --danger: #ef4444; --danger-text: #fca5a5; --success: #34d399;
     --switch-on: #34c759;
+    --shadow: none;
+    --r-lg: 1.5rem; --r-md: 1.15rem; --r-sm: .8rem;
   }
   html { transition: background .4s ease-out; }
   :focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
@@ -69,17 +78,18 @@
   .nav-btn.active .ico { transform: translateY(-1px) scale(1.08); }
   * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
   body {
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-    background: var(--bg); color: var(--fg); min-height: 100dvh;
+    font-family: "Manrope", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    background: var(--bg); color: var(--fg); min-height: 100dvh; font-weight: 500;
+    -webkit-font-smoothing: antialiased;
   }
-  .app { max-width: 28rem; margin: 0 auto; padding-bottom: 5.5rem; }
+  .app { max-width: 28rem; margin: 0 auto; padding-bottom: 6.5rem; }
   .page { padding: 1rem; }
-  h1 { font-size: 1.5rem; margin-bottom: 1rem; }
+  h1 { font-size: 1.55rem; font-weight: 800; letter-spacing: -.02em; margin-bottom: 1rem; text-wrap: balance; }
   .page-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 1rem; }
   .page-head h1 { margin-bottom: 0; }
   h2.section-title, .section-title {
-    font-size: .7rem; font-weight: 600; text-transform: uppercase; letter-spacing: .05em;
-    color: var(--muted); margin: 1.1rem 0 .5rem;
+    font-size: 1.02rem; font-weight: 800; letter-spacing: -.01em;
+    color: var(--fg); margin: 1.5rem 0 .65rem;
   }
   .empty { text-align: center; color: var(--muted); font-size: .875rem; margin-top: 4rem; }
   .cat-head { display: flex; align-items: center; gap: .4rem; }
@@ -89,16 +99,23 @@
   .today-date { font-size: .8rem; color: var(--muted); margin: -0.75rem 0 1rem; }
   .ov-grid { display: grid; grid-template-columns: 1fr 1fr; gap: .6rem; align-items: start; }
   .ov-card {
-    background: var(--card); border: 1px solid var(--border); border-radius: .9rem;
-    padding: .75rem; display: flex; flex-direction: column; gap: .5rem;
-    color: var(--fg); position: relative;
+    background: var(--card); border: 1px solid var(--edge); border-radius: var(--r-md);
+    padding: .9rem; display: flex; flex-direction: column; gap: .55rem;
+    color: var(--fg); position: relative; box-shadow: var(--shadow); min-width: 0;
   }
-  .ov-head { display: flex; align-items: center; gap: .45rem; font-size: .78rem; font-weight: 600; min-width: 0; }
+  .ov-head { display: flex; align-items: center; gap: .55rem; font-size: .86rem; font-weight: 700; min-width: 0; }
   .ov-head .name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .cat-ico {
-    flex-shrink: 0; width: 1.8rem; height: 1.8rem; border-radius: .5rem;
+    flex-shrink: 0; width: 2rem; height: 2rem; border-radius: .65rem;
     display: flex; align-items: center; justify-content: center;
   }
+  /* วงแหวน progress รอบไอคอนหมวด (แบบ reference Habitual) */
+  .cat-ring { position: relative; flex-shrink: 0; width: 2.6rem; height: 2.6rem; display: flex; align-items: center; justify-content: center; }
+  .cat-ring svg.ring { position: absolute; inset: 0; width: 100%; height: 100%; transform: rotate(-90deg); }
+  .cat-ring svg.ring circle { fill: none; stroke-width: 3; }
+  .cat-ring svg.ring .ring-track { stroke: var(--border); }
+  .cat-ring svg.ring .ring-fill { stroke-linecap: round; transition: stroke-dashoffset .45s cubic-bezier(.22, 1, .36, 1); }
+  .cat-ring .cat-ico { width: 1.7rem; height: 1.7rem; border-radius: 50%; }
   .ov-more {
     flex-shrink: 0; background: none; border: none; color: var(--muted); cursor: pointer;
     width: 2.75rem; height: 2.75rem; margin: -.65rem -.65rem -.65rem 0;
@@ -111,9 +128,9 @@
   .ov-done-all { color: var(--success); font-weight: 600; }
   .mini-list { display: flex; flex-direction: column; }
   .mini-task {
-    display: flex; align-items: flex-start; gap: .4rem;
-    padding: .35rem 0; background: none; border: none; text-align: left; width: 100%;
-    font-family: inherit; font-size: .74rem; color: var(--fg); cursor: pointer;
+    display: flex; align-items: flex-start; gap: .5rem;
+    padding: .38rem 0; background: none; border: none; text-align: left; width: 100%;
+    font-family: inherit; font-size: .8rem; font-weight: 600; color: var(--fg); cursor: pointer;
   }
   .mini-task:active { opacity: .6; }
   .mini-dot {
@@ -166,12 +183,59 @@
   .day-pill:active { transform: scale(.9); }
   .day-pill.sel { background: var(--primary); border-color: var(--primary); color: #fff; }
 
-  /* pet + streak card */
-  .pet-card {
-    display: flex; align-items: center; flex-wrap: wrap; gap: .85rem;
-    background: var(--card); border: 1px solid var(--border); border-radius: 1rem;
-    padding: .9rem 1rem; margin: .9rem 0 .25rem;
+  /* ---- Home hero: แถบสี indigo เต็มความกว้าง + แผ่นเนื้อหาโค้งซ้อนขึ้นมา (แบบ reference) ---- */
+  .hero {
+    margin: -1rem -1rem 0; padding: calc(1.1rem + env(safe-area-inset-top)) 1.25rem 3.4rem;
+    background: linear-gradient(160deg, var(--hero) 0%, var(--hero-2) 100%);
+    color: var(--hero-fg); position: relative; overflow: hidden;
   }
+  .hero::before { /* วงกลมจางๆ มุมขวาบน ให้มีมิติแบบ reference */
+    content: ""; position: absolute; top: -7rem; right: -5rem; width: 16rem; height: 16rem;
+    border-radius: 50%; background: rgba(255, 255, 255, .08);
+  }
+  .hero > * { position: relative; }
+  .hero-top { display: flex; align-items: center; justify-content: space-between; gap: .75rem; margin-bottom: 1.1rem; }
+  .hero-date { display: flex; align-items: center; gap: .4rem; font-size: .8rem; font-weight: 700; color: rgba(255, 255, 255, .78); }
+  .hero-actions { display: flex; align-items: center; gap: .5rem; }
+  .hero-streak, .hero-pet {
+    display: inline-flex; align-items: center; justify-content: center; gap: .3rem;
+    background: rgba(255, 255, 255, .18); color: var(--hero-fg); border: none; cursor: pointer;
+    font: inherit; font-weight: 800; font-size: .82rem; border-radius: 999px; min-height: 2.5rem;
+    backdrop-filter: blur(6px); transition: background .15s ease-out, transform .15s cubic-bezier(.22, 1, .36, 1);
+  }
+  .hero-streak { padding: 0 .8rem 0 .6rem; }
+  .hero-streak:active, .hero-pet:active { transform: scale(.94); }
+  .hero-pet { width: 2.5rem; padding: .2rem; line-height: 0; background: var(--card); }
+  .hero-pet svg { width: 100%; height: 100%; overflow: visible; }
+  .hero-pet.bounce { animation: petBounce .9s cubic-bezier(.22, 1.4, .36, 1); }
+  .hero-title {
+    font-size: 1.75rem; font-weight: 800; letter-spacing: -.025em; line-height: 1.15;
+    margin: 0 0 1.25rem; color: var(--hero-fg); text-wrap: balance;
+  }
+  .hero-title b { font-weight: 800; }
+  .hero-title .soft { font-weight: 600; color: rgba(255, 255, 255, .8); }
+  /* 7 วัน check-in เป็นวงกลมใหญ่ (แบบ Habitual) */
+  .hero-week { display: flex; justify-content: space-between; gap: .3rem; }
+  .hw-day { flex: 1; display: flex; flex-direction: column; align-items: center; gap: .4rem; }
+  .hw-dow { font-size: .68rem; font-weight: 800; color: rgba(255, 255, 255, .72); letter-spacing: .04em; }
+  .hw-circle {
+    width: 2.35rem; height: 2.35rem; border-radius: 50%; display: flex; align-items: center; justify-content: center;
+    background: rgba(255, 255, 255, .16); color: transparent; font-size: .95rem; font-weight: 800;
+    transition: transform .2s cubic-bezier(.22, 1, .36, 1);
+  }
+  .hw-day.in .hw-circle { background: var(--card); color: var(--primary); }
+  .hw-day.today .hw-circle { box-shadow: 0 0 0 2px var(--hero-fg); }
+  .hw-day.today:not(.in) .hw-circle { background: rgba(255, 255, 255, .28); }
+  .hw-day.future .hw-circle { background: rgba(255, 255, 255, .09); }
+  .hw-num { font-size: .66rem; font-weight: 700; color: rgba(255, 255, 255, .6); }
+  .hw-day.today .hw-num { color: var(--hero-fg); }
+  /* แผ่นเนื้อหาโค้งซ้อนทับ hero */
+  .sheet-body {
+    position: relative; margin: -1.9rem -1rem 0; padding: 1.1rem 1rem 0;
+    background: var(--bg); border-radius: var(--r-lg) var(--r-lg) 0 0;
+  }
+  .sheet-body .section-title:first-of-type { margin-top: 1.1rem; }
+  .pp-streak { display: flex; flex-direction: column; gap: .45rem; }
   .pet-week {
     flex-basis: 100%; display: flex; gap: .3rem; justify-content: space-between;
     border-top: 1px solid var(--border); padding-top: .6rem; margin-top: .1rem;
@@ -192,7 +256,6 @@
   .pet-streak b { color: var(--fg); font-weight: 700; }
   .pet-streak { display: flex; align-items: center; gap: .3rem; }
   .flame-anim { animation: flameFlick 1.7s ease-in-out infinite; transform-origin: 50% 90%; }
-  .pet-card.level-up { border-color: var(--primary); box-shadow: 0 0 0 3px var(--primary-soft); }
   .pet-emoji {
     width: 4.6rem; height: 4.6rem; flex-shrink: 0; background: none; border: none;
     padding: 0; cursor: pointer; line-height: 0;
@@ -279,8 +342,6 @@
     75% { transform: scale(1.12); }
     100% { transform: scale(1); }
   }
-  .pet-info { flex: 1; min-width: 0; }
-  .pet-name { font-size: .9rem; font-weight: 700; display: flex; align-items: center; gap: .4rem; flex-wrap: wrap; }
   .pet-level {
     font-size: .62rem; font-weight: 700; color: var(--primary);
     background: var(--primary-soft); border-radius: 999px; padding: .1rem .45rem;
@@ -291,11 +352,10 @@
     animation: petBounce .9s cubic-bezier(.22, 1.4, .36, 1);
   }
   .pet-streak { font-size: .72rem; color: var(--muted); margin-top: .15rem; }
-  .pet-xp { display: flex; align-items: center; gap: .5rem; margin-top: .35rem; }
   .pet-xp-num { font-size: .6rem; color: var(--muted); flex-shrink: 0; }
   .pet-next { font-size: .62rem; color: var(--muted); margin-top: .3rem; }
   .toast {
-    position: fixed; left: 50%; bottom: calc(5.5rem + env(safe-area-inset-bottom));
+    position: fixed; left: 50%; bottom: calc(6rem + env(safe-area-inset-bottom));
     transform: translate(-50%, 12px); opacity: 0; z-index: 60;
     background: var(--fg); color: var(--bg); font-size: .8rem; font-weight: 600;
     padding: .6rem 1rem; border-radius: 999px; box-shadow: 0 6px 20px rgba(0,0,0,.3);
@@ -327,16 +387,16 @@
   @keyframes sparkTw { 0%, 100% { opacity: .25; transform: scale(.9); } 50% { opacity: .85; transform: scale(1.15); } }
   .pp-stats { display: grid; grid-template-columns: 1fr 1fr; gap: .6rem; width: 100%; max-width: 22rem; }
   .pp-stat {
-    background: var(--card); border: 1px solid var(--border); border-radius: .8rem;
-    padding: .7rem .8rem; display: flex; flex-direction: column; gap: .3rem;
+    background: var(--card); border: 1px solid var(--edge); border-radius: var(--r-md);
+    padding: .8rem .9rem; display: flex; flex-direction: column; gap: .3rem; box-shadow: var(--shadow);
   }
   .pp-stat-label { font-size: .7rem; color: var(--muted); font-weight: 600; }
   .pp-stat b { font-size: 1.1rem; }
   .pp-start { max-width: 22rem; }
   .pp-hint { font-size: .74rem; color: var(--muted); text-align: center; }
   .pp-card {
-    background: var(--card); border: 1px solid var(--border); border-radius: 1rem;
-    padding: .9rem; width: 100%; max-width: 22rem;
+    background: var(--card); border: 1px solid var(--edge); border-radius: var(--r-md);
+    padding: .9rem; width: 100%; max-width: 22rem; box-shadow: var(--shadow);
   }
   .pp-q { font-size: .82rem; font-weight: 700; margin-bottom: .6rem; text-align: center; }
   .fp-stepper { display: flex; align-items: center; justify-content: center; gap: 1.1rem; margin-bottom: .6rem; }
@@ -362,8 +422,8 @@
 
   /* real pets */
   .petr-card {
-    display: flex; align-items: center; gap: .8rem; width: 100%;
-    background: var(--card); border: 1px solid var(--border); border-radius: 1rem;
+    display: flex; align-items: center; gap: .8rem; width: 100%; box-shadow: var(--shadow);
+    background: var(--card); border: 1px solid var(--edge); border-radius: var(--r-md);
     padding: .8rem .9rem; margin-bottom: .55rem; cursor: pointer;
     font-family: inherit; color: var(--fg); text-align: left;
     transition: transform .08s;
@@ -464,8 +524,8 @@
   /* settings — grouped list แบบแอพ */
   .set-profile {
     display: flex; align-items: center; gap: .85rem;
-    background: var(--card); border: 1px solid var(--border); border-radius: 1rem;
-    padding: 1rem; margin-bottom: 1.1rem;
+    background: var(--card); border: 1px solid var(--edge); border-radius: var(--r-md);
+    padding: 1rem; margin-bottom: 1.1rem; box-shadow: var(--shadow);
   }
   .set-avatar {
     width: 2.9rem; height: 2.9rem; border-radius: 50%; background: var(--primary); color: #fff;
@@ -473,8 +533,8 @@
     flex-shrink: 0;
   }
   .set-group {
-    background: var(--card); border: 1px solid var(--border); border-radius: 1rem;
-    margin-bottom: 1.1rem; overflow: hidden;
+    background: var(--card); border: 1px solid var(--edge); border-radius: var(--r-md);
+    margin-bottom: 1.1rem; overflow: hidden; box-shadow: var(--shadow);
   }
   .set-row {
     display: flex; align-items: center; gap: .7rem; width: 100%;
@@ -555,7 +615,7 @@
   .login-wrap .login { position: relative; z-index: 1; }
   /* input มีพื้นทึบของตัวเองอยู่แล้วเลยยังอ่านง่ายแม้ไม่มีการ์ดขาวรองด้านหลัง */
   .login-wrap .login input, .login-wrap .login .btn-google {
-    box-shadow: 0 2px 10px -4px rgba(0,0,0,.25);
+    background: var(--card); box-shadow: 0 2px 10px -4px rgba(0,0,0,.18);
   }
   @keyframes loginIn {
     from { opacity: 0; transform: translateY(22px); }
@@ -598,18 +658,18 @@
   .empty-sm { text-align: center; color: var(--muted); font-size: .8rem; padding: 1rem 0; }
 
   .task {
-    display: flex; gap: .6rem; align-items: flex-start;
-    background: var(--card); border: 1px solid var(--border); border-radius: .75rem;
-    padding: .75rem; margin-bottom: .5rem;
+    display: flex; gap: .7rem; align-items: flex-start;
+    background: var(--card); border: 1px solid var(--edge); border-radius: var(--r-md);
+    padding: .9rem; margin-bottom: .55rem; box-shadow: var(--shadow);
     cursor: pointer; user-select: none; transition: transform .08s, opacity .15s;
   }
   .task:active { transform: scale(.98); }
-  .task.is-done { opacity: .65; border-color: var(--success); }
+  .task.is-done { opacity: .6; }
   .task-status {
-    flex-shrink: 0; margin-top: .1rem; width: 1.35rem; height: 1.35rem;
-    border-radius: 50%; border: 2px solid var(--border);
+    flex-shrink: 0; margin-top: .05rem; width: 1.5rem; height: 1.5rem;
+    border-radius: 50%; border: 2px solid color-mix(in srgb, var(--muted) 45%, var(--border));
     display: flex; align-items: center; justify-content: center;
-    color: #fff; font-size: .7rem; pointer-events: none;
+    color: #fff; font-size: .72rem; pointer-events: none;
   }
   .task.is-done .task-status { background: var(--success); border-color: var(--success); }
   .task-body { flex: 1; min-width: 0; }
@@ -619,7 +679,7 @@
     display: flex; align-items: center; justify-content: center;
     margin: -.55rem -.55rem -.55rem -.25rem;
   }
-  .task-title { font-size: .9rem; font-weight: 500; }
+  .task-title { font-size: .92rem; font-weight: 700; }
   .task-title.done { text-decoration: line-through; opacity: .5; }
   .task-meta {
     display: flex; flex-wrap: wrap; gap: .15rem .5rem; align-items: center;
@@ -628,38 +688,50 @@
   .task-meta .overdue { color: var(--danger-text); font-weight: 600; }
   .chip { border-radius: 999px; padding: .1rem .5rem; font-size: .65rem; font-weight: 600; }
 
+  /* ---- bottom bar: แคปซูลลอย + ปุ่ม + แยกออกมาทางขวา (แบบ reference Iconly) ---- */
   .fab {
-    position: fixed; bottom: calc(4.5rem + env(safe-area-inset-bottom)); right: 1rem;
-    width: 3.5rem; height: 3.5rem; border-radius: 50%; border: none;
+    position: fixed; bottom: calc(1rem + env(safe-area-inset-bottom)); right: max(1rem, calc(50% - 13rem));
+    width: 3.6rem; height: 3.6rem; border-radius: 50%; border: none;
     background: var(--primary); color: #fff;
     display: flex; align-items: center; justify-content: center;
-    box-shadow: 0 4px 12px rgba(0,0,0,.25); cursor: pointer; z-index: 20;
+    box-shadow: 0 10px 24px -8px color-mix(in srgb, var(--primary) 70%, transparent); cursor: pointer; z-index: 20;
   }
-  @media (min-width: 30rem) { .fab { right: calc(50% - 13rem); } }
   .fab:active { background: var(--primary-dark); }
 
-  nav { position: fixed; inset-inline: 0; bottom: 0; z-index: 20; background: var(--card); border-top: 1px solid var(--border); }
-  .nav-inner { max-width: 28rem; margin: 0 auto; display: flex; }
+  nav {
+    position: fixed; z-index: 20; bottom: calc(1rem + env(safe-area-inset-bottom));
+    left: max(1rem, calc(50% - 13rem)); right: max(5.4rem, calc(50% - 13rem + 4.4rem));
+    background: var(--card); border: 1px solid var(--edge); border-radius: 999px;
+    box-shadow: 0 12px 32px -12px rgba(21, 23, 43, .28), 0 1px 2px rgba(21, 23, 43, .06);
+    padding: .35rem;
+  }
+  .nav-inner { display: flex; align-items: center; gap: .1rem; }
   .nav-btn {
-    flex: 1; display: flex; flex-direction: column; align-items: center; gap: .1rem;
-    padding: .5rem 0 calc(.5rem + env(safe-area-inset-bottom));
-    background: none; border: none; font-size: .62rem; color: var(--muted); cursor: pointer; font-family: inherit;
+    flex: 1; min-width: 0; display: flex; align-items: center; justify-content: center; gap: .4rem;
+    height: 2.85rem; padding: 0 .5rem; border-radius: 999px;
+    background: none; border: none; font-size: .8rem; font-weight: 800; color: var(--muted); cursor: pointer; font-family: inherit;
+    transition: background .18s ease-out, color .18s ease-out, flex-grow .22s cubic-bezier(.22, 1, .36, 1);
   }
   .nav-btn .ico { line-height: 0; }
+  .nav-btn .lbl { display: none; white-space: nowrap; }
+  .nav-btn.active { flex: 0 0 auto; padding: 0 .95rem 0 .8rem; background: var(--primary-soft); color: var(--primary); }
+  .nav-btn.active .lbl { display: inline; }
   .btn { display: inline-flex; align-items: center; justify-content: center; gap: .4rem; }
-  .nav-btn.active { color: var(--primary); font-weight: 600; }
 
   .overlay { position: fixed; inset: 0; background: rgba(0,0,0,.45); z-index: 30; display: flex; align-items: flex-end; justify-content: center; }
   @media (min-width: 30rem) { .overlay { align-items: center; } }
   .sheet {
     width: 100%; max-width: 28rem; max-height: 90dvh; overflow-y: auto;
-    background: var(--bg); border-radius: 1rem 1rem 0 0; padding: 1rem;
+    background: var(--card); border-radius: var(--r-lg) var(--r-lg) 0 0; padding: 1.1rem 1.1rem 1rem;
     padding-bottom: calc(1rem + env(safe-area-inset-bottom));
   }
-  @media (min-width: 30rem) { .sheet { border-radius: 1rem; } }
-  .sheet-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: .75rem; }
-  .sheet-head h2 { font-size: 1.1rem; }
-  .x-btn { background: none; border: none; font-size: 1.25rem; color: var(--muted); cursor: pointer; }
+  @media (min-width: 30rem) { .sheet { border-radius: var(--r-lg); } }
+  .sheet-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: .9rem; }
+  .sheet-head h2 { font-size: 1.15rem; font-weight: 800; letter-spacing: -.01em; }
+  .x-btn {
+    background: var(--bg); border: none; font-size: 1rem; color: var(--muted); cursor: pointer;
+    width: 2.2rem; height: 2.2rem; border-radius: 50%; display: flex; align-items: center; justify-content: center;
+  }
 
   label.fld { display: block; font-size: .7rem; color: var(--muted); margin-bottom: .75rem; }
   label.fld-check {
@@ -669,20 +741,24 @@
   label.fld-check input[type="checkbox"] {
     width: 1.15rem; height: 1.15rem; margin: 0; accent-color: var(--primary); flex-shrink: 0; cursor: pointer;
   }
-  input, select, textarea, .btn { font-family: inherit; font-size: .875rem; color: var(--fg); }
+  input, select, textarea, .btn { font-family: inherit; font-size: .9rem; color: var(--fg); }
   input, select, textarea {
-    width: 100%; background: var(--card); border: 1px solid var(--border);
-    border-radius: .75rem; padding: .6rem .75rem; margin-top: .25rem;
+    width: 100%; background: var(--bg); border: 1.5px solid transparent;
+    border-radius: var(--r-sm); padding: .7rem .85rem; margin-top: .3rem; font-weight: 600;
+    transition: border-color .15s ease-out, background .15s ease-out;
   }
+  input::placeholder, textarea::placeholder { color: var(--muted); font-weight: 500; }
+  input:focus, select:focus, textarea:focus { outline: none; border-color: var(--primary); background: var(--card); }
   textarea { resize: vertical; }
   .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: .75rem; }
-  .btn { width: 100%; border: none; border-radius: .75rem; padding: .75rem; font-weight: 600; cursor: pointer; margin-top: .25rem; }
+  .btn { width: 100%; border: none; border-radius: var(--r-sm); padding: .85rem; font-weight: 800; cursor: pointer; margin-top: .25rem; transition: transform .12s cubic-bezier(.22, 1, .36, 1), background .15s; }
+  .btn:active { transform: scale(.98); }
   .btn-primary { background: var(--primary); color: #fff; }
   .btn-primary:active { background: var(--primary-dark); }
-  .btn-outline { background: transparent; border: 1px solid var(--border); color: var(--fg); }
-  .btn-danger-outline { background: transparent; border: 1px solid var(--danger); color: var(--danger); }
+  .btn-outline { background: transparent; border: 1.5px solid var(--border); color: var(--fg); }
+  .btn-danger-outline { background: transparent; border: 1.5px solid color-mix(in srgb, var(--danger) 45%, transparent); color: var(--danger); }
 
-  .card { background: var(--card); border: 1px solid var(--border); border-radius: .75rem; padding: 1rem; margin-bottom: .75rem; }
+  .card { background: var(--card); border: 1px solid var(--edge); border-radius: var(--r-md); padding: 1rem; margin-bottom: .75rem; box-shadow: var(--shadow); }
   .cat-row { display: flex; align-items: center; gap: .75rem; background: var(--card); border: 1px solid var(--border); border-radius: .75rem; padding: .6rem .75rem; margin-bottom: .5rem; }
   .cat-dot { width: 1rem; height: 1rem; border-radius: 50%; flex-shrink: 0; }
   .cat-name { flex: 1; font-size: .875rem; }
@@ -717,21 +793,25 @@
     .cal-more { display: none; }
   }
   .cal-nav {
-    background: var(--card); border: 1px solid var(--border); border-radius: .6rem;
+    background: var(--card); border: 1px solid var(--edge); border-radius: 50%; box-shadow: var(--shadow);
     width: 2.75rem; height: 2.75rem; cursor: pointer; color: var(--fg);
     display: flex; align-items: center; justify-content: center;
   }
   .cal-seg {
-    display: inline-flex; background: var(--card); border: 1px solid var(--border);
-    border-radius: .6rem; padding: .15rem; gap: .1rem;
+    display: inline-flex; background: var(--card); border: 1px solid var(--edge); box-shadow: var(--shadow);
+    border-radius: 999px; padding: .2rem; gap: .1rem;
   }
   .cal-seg-btn {
-    border: none; background: none; font-family: inherit; font-size: .75rem; font-weight: 600;
-    color: var(--muted); padding: .6rem .75rem; border-radius: .45rem; cursor: pointer;
-    min-height: 2.5rem; transition: background .15s, color .15s;
+    border: none; background: none; font-family: inherit; font-size: .78rem; font-weight: 800;
+    color: var(--muted); padding: .55rem .85rem; border-radius: 999px; cursor: pointer;
+    min-height: 2.4rem; transition: background .15s, color .15s;
   }
   .cal-seg-btn.sel { background: var(--primary); color: #fff; }
-  .cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: .2rem; }
+  .cal-grid {
+    display: grid; grid-template-columns: repeat(7, 1fr); gap: .2rem;
+    background: var(--card); border: 1px solid var(--edge); border-radius: var(--r-md);
+    padding: .5rem .3rem; box-shadow: var(--shadow);
+  }
   .cal-dow { text-align: center; font-size: .65rem; color: var(--muted); font-weight: 600; padding: .25rem 0; }
   .cal-day {
     min-height: 4.3rem; border: 1px solid transparent; border-radius: .55rem; background: none;
@@ -789,21 +869,21 @@
   .cl-complete { border-color: var(--success); }
 
   /* dashboard */
-  .stat-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: .5rem; margin-bottom: .25rem; }
+  .stat-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: .6rem; margin-bottom: .25rem; }
   .stat-card {
-    background: var(--card); border: 1px solid var(--border); border-radius: .75rem;
-    padding: .6rem .5rem .65rem; text-align: center;
-    display: flex; flex-direction: column; align-items: center; gap: .1rem;
+    background: var(--card); border: 1px solid var(--edge); border-radius: var(--r-md);
+    padding: .8rem .6rem; text-align: left; box-shadow: var(--shadow);
+    display: flex; flex-direction: column; align-items: flex-start; gap: .15rem;
   }
   .stat-ico {
-    width: 1.5rem; height: 1.5rem; border-radius: .45rem; margin-bottom: .1rem;
+    width: 1.8rem; height: 1.8rem; border-radius: .6rem; margin-bottom: .25rem;
     display: flex; align-items: center; justify-content: center;
   }
-  .stat-num { font-size: 1.3rem; font-weight: 700; line-height: 1.1; }
+  .stat-num { font-size: 1.5rem; font-weight: 800; line-height: 1; letter-spacing: -.02em; font-variant-numeric: tabular-nums; }
   .stat-num.danger { color: var(--danger-text); }
   .stat-num.success { color: var(--success); }
-  .stat-label { font-size: .65rem; color: var(--muted); margin-top: .1rem; }
-  .dash-cat { background: var(--card); border: 1px solid var(--border); border-radius: .75rem; padding: .75rem; margin-bottom: .5rem; }
+  .stat-label { font-size: .7rem; font-weight: 700; color: var(--muted); }
+  .dash-cat { background: var(--card); border: 1px solid var(--edge); border-radius: var(--r-md); padding: .9rem; margin-bottom: .55rem; box-shadow: var(--shadow); }
   .dash-cat-head { display: flex; align-items: center; gap: .5rem; font-size: .85rem; font-weight: 600; }
   .dash-cat-head .cat-dot { width: .75rem; height: .75rem; }
   .dash-cat-nums { margin-left: auto; font-size: .75rem; color: var(--muted); font-weight: 400; }
@@ -819,27 +899,34 @@
   /* Tablet (>=640px): จอกว้างขึ้น การ์ด 3 คอลัมน์ */
   @media (min-width: 640px) {
     .app { max-width: 44rem; }
-    .nav-inner { max-width: 44rem; }
     .ov-grid { grid-template-columns: repeat(3, 1fr); }
+    nav { left: calc(50% - 21rem); right: calc(50% - 21rem + 4.4rem); }
     .fab { right: calc(50% - 21rem); }
+    /* จอกว้างขึ้น hero เป็นบล็อกโค้งลอยแทนเต็มขอบ */
+    .hero { margin: 0; border-radius: var(--r-lg); padding-bottom: 3.4rem; }
+    .sheet-body { margin-inline: 0; }
   }
   /* Desktop (>=1024px): sidebar ซ้าย + เนื้อหากว้าง */
   @media (min-width: 1024px) {
     .app { max-width: none; margin-left: 14rem; padding-bottom: 3rem; }
     .page { max-width: 56rem; margin: 0 auto; padding: 1.5rem 1.5rem 3rem; }
-    nav { inset: 0 auto 0 0; width: 14rem; border-top: none; border-right: 1px solid var(--border); }
+    nav {
+      inset: 0 auto 0 0; width: 14rem; border-radius: 0; box-shadow: none; padding: 0;
+      border: none; border-right: 1px solid var(--border);
+    }
     .nav-inner {
-      flex-direction: column; max-width: none; padding-top: .75rem; gap: .2rem;
+      flex-direction: column; align-items: stretch; padding-top: .75rem; gap: .2rem;
     }
     .nav-inner::before {
-      content: "Solo Task"; font-size: 1.05rem; font-weight: 700;
+      content: "Solo Task"; font-size: 1.1rem; font-weight: 800; letter-spacing: -.02em;
       padding: .75rem 1.25rem 1rem; color: var(--fg);
     }
     .nav-btn {
-      flex: none; flex-direction: row; justify-content: flex-start; gap: .65rem;
-      font-size: .85rem; padding: .6rem .85rem; margin: 0 .6rem; border-radius: .5rem;
+      flex: none; justify-content: flex-start; gap: .65rem; height: auto;
+      font-size: .88rem; padding: .65rem .9rem; margin: 0 .6rem; border-radius: var(--r-sm);
     }
-    .nav-btn.active { background: var(--primary-soft); }
+    .nav-btn .lbl { display: inline; }
+    .nav-btn.active { flex-grow: 0; }
     .ov-grid { grid-template-columns: repeat(3, 1fr); gap: .8rem; }
     .fab { right: 2.5rem; bottom: 2.5rem; }
     .stat-row { max-width: 32rem; }
@@ -886,6 +973,7 @@ const ICONS = {
   dumbbell: '<line x1="7" y1="12" x2="17" y2="12"/><rect x="4.5" y="7.5" width="3" height="9" rx="1"/><rect x="16.5" y="7.5" width="3" height="9" rx="1"/><line x1="2" y1="9.5" x2="2" y2="14.5"/><line x1="22" y1="9.5" x2="22" y2="14.5"/>',
   logout: '<path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/>',
   x: '<line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>',
+  check: '<polyline points="20 6 9 17 4 12"/>',
   clock: '<circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>',
   checksquare: '<polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/>',
   refresh: '<polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/>',
@@ -1034,6 +1122,7 @@ function migrate(s) {
 function save() {
   localStorage.setItem(stateKey, JSON.stringify(state));
   scheduleCloudSave(); // sync ขึ้น cloud ด้วยถ้าเชื่อมอยู่ (debounced)
+  scheduleGcalSync();  // และดัน task ไป Google Calendar ถ้าเชื่อมไว้ (debounced, no-op ถ้าไม่มีอะไรเปลี่ยน)
 }
 function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 8); }
 
@@ -1134,11 +1223,14 @@ async function initCloud() {
     cloudStatus = "ready";
     const { data } = await sb.auth.getSession();
     sbToken = data.session?.access_token || null;
-    if (data.session) await onCloudSignedIn(data.session);
+    if (data.session) { await onCloudSignedIn(data.session); captureGoogleToken(data.session); }
     sb.auth.onAuthStateChange((event, session) => {
       sbToken = session?.access_token || sbToken;
-      if (event === "SIGNED_IN" && session && (!sbUser || sbUser.id !== session.user.id)) {
-        onCloudSignedIn(session);
+      if (event === "SIGNED_IN" && session) {
+        (async () => {
+          if (!sbUser || sbUser.id !== session.user.id) await onCloudSignedIn(session);
+          captureGoogleToken(session); // กลับมาจากหน้า Connect Google Calendar → เก็บ refresh token
+        })();
       }
       if (event === "SIGNED_OUT") { sbUser = null; sbToken = null; }
     });
@@ -1410,6 +1502,149 @@ async function doSignOut() {
   render();
 }
 
+/* ---------- Google Calendar sync ----------
+   ผ่าน Edge Function "gcal-sync" (ดู supabase/functions/gcal-sync) — ฝั่งเว็บไม่เคยเห็น Google token
+   - Connect: login Google อีกรอบขอ scope calendar + offline → ได้ refresh token → ส่งไปเก็บที่ server
+   - Sync: ทุกครั้งที่ save() จะเทียบ hash ของแต่ละ task กับ meta.gcalMap แล้วส่งเฉพาะที่เปลี่ยน
+     task ที่หายไป (ลบ/ไม่มีวัน) → ลบ event ใน Google ด้วย — ไม่ต้อง hook ทุกจุดที่แก้ task */
+const GCAL_SCOPES = "https://www.googleapis.com/auth/calendar";
+const GCAL_PENDING_KEY = "task-studio-gcal-pending";
+let gcalTimer = null;
+let gcalBusy = false;
+let gcalState = "idle"; // idle | syncing | error | reauth
+let gcalRetryAt = 0;    // หลัง error พัก 60 วิ ก่อนลองใหม่ (กัน toast รัว)
+
+function gcalConnected() { return !!(sb && sbUser && state.meta.gcal?.connected); }
+
+function gcalHash(t) {
+  const cat = catById(t.categoryId);
+  return [t.title, t.note || "", t.dueAt, t.endDate || "", cat ? cat.name : "", t.status, t.reminderMin ?? ""].join("|");
+}
+
+function gcalPayload(t) {
+  const start = new Date(t.dueAt);
+  const hasTime = start.getHours() !== 0 || start.getMinutes() !== 0;
+  const span = taskSpan(t);
+  const endEx = new Date(span.end); endEx.setDate(endEx.getDate() + 1);
+  const cat = catById(t.categoryId);
+  return {
+    id: t.id, title: t.title, note: t.note || "", category: cat ? cat.name : "", status: t.status,
+    reminderMin: t.reminderMin ?? null,
+    allDay: isRangeTask(t) || !hasTime,
+    dueAt: t.dueAt, startDate: dateKey(span.start), endDateEx: dateKey(endEx),
+  };
+}
+
+async function gcalInvoke(body) {
+  const { data, error } = await sb.functions.invoke("gcal-sync", { body });
+  if (error) {
+    let detail = error.message;
+    try { const j = await error.context?.json(); if (j?.error) detail = j.error; } catch { /* ignore */ }
+    throw new Error(detail);
+  }
+  if (data?.error) throw new Error(data.error);
+  return data;
+}
+
+async function connectGoogleCalendar() {
+  if (!sb) return;
+  localStorage.setItem(GCAL_PENDING_KEY, "1");
+  const { error } = await sb.auth.signInWithOAuth({
+    provider: "google",
+    options: {
+      redirectTo: location.origin + location.pathname,
+      scopes: GCAL_SCOPES,
+      queryParams: { access_type: "offline", prompt: "consent" }, // ต้องมีทั้งคู่ถึงจะได้ refresh token
+    },
+  });
+  if (error) { localStorage.removeItem(GCAL_PENDING_KEY); showToast("❌ " + error.message); }
+}
+
+/** หลัง redirect กลับมาจาก Google — Supabase แนบ provider_refresh_token มาใน session แค่ครั้งนี้ครั้งเดียว */
+async function captureGoogleToken(session) {
+  const rt = session?.provider_refresh_token;
+  if (!rt || !localStorage.getItem(GCAL_PENDING_KEY)) return;
+  localStorage.removeItem(GCAL_PENDING_KEY);
+  try {
+    await gcalInvoke({ op: "store_token", refresh_token: rt });
+    state.meta.gcal = { connected: true, lastSync: null };
+    state.meta.gcalMap = state.meta.gcalMap || {};
+    gcalState = "idle"; gcalRetryAt = 0;
+    save();
+    showToast("✅ Google Calendar connected — syncing your tasks");
+    currentTab = "settings"; render();
+  } catch (e) {
+    showToast("❌ Google Calendar: " + e.message);
+  }
+}
+
+async function disconnectGoogleCalendar() {
+  if (!confirm("Disconnect Google Calendar? Events already created will stay in Google.")) return;
+  try { await gcalInvoke({ op: "disconnect" }); } catch { /* ลบฝั่งเราต่อแม้ server ตอบ error */ }
+  state.meta.gcal = { connected: false };
+  state.meta.gcalMap = {};
+  gcalState = "idle";
+  save(); render();
+}
+
+function gcalSyncNow() {
+  gcalRetryAt = 0;
+  clearTimeout(gcalTimer); gcalTimer = null;
+  // บังคับส่งทุก task ใหม่ (เผื่อผู้ใช้ลบ event ใน Google เอง server จะสร้างให้ใหม่)
+  for (const k of Object.keys(state.meta.gcalMap || {})) state.meta.gcalMap[k].hash = "";
+  runGcalSync();
+}
+
+function scheduleGcalSync() {
+  if (!gcalConnected() || Date.now() < gcalRetryAt) return;
+  clearTimeout(gcalTimer);
+  gcalTimer = setTimeout(runGcalSync, 2500);
+}
+
+async function runGcalSync() {
+  gcalTimer = null;
+  if (!gcalConnected() || gcalBusy) return;
+  const map = state.meta.gcalMap || (state.meta.gcalMap = {});
+  const upserts = [];
+  const removals = []; // { taskId, eventId }
+  const alive = new Set();
+  for (const t of state.tasks) {
+    alive.add(t.id);
+    if (!t.dueAt) { if (map[t.id]) removals.push({ taskId: t.id, eventId: map[t.id].eventId }); continue; }
+    const h = gcalHash(t);
+    if (!map[t.id] || map[t.id].hash !== h) upserts.push({ ...gcalPayload(t), eventId: map[t.id]?.eventId || null, hash: h });
+  }
+  for (const id of Object.keys(map)) if (!alive.has(id)) removals.push({ taskId: id, eventId: map[id].eventId });
+  if (!upserts.length && !removals.length) {
+    if (currentTab === "settings" && gcalState !== "idle") { gcalState = "idle"; render(); }
+    return;
+  }
+  gcalBusy = true; gcalState = "syncing";
+  if (currentTab === "settings") render();
+  try {
+    const res = await gcalInvoke({ op: "sync", upserts, deletes: removals.map(r => r.eventId).filter(Boolean) });
+    for (const u of upserts) if (res.events?.[u.id]) map[u.id] = { eventId: res.events[u.id], hash: u.hash };
+    for (const r of removals) delete map[r.taskId]; // server ถือว่า 404 = ลบแล้ว
+    const failedCount = Object.keys(res.failed || {}).length;
+    state.meta.gcal.lastSync = new Date().toISOString();
+    gcalState = failedCount ? "error" : "idle";
+    if (failedCount) { gcalRetryAt = Date.now() + 60000; showToast(`⚠️ Google Calendar: ${failedCount} task${failedCount > 1 ? "s" : ""} failed to sync`); }
+  } catch (e) {
+    if (/reauth|not_connected/.test(e.message)) {
+      gcalState = "reauth";
+      state.meta.gcal.connected = false;
+      showToast("⚠️ Google Calendar disconnected — reconnect in Settings");
+    } else {
+      gcalState = "error";
+      gcalRetryAt = Date.now() + 60000;
+      showToast("⚠️ Google Calendar: " + e.message);
+    }
+  }
+  gcalBusy = false;
+  save(); // เก็บ map — save() จะเรียก schedule อีกรอบ แต่ไม่มีอะไรค้างแล้วเลยจบเงียบๆ
+  if (currentTab === "settings") render();
+}
+
 /* ---------- category schedule ---------- */
 /** ตอนนี้อยู่ในช่วงเวลาของหมวดนี้ไหม (รองรับช่วงข้ามเที่ยงคืน เช่น 22:00-01:00) */
 function scheduleActive(c) {
@@ -1505,10 +1740,10 @@ const PET_STAGES = [
   { name: "Phoenix Tiel" },
 ];
 
-/** ไฟ streak แบบ TikTok — เปลวไล่สีเหลือง→ส้ม→แดง + ไส้ในสว่าง (lit=false = เทาซีด) */
+/** ไฟ streak — เปลวทรงหยดน้ำโค้งเรียบ ไล่สีเหลือง→ส้ม→แดง + ไส้ในสว่าง (lit=false = เทาซีด) */
 function flameSvg(size, lit, flick) {
-  const outer = "M12 22 C7.2 22 4.5 18.6 4.5 15 C4.5 11.9 6.3 9.9 7.8 7.7 C8.9 6 9.6 4.1 9.3 2 C12.6 3.6 14.4 6 15 8.3 C15.7 7.5 16.1 6.4 16.2 5.1 C18.6 7.4 19.5 10.8 19.5 13.5 C19.5 18 16.7 22 12 22z";
-  const inner = "M12 22 C9.7 22 8.1 20.3 8.1 18.2 C8.1 16.4 9.1 15.2 10 14 C10.8 13.1 11.4 12.1 11.5 10.8 C13.7 12.3 15.9 14.6 15.9 17.4 C15.9 20 14.3 22 12 22z";
+  const outer = "M12.963 2.286a.75.75 0 0 0-1.071-.136 9.742 9.742 0 0 0-3.539 6.176 7.547 7.547 0 0 1-1.705-1.715.75.75 0 0 0-1.152-.082A9 9 0 1 0 15.68 4.534a7.46 7.46 0 0 1-2.717-2.248z";
+  const inner = "M15.75 14.25a3.75 3.75 0 1 1-7.313-1.172c.628.465 1.35.81 2.133 1a5.99 5.99 0 0 1 1.925-3.546 3.75 3.75 0 0 1 3.255 3.718z";
   if (!lit) {
     return `<svg width="${size}" height="${size}" viewBox="0 0 24 24" aria-hidden="true">
       <path d="${outer}" fill="var(--border)"/>
@@ -2149,6 +2384,9 @@ function renderPetPage() {
 
   // main
   const line = PET_LINES[new Date().getDate() % PET_LINES.length];
+  const { prog, need } = levelInfo();
+  const nextStage = PET_STAGES[Math.min(level, PET_STAGES.length - 1)];
+  const streak = currentStreak();
   return `<button class="back-btn" onclick="closePet()">${icon("left", 15)} Home</button>
     <div class="pet-page">
       <div class="pp-head"><h1>${esc(pet.name)}</h1><span class="pet-level">Lv ${levelInfo().level}</span></div>
@@ -2167,6 +2405,14 @@ function renderPetPage() {
           <b>${stats.happiness}%</b>
           <span class="ov-bar"><span style="width:${stats.happiness}%;background:#ef4444"></span></span>
         </div>
+      </div>
+      <div class="pp-card pp-streak">
+        <div class="pet-streak">${flameSvg(16, streak > 0, streak > 0)} <b>${streak}</b>&nbsp;day${streak === 1 ? "" : "s"} streak${state.game.best > 1 ? ` · best ${state.game.best}` : ""}
+          <span class="pet-xp-num" style="margin-left:auto">${prog}/${need} XP</span>
+        </div>
+        <span class="ov-bar"><span style="width:${Math.round(prog / need * 100)}%;background:var(--primary)"></span></span>
+        ${level < PET_STAGES.length ? `<div class="pet-next">Next: ${nextStage.name}</div>` : ""}
+        ${petWeekHtml()}
       </div>
       <button class="btn btn-primary pp-start" onclick="startFocusSetup()">Start focus session</button>
       <p class="pp-hint">${focusMin} min · customizable${stats.focusToday ? ` · ${stats.focusToday} min focused today` : ""}</p>
@@ -2451,6 +2697,30 @@ function taskSpan(t) {
 function fmtSpanDate(d) {
   return MONTHS_SHORT[d.getMonth()] + " " + d.getDate();
 }
+
+/** ลิงก์ "Add to Google Calendar" แบบไม่ต้อง OAuth — เปิดฟอร์มสร้าง event ที่กรอกให้แล้ว
+ *  - task หลายวัน หรือไม่ได้ตั้งเวลา → all-day (วันจบเป็น exclusive ตามสเปก Google)
+ *  - task มีเวลา → event 1 ชั่วโมง ส่งเป็น UTC (ลงท้าย Z) กันปัญหา timezone */
+function googleCalUrl(t) {
+  if (!t.dueAt) return null;
+  const pad = n => String(n).padStart(2, "0");
+  const ymd = d => d.getFullYear() + pad(d.getMonth() + 1) + pad(d.getDate());
+  const utc = d => d.toISOString().replace(/[-:]|\.\d{3}/g, "");
+  const start = new Date(t.dueAt);
+  const hasTime = start.getHours() !== 0 || start.getMinutes() !== 0;
+  let dates;
+  if (isRangeTask(t) || !hasTime) {
+    const span = taskSpan(t);
+    const endEx = new Date(span.end); endEx.setDate(endEx.getDate() + 1);
+    dates = ymd(span.start) + "/" + ymd(endEx);
+  } else {
+    dates = utc(start) + "/" + utc(new Date(start.getTime() + 3600000));
+  }
+  const cat = catById(t.categoryId);
+  const details = [t.note, cat ? "Category: " + cat.name : "", "— from Solo Task"].filter(Boolean).join("\n\n");
+  const p = new URLSearchParams({ action: "TEMPLATE", text: t.title, dates, details });
+  return "https://calendar.google.com/calendar/render?" + p.toString();
+}
 function fmtSpan(t) {
   const span = taskSpan(t);
   if (!span) return "";
@@ -2476,49 +2746,63 @@ function todayTasksOf(catKey) {
   });
 }
 
-/** การ์ดสัตว์เลี้ยง + streak + check-in */
-function petCardHtml() {
-  const { level, prog, need } = levelInfo();
+/** ตาราง 7 วันล่าสุด (จบที่วันนี้) — โชว์ว่าวันไหนเข้าแอพบ้าง */
+function petWeekHtml() {
+  const cells = [];
+  const d = new Date();
+  d.setDate(d.getDate() - 6);
+  for (let i = 0; i < 7; i++) {
+    const k = dateKey(d);
+    const inDay = !!state.game.checkins[k];
+    const today = isToday(d);
+    cells.push(`<span class="pw-cell ${today ? "today" : ""}" title="${k}">
+      <span class="pw-dow">${DOW[d.getDay()][0]}</span>
+      <span class="pw-dot ${inDay ? "in" : ""}">${flameSvg(inDay ? 17 : 14, inDay)}</span>
+      <span class="pw-num">${d.getDate()}</span>
+    </span>`);
+    d.setDate(d.getDate() + 1);
+  }
+  return `<div class="pet-week">${cells.join("")}</div>`;
+}
+
+/** มุมขวาบนของ hero: ชิป streak + รูปสัตว์เลี้ยง (กดเข้าหน้าสัตว์เลี้ยง — รายละเอียด XP/streak อยู่ในนั้น) */
+function heroActionsHtml() {
+  const { level } = levelInfo();
   const pet = petForLevel(level);
-  const next = PET_STAGES[Math.min(level, PET_STAGES.length - 1)];
   const streak = currentStreak();
-  const doneToday = checkedInToday();
-  return `<div class="pet-card ${justLeveled ? "level-up" : ""}">
-    <button class="pet-emoji ${justCheckedIn || justLeveled ? "bounce" : ""}" aria-label="Pet your ${pet.name}"
-      onclick="this.classList.add('bounce');openPet()">${petSvg(level)}</button>
-    <div class="pet-info">
-      <div class="pet-name">${pet.name}
-        <span class="pet-level">Lv ${level}</span>
-        ${justLeveled ? `<span class="pet-levelup">LEVEL UP!</span>` : ""}
-      </div>
-      <div class="pet-streak">${flameSvg(15, streak > 0, streak > 0)} <b>${streak}</b> day${streak === 1 ? "" : "s"} streak${state.game.best > 1 ? ` · best ${state.game.best}` : ""}</div>
-      <div class="pet-xp">
-        <span class="ov-bar" style="flex:1"><span style="width:${Math.round(prog / need * 100)}%;background:var(--primary)"></span></span>
-        <span class="pet-xp-num">${prog}/${need} XP</span>
-      </div>
-      ${level < PET_STAGES.length ? `<div class="pet-next">Next: ${next.name}</div>` : ""}
-    </div>
-    <div class="pet-week">
-      ${(() => {
-        // 7 วันล่าสุด (จบที่วันนี้) — โชว์ว่าวันไหนเข้าแอพบ้าง
-        const cells = [];
-        const d = new Date();
-        d.setDate(d.getDate() - 6);
-        for (let i = 0; i < 7; i++) {
-          const k = dateKey(d);
-          const inDay = !!state.game.checkins[k];
-          const today = isToday(d);
-          cells.push(`<span class="pw-cell ${today ? "today" : ""}" title="${k}">
-            <span class="pw-dow">${DOW[d.getDay()][0]}</span>
-            <span class="pw-dot ${inDay ? "in" : ""}">${flameSvg(inDay ? 17 : 14, inDay)}</span>
-            <span class="pw-num">${d.getDate()}</span>
-          </span>`);
-          d.setDate(d.getDate() + 1);
-        }
-        return cells.join("");
-      })()}
-    </div>
+  return `<div class="hero-actions">
+    <button class="hero-streak" onclick="openPet()" aria-label="${streak} day streak — open ${pet.name}">${flameSvg(16, streak > 0, streak > 0)} ${streak}</button>
+    <button class="hero-pet ${justCheckedIn || justLeveled ? "bounce" : ""}" onclick="openPet()" aria-label="Open ${pet.name} · Lv ${level}">${petSvg(level)}</button>
   </div>`;
+}
+
+/** 7 วันล่าสุดเป็นวงกลมใหญ่ใน hero — วันที่เข้าแอพเป็นวงขาวมี ✓ */
+function heroWeekHtml() {
+  const cells = [];
+  const d = new Date();
+  d.setDate(d.getDate() - 6);
+  for (let i = 0; i < 7; i++) {
+    const k = dateKey(d);
+    const inDay = !!state.game.checkins[k];
+    const today = isToday(d);
+    cells.push(`<span class="hw-day ${inDay ? "in" : ""} ${today ? "today" : ""}" title="${k}">
+      <span class="hw-dow">${DOW[d.getDay()][0]}</span>
+      <span class="hw-circle">${inDay ? icon("check", 16) : ""}</span>
+      <span class="hw-num">${d.getDate()}</span>
+    </span>`);
+    d.setDate(d.getDate() + 1);
+  }
+  return `<div class="hero-week">${cells.join("")}</div>`;
+}
+
+/** วงแหวน progress (0-100) รอบไอคอน */
+function ringSvg(pct, color) {
+  const r = 17, c = 2 * Math.PI * r;
+  const off = c * (1 - Math.max(0, Math.min(100, pct)) / 100);
+  return `<svg class="ring" viewBox="0 0 40 40" aria-hidden="true">
+    <circle class="ring-track" cx="20" cy="20" r="${r}"/>
+    <circle class="ring-fill" cx="20" cy="20" r="${r}" stroke="${color}" stroke-dasharray="${c.toFixed(2)}" stroke-dashoffset="${off.toFixed(2)}"/>
+  </svg>`;
 }
 
 const MINI_LIMIT = 4;
@@ -2575,15 +2859,15 @@ function renderHome() {
     const schedText = featured && cat ? `<span class="ov-sub" style="margin-left:auto">${scheduleSummary(cat)}</span>` : "";
     return `<div class="ov-card ${featured ? "featured" : ""}" ${featured ? `style="border-color:${g.color}"` : ""}>
       <div class="ov-head">
-        <span class="cat-ico" style="background:color-mix(in srgb, ${g.color} 16%, var(--card));color:color-mix(in srgb, ${g.color} 55%, var(--fg))">${icon(g.icon, featured ? 17 : 15)}</span>
-        <span class="name">${esc(g.name)}</span>
+        <span class="cat-ring">${ringSvg(pct, g.color)}<span class="cat-ico" style="background:color-mix(in srgb, ${g.color} 16%, var(--card));color:color-mix(in srgb, ${g.color} 55%, var(--fg))">${icon(g.icon, 14)}</span></span>
+        <span class="name">${esc(g.name)}
+          <span class="ov-sub" style="display:block;font-weight:600">${total ? `${done.length}/${total} done${pct === 100 ? " ✓" : ""}` : "No tasks today"}</span>
+        </span>
         ${nowBadge}
         <button class="ov-more" aria-label="Open ${esc(g.name)}" onclick="goCat('${g.key}')">${icon("right", 14)}</button>
       </div>
       ${featured ? `<div style="display:flex">${schedText}</div>` : ""}
-      <div class="mini-list">${list}</div>
-      <span class="ov-sub">${total ? `${done.length}/${total} done` : "&nbsp;"}</span>
-      <span class="ov-bar"><span style="width:${pct}%;background:${g.color}"></span></span>
+      ${total ? `<div class="mini-list">${list}</div>` : ""}
     </div>`;
   }
 
@@ -2704,8 +2988,16 @@ function renderHome() {
   </button>`;
 
   const g = greeting();
-  return `<h1 class="greet"><span class="greet-ico" style="color:${g.color}">${icon(g.icon, 26)}</span>${g.text}${user?.name ? ", " + esc(user.name.split(" ")[0]) : ""}</h1>
-    <div class="today-date">${DOW[d.getDay()]}, ${d.getDate()} ${MONTHS[d.getMonth()]} ${d.getFullYear()}</div>
+  const firstName = user?.name ? esc(user.name.split(" ")[0]) : "";
+  return `<section class="hero">
+      <div class="hero-top">
+        <div class="hero-date">${icon(g.icon, 15)} ${DOW[d.getDay()]}, ${d.getDate()} ${MONTHS_SHORT[d.getMonth()]}</div>
+        ${heroActionsHtml()}
+      </div>
+      <h1 class="hero-title"><span class="soft">${g.text},</span><br>${firstName ? `${firstName}, ` : ""}you're doing <b>great!</b></h1>
+      ${heroWeekHtml()}
+    </section>
+    <div class="sheet-body">
     <div class="stat-row">
       <div class="stat-card">
         <span class="stat-ico" style="background:color-mix(in srgb, #ef4444 14%, var(--card));color:var(--danger-text)">${icon("bell", 13)}</span>
@@ -2720,7 +3012,6 @@ function renderHome() {
         <div class="stat-num success">${doneTodayCount}</div><div class="stat-label">Done today</div>
       </div>
     </div>
-    ${petCardHtml()}
     ${featuredHtml ? `<h2 class="section-title">Right now</h2><div class="ov-grid">${featuredHtml}</div>` : ""}
     <h2 class="section-title">Daily routine</h2>
     <div class="ov-grid">${routineCard}</div>
@@ -2730,7 +3021,8 @@ function renderHome() {
     <div class="ov-grid">${cards}</div>
     ${tomorrowCard ? `<h2 class="section-title">Tomorrow</h2><div class="ov-grid">${tomorrowCard}</div>` : ""}
     <h2 class="section-title">Completed — last 7 days</h2>
-    <div class="card"><div class="week-chart">${weekChart}</div></div>`;
+    <div class="card"><div class="week-chart">${weekChart}</div></div>
+    </div>`;
 }
 
 /** เมื่อกดเข้าหมวดหมู่จาก Home: "today" = เฉพาะที่เกี่ยวกับวันนี้ (ค่าตั้งต้นเดิม), "all" = ทุก task ในหมวดไม่ว่าวันไหน */
@@ -3040,6 +3332,36 @@ function renderSettings() {
       </form>`}
     </div>
 
+    ${cloudConfigured() && sbUser ? (() => {
+      const on = gcalConnected();
+      const isGoogle = user?.provider === "google";
+      const last = state.meta.gcal?.lastSync;
+      const label = on
+        ? (gcalState === "syncing" ? "Connected — syncing…"
+          : gcalState === "error" ? "Connected — sync error, will retry"
+          : "Connected — tasks sync to a “Solo Task” calendar")
+        : gcalState === "reauth" ? "Disconnected — please reconnect" : "Not connected";
+      const sub = on
+        ? (last ? "Last sync " + fmtDateTime(new Date(last)) : "Waiting for first sync…")
+        : (isGoogle ? "Auto-create events for your tasks — get reminders on your phone via Google Calendar"
+                    : "Sign in with Google to use this");
+      const actions = on
+        ? `<button class="link-primary" onclick="gcalSyncNow()">Sync now</button>
+           <button class="link-danger" onclick="disconnectGoogleCalendar()">Disconnect</button>`
+        : isGoogle ? `<button class="link-primary" onclick="connectGoogleCalendar()">${gcalState === "reauth" ? "Reconnect" : "Connect"}</button>` : "";
+      return `
+    <h2 class="section-title">Google Calendar</h2>
+    <div class="set-group">
+      <div class="set-row static">
+        <span class="set-ico" style="background:color-mix(in srgb, #4285f4 16%, var(--card));color:color-mix(in srgb, #4285f4 60%, var(--fg))">${icon("calendar", 14)}</span>
+        <span class="set-label">${label}
+          <span class="set-sub">${sub}</span>
+        </span>
+        ${actions}
+      </div>
+    </div>`;
+    })() : ""}
+
     <h2 class="section-title">Data</h2>
     <div class="set-group">
       <button class="set-row" onclick="exportData()">
@@ -3221,7 +3543,7 @@ function render() {
   document.getElementById("navBar").innerHTML = TABS.map(([id, ico, label]) =>
     `<button class="nav-btn ${id === currentTab ? "active" : ""}" onclick="switchTab('${id}')"
       aria-current="${id === currentTab ? "page" : "false"}">
-      <span class="ico">${icon(ico, 19)}</span>${label}</button>`).join("");
+      <span class="ico">${icon(ico, 20)}</span><span class="lbl">${label}</span></button>`).join("");
   document.getElementById("fabBtn").style.display =
     currentTab === "settings" ? "none" : "";
   if (currentTab === "settings") renderColorPick();
@@ -3263,6 +3585,11 @@ function openForm(taskId) {
     const d = new Date(calSelected + "T09:00:00");
     defaultDue = toInputValue(d);
   }
+  // งานเดิมที่ตั้งเวลาไว้ตรงเที่ยงคืนพอดี ถือว่าไม่ได้ตั้งเวลาไว้ (เข้ากับ heuristic ของ fmtDateTime)
+  const hasTimeInit = t && t.dueAt
+    ? (new Date(t.dueAt).getHours() !== 0 || new Date(t.dueAt).getMinutes() !== 0)
+    : true;
+  const dueInputVal = t && t.dueAt ? toInputValue(new Date(t.dueAt)) : defaultDue;
   const formCats = activeCategories();
   if (t && t.categoryId && !formCats.some(c => c.id === t.categoryId)) {
     const cur = catById(t.categoryId);
@@ -3294,9 +3621,13 @@ function openForm(taskId) {
         <div class="row2">
           <label class="fld">Category<select id="fCat">${catOpts}</select></label>
           <label class="fld"><span id="fDueLabelText">${t?.endDate ? "Start date" : "Due date"}</span>
-            <input type="datetime-local" id="fDue" value="${t && t.dueAt ? toInputValue(new Date(t.dueAt)) : defaultDue}" onkeydown="submitOnEnter(event)">
+            <input type="${hasTimeInit ? "datetime-local" : "date"}" id="fDue" value="${hasTimeInit ? dueInputVal : dueInputVal.slice(0, 10)}" onkeydown="submitOnEnter(event)">
           </label>
         </div>
+        <label class="fld-check">
+          <input type="checkbox" id="fTimeOn" ${hasTimeInit ? "checked" : ""} onchange="toggleFormTime()">
+          Include time
+        </label>
         <label class="fld-check">
           <input type="checkbox" id="fRangeOn" ${t?.endDate ? "checked" : ""} onchange="toggleFormRange()">
           Multi-day task (spans a date range)
@@ -3309,11 +3640,27 @@ function openForm(taskId) {
           <label class="fld">Repeat<select id="fRec">${recOpts}</select></label>
         </div>
         <button type="submit" class="btn btn-primary">Save</button>
+        ${t && t.dueAt ? `<a class="btn btn-outline" href="${esc(googleCalUrl(t))}" target="_blank" rel="noopener" style="text-decoration:none">${icon("calendar", 15)} Add to Google Calendar</a>` : ""}
         ${t ? `<button type="button" class="btn btn-danger-outline" onclick="deleteTask('${t.id}')">Delete Task</button>` : ""}
       </form>
     </div>
   </div>`;
   setTimeout(() => document.getElementById("fTitle")?.focus(), 50);
+}
+
+/** สลับ Due date ระหว่างมีเวลา (datetime-local) กับไม่มีเวลา (date) โดยคงวันที่เดิมไว้ */
+function toggleFormTime() {
+  const on = document.getElementById("fTimeOn").checked;
+  const dueEl = document.getElementById("fDue");
+  const cur = dueEl.value;
+  if (!cur) { dueEl.type = on ? "datetime-local" : "date"; return; }
+  if (on) {
+    dueEl.type = "datetime-local";
+    dueEl.value = cur.length === 10 ? cur + "T09:00" : cur;
+  } else {
+    dueEl.type = "date";
+    dueEl.value = cur.slice(0, 10);
+  }
 }
 
 /** สลับโหมด multi-day: โชว์/ซ่อนช่อง End date + เปลี่ยน label ช่องแรกเป็น "Start date" */
@@ -3335,6 +3682,7 @@ function submitForm(e, taskId) {
   const title = document.getElementById("fTitle").value.trim();
   if (!title) return;
   const dueRaw = document.getElementById("fDue").value;
+  const timeOn = document.getElementById("fTimeOn").checked;
   const remRaw = document.getElementById("fRem").value;
   const rangeOn = document.getElementById("fRangeOn").checked;
   const endRaw = rangeOn ? document.getElementById("fEnd").value : "";
@@ -3346,7 +3694,7 @@ function submitForm(e, taskId) {
     title,
     note: document.getElementById("fNote").value.trim(),
     categoryId: document.getElementById("fCat").value || null,
-    dueAt: dueRaw ? new Date(dueRaw).toISOString() : null,
+    dueAt: dueRaw ? new Date(timeOn ? dueRaw : dueRaw + "T00:00:00").toISOString() : null,
     endDate: (rangeOn && dueRaw && endRaw) ? endRaw : null,
     reminderMin: remRaw === "" ? null : Number(remRaw),
     recurrence: document.getElementById("fRec").value,
