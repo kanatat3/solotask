@@ -1334,9 +1334,18 @@ async function importAgentLog() {
       });
       added++;
     }
-    if (added > 0) save();
+    if (added > 0) save(); // ลง localStorage ก่อน — ถ้าขั้นถัดไปล้ม งานไม่หาย และรอบหน้า dedupe ด้วย agentLogId
+    // mark ว่า import แล้ว "หลัง" state ที่มี task เหล่านี้ขึ้น cloud สำเร็จเท่านั้น —
+    // กันเคสแท็บปิดก่อน debounced save ทัน (แถว log ถูกกินทิ้งแต่ task ไม่เคยถึง cloud)
+    // และ mark เฉพาะแถวที่มี task ใน state จริง (แถวที่ dedupe ข้ามก็ผ่านเงื่อนไขนี้เพราะ task เดิมอยู่ใน state)
+    const doneIds = rows.filter(r => state.tasks.some(t => t.agentLogId === r.id)).map(r => r.id);
+    if (!doneIds.length) return;
+    const { error: upErr } = await sb.from("app_state").upsert({
+      user_id: sbUser.id, data: state, updated_at: new Date().toISOString(),
+    });
+    if (upErr) { console.warn("agent_log: cloud save failed, keeping rows for retry:", upErr.message); return; }
     const { error: markErr } = await sb.from("agent_log")
-      .update({ imported: true }).in("id", rows.map(r => r.id));
+      .update({ imported: true }).in("id", doneIds);
     if (markErr) console.warn("agent_log mark imported failed:", markErr.message);
     if (added > 0) { showToast(`🤖 Imported ${added} task${added > 1 ? "s" : ""} from Claude`); render(); }
   } catch (e) {
