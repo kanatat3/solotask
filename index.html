@@ -1284,6 +1284,64 @@ async function pullCloud() {
   } finally {
     cloudPulling = false;
   }
+  await importAgentLog();
+}
+
+/* ---------- agent log import ----------
+   Claude Code (หรือ agent อื่น) บันทึกงานที่ทำเสร็จลงตาราง agent_log ผ่าน service role key
+   ฝั่งแอปดึงแถวที่ยัง imported=false มาสร้างเป็น task สถานะ done ในหมวด "AI Work"
+   แล้ว mark ว่า import แล้ว — ทำหลัง pullCloud เสมอ เพื่อให้เขียนทับ state ล่าสุดจาก cloud */
+const AGENT_CAT = { name: "AI Work", color: "#ec4899", icon: "chart" };
+
+async function importAgentLog() {
+  if (!sb || !sbUser) return;
+  try {
+    const { data: rows, error } = await sb.from("agent_log")
+      .select("id, title, note, project, started_at, done_at")
+      .eq("user_id", sbUser.id).eq("imported", false)
+      .order("done_at", { ascending: true }).limit(100);
+    if (error || !rows || rows.length === 0) return;
+
+    let cat = state.categories.find(c => c.name.toLowerCase() === AGENT_CAT.name.toLowerCase());
+    if (!cat) { cat = { id: uid(), ...AGENT_CAT }; state.categories.push(cat); }
+
+    let added = 0;
+    for (const r of rows) {
+      // กันซ้ำ: ถ้าเคย import แถวนี้แล้ว (เช่น mark imported ไม่สำเร็จรอบก่อน) ข้ามไป
+      if (state.tasks.some(t => t.agentLogId === r.id)) continue;
+      const doneAt = r.done_at || new Date().toISOString();
+      const startedAt = r.started_at || null;
+      // ใส่ช่วงเวลาทำงานไว้ใน note: "⏱ 14:00–16:30 (2h 30m)" — คร่อมวันก็ระบุวันด้วย
+      let note = r.note || "";
+      if (startedAt) {
+        const s = new Date(startedAt), d = new Date(doneAt);
+        const fmtT = x => x.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", hour12: false });
+        const sameDay = dateKey(s) === dateKey(d);
+        const mins = Math.max(1, Math.round((d - s) / 60000));
+        const dur = mins >= 60 ? `${Math.floor(mins / 60)}h ${mins % 60}m` : `${mins}m`;
+        const range = sameDay ? `${fmtT(s)}–${fmtT(d)}` : `${dateKey(s)} ${fmtT(s)} – ${dateKey(d)} ${fmtT(d)}`;
+        note = `⏱ ${range} (${dur})` + (note ? `\n${note}` : "");
+      }
+      const dueAt = startedAt || doneAt;
+      const spansDays = startedAt && dateKey(new Date(startedAt)) !== dateKey(new Date(doneAt));
+      state.tasks.push({
+        id: uid(), agentLogId: r.id,
+        title: r.project ? `[${r.project}] ${r.title}` : r.title,
+        note, categoryId: cat.id,
+        dueAt, endDate: spansDays ? dateKey(new Date(doneAt)) : null,
+        reminderMin: null, recurrence: "none",
+        status: "done", doneAt, notifiedAt: null, createdAt: dueAt,
+      });
+      added++;
+    }
+    if (added > 0) save();
+    const { error: markErr } = await sb.from("agent_log")
+      .update({ imported: true }).in("id", rows.map(r => r.id));
+    if (markErr) console.warn("agent_log mark imported failed:", markErr.message);
+    if (added > 0) { showToast(`🤖 Imported ${added} task${added > 1 ? "s" : ""} from Claude`); render(); }
+  } catch (e) {
+    console.warn("agent_log import failed:", e);
+  }
 }
 
 function scheduleCloudSave() {
