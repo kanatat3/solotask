@@ -1834,93 +1834,219 @@ function flameSvg(size, lit, flick) {
   </svg>`;
 }
 
-/** สัตว์เลี้ยงแบบ SVG การ์ตูน — ตัวเด้ง กะพริบตา ปีกขยับ (อนิเมชันอยู่ใน CSS) */
+/** สัตว์เลี้ยงแบบ SVG — ค็อกคาเทล 7 ช่วงวัย วาดใหม่ (flat vector + ตาแบบ plush) — อนิเมชันอยู่ใน CSS ผ่าน class p-* */
+let petSvgSeq = 0;
 function petSvg(level) {
-  const stage = Math.min(level, PET_STAGES.length);
-  const eyes = (y) => `
-    <g class="p-eye"><circle cx="41" cy="${y}" r="3.6" fill="#33261a"/><circle cx="42.4" cy="${y - 1.3}" r="1.2" fill="#fff"/></g>
-    <g class="p-eye"><circle cx="59" cy="${y}" r="3.6" fill="#33261a"/><circle cx="60.4" cy="${y - 1.3}" r="1.2" fill="#fff"/></g>`;
-  const cheeks = (y) => `
-    <circle cx="32" cy="${y}" r="4.2" fill="#fda4af" opacity=".75"/>
-    <circle cx="68" cy="${y}" r="4.2" fill="#fda4af" opacity=".75"/>`;
-  const beak = (y) => `<path d="M46 ${y} h8 l-4 6 z" fill="#f59e0b"/>`;
-  const feet = `<g class="p-feet">
-    <path d="M40 88 l-3 5 M40 88 l0 5.5 M40 88 l3 5" stroke="#f59e0b" stroke-width="2.2" stroke-linecap="round" fill="none"/>
-    <path d="M60 88 l-3 5 M60 88 l0 5.5 M60 88 l3 5" stroke="#f59e0b" stroke-width="2.2" stroke-linecap="round" fill="none"/></g>`;
+  // ปัดเป็นจำนวนเต็มและกัน NaN/undefined (เช่น xp เพี้ยนจากไฟล์ import) — ไม่งั้นตกไป stage ที่ไม่มี config แล้ว throw
+  const n = Math.round(Number(level));
+  const stage = Number.isFinite(n) ? Math.max(1, Math.min(n, PET_STAGES.length)) : 1;
+  // id ต้องไม่ซ้ำข้ามอินสแตนซ์ (หน้าเดียวกันวาดสัตว์เลี้ยงได้หลายตัว) — id ซ้ำผิดสเปกและ url(#) อาจชี้ผิดตัว
+  const uid = ++petSvgSeq;
+  const id = (k) => `pet${stage}-${k}-${uid}`;
+  const f = (v) => String(Math.round(v * 100) / 100);
+  const EYE = "#2a1d14";
+  const FOOT = "#8B8E99";
+  const SW = 'stroke-linecap="round" stroke-linejoin="round"';
+
+  /* tapered sickle leaf from base B to tip T; w = thickness, bend = curvature */
+  const leafD = (bx, by, tx, ty, w, bend) => {
+    const mx = (bx + tx) / 2, my = (by + ty) / 2, dx = tx - bx, dy = ty - by;
+    const len = Math.hypot(dx, dy) || 1, nx = -dy / len, ny = dx / len;
+    const cx = mx + nx * bend, cy = my + ny * bend;
+    return `M${f(bx)} ${f(by)} Q${f(cx + nx * w)} ${f(cy + ny * w)} ${f(tx)} ${f(ty)} Q${f(cx - nx * w * 0.35)} ${f(cy - ny * w * 0.35)} ${f(bx)} ${f(by)}z`;
+  };
+  const feather = (bx, by, tx, ty, w, bend, base, shade) =>
+    `<path d="${leafD(bx, by, tx, ty, w + 0.4, bend + 1.3)}" fill="${shade}"/>` +
+    `<path d="${leafD(bx, by, tx, ty, w, bend)}" fill="${base}"/>`;
+
+  /* plush-kawaii glossy eye: big iris, warm lower glint, large upper-left highlight, small lower-right dot */
+  const eye = (cx, cy, r) =>
+    `<g class="p-eye"><ellipse cx="${f(cx)}" cy="${f(cy)}" rx="${f(r)}" ry="${f(r * 1.08)}" fill="${EYE}"/>` +
+    `<ellipse cx="${f(cx)}" cy="${f(cy + r * 0.32)}" rx="${f(r * 0.6)}" ry="${f(r * 0.48)}" fill="#54392a"/>` +
+    `<circle cx="${f(cx - r * 0.33)}" cy="${f(cy - r * 0.36)}" r="${f(r * 0.38)}" fill="#fff"/>` +
+    `<circle cx="${f(cx + r * 0.4)}" cy="${f(cy + r * 0.38)}" r="${f(r * 0.17)}" fill="#fff" opacity=".9"/></g>`;
+  const eyes = (y, dx, r) => eye(50 - dx, y, r) + eye(50 + dx, y, r);
+
+  const cheeks = (y, dx, r, col, op) =>
+    `<circle cx="${f(50 - dx)}" cy="${f(y)}" r="${f(r)}" fill="${col}" opacity="${op}"/><circle cx="${f(50 + dx)}" cy="${f(y)}" r="${f(r)}" fill="${col}" opacity="${op}"/>`;
+
+  /* small friendly hooked beak: soft domed top, orange hook, darker lower band */
+  const beak = (y, s, base, shade) => {
+    const P = (x, yy) => `${f(50 + x * s)} ${f(y + yy * s)}`;
+    return `<path d="M${P(-4.2, 0)} C${P(-4.4, -2.2)} ${P(4.4, -2.2)} ${P(4.2, 0)} C${P(4.2, 4.2)} ${P(1.8, 7)} ${P(0, 8.6)} C${P(-1.8, 7)} ${P(-4.2, 4.2)} ${P(-4.2, 0)}z" fill="${base}"/>` +
+      `<path d="M${P(-3, 3)} C${P(-1.4, 5.4)} ${P(1.4, 5.4)} ${P(3, 3)} C${P(2.4, 6.2)} ${P(0.8, 7.8)} ${P(0, 8.6)} C${P(-0.8, 7.8)} ${P(-2.4, 6.2)} ${P(-3, 3)}z" fill="${shade}"/>` +
+      `<ellipse cx="${f(50 - 1.5 * s)}" cy="${f(y - 0.4 * s)}" rx="${f(1.1 * s)}" ry="${f(0.7 * s)}" fill="#fff" opacity=".5"/>`;
+  };
+
+  /* plush two-toe nub feet, cockatiel grey */
+  const feet = (y, dx, len) => {
+    const toe = (x) => `M${f(x)} ${f(y)} l${f(-len * 0.55)} ${f(len)} M${f(x)} ${f(y)} l${f(len * 0.55)} ${f(len)}`;
+    return `<g class="p-feet"><path d="${toe(50 - dx)} ${toe(50 + dx)}" stroke="${FOOT}" stroke-width="3.2" ${SW} fill="none"/></g>`;
+  };
+
+  /* folded plush wing, rounded tip; local coords, shoulder at (0,0), r side mirrored around x=50 */
+  const wing = (side, sc, ox, oy, base, shade, hi, extra) => {
+    const P = (x, y) => `${f(ox + x * sc)} ${f(oy + y * sc)}`;
+    const body = `M${P(0, 0)} C${P(-9, 1)} ${P(-16, 9)} ${P(-16, 17)} C${P(-16, 25)} ${P(-12, 32)} ${P(-6, 33)} C${P(-1, 33.5)} ${P(1.5, 27)} ${P(1.5, 19)} C${P(2, 12)} ${P(2, 5)} ${P(0, 0)}z`;
+    const band = `M${P(-16, 17)} C${P(-16, 25)} ${P(-12, 32)} ${P(-6, 33)} C${P(-1, 33.5)} ${P(1.5, 27)} ${P(1.5, 19)} C${P(-5, 24)} ${P(-12, 22)} ${P(-16, 17)}z`;
+    const gloss = `M${P(-2, 2)} C${P(-8, 4)} ${P(-13, 9)} ${P(-14, 15)} C${P(-12, 10)} ${P(-7, 6)} ${P(-1, 5)}z`;
+    const inner = `<path d="${body}" fill="${base}"/><path d="${band}" fill="${shade}"/><path d="${gloss}" fill="${hi}" opacity=".85"/>${extra ? extra(P) : ""}`;
+    return side === "l"
+      ? `<g class="p-wing p-wing-l">${inner}</g>`
+      : `<g class="p-wing p-wing-r"><g transform="matrix(-1 0 0 1 100 0)">${inner}</g></g>`;
+  };
+  const wings = (sc, ox, oy, base, shade, hi, extra) => wing("l", sc, ox, oy, base, shade, hi, extra) + wing("r", sc, ox, oy, base, shade, hi, extra);
+
+  /* single tail feather hanging down behind the body, tilted `ang` deg off vertical (tip to the left).
+     Local top-centre = attachment point (hidden behind body); bbox top-right stays next to it for the wag pivot. */
+  const tail = (ox, oy, len, w, ang, outer, stripe, edge) => {
+    const h = w / 2, e = len - 4;
+    const body = `M${f(-h)} 0 L${f(h)} 0 L${f(h)} ${f(e)} C${f(h)} ${f(len + 1.3)} ${f(-h)} ${f(len + 1.3)} ${f(-h)} ${f(e)}z`;
+    const strip = `M${f(-h + 0.6)} 3 L${f(-h + 3.2)} 3 L${f(-h + 3.2)} ${f(e)} C${f(-h + 3)} ${f(len - 0.6)} ${f(-h + 1.4)} ${f(len - 0.2)} ${f(-h + 0.6)} ${f(e - 0.5)}z`;
+    return `<g class="p-tail"><g transform="translate(${f(ox)} ${f(oy)}) rotate(${ang})">` +
+      `<path d="${body}" fill="${outer}" stroke="${edge}" stroke-width="1" stroke-linejoin="round"/>` +
+      `<path d="${strip}" fill="${stripe}"/></g></g>`;
+  };
+
+  /* cel-shaded head circle + body blob */
+  const shadedHead = (cx, cy, r, base, shade, hi, edge) =>
+    `<circle cx="${cx}" cy="${cy}" r="${r}" fill="${shade}"${edge ? ` stroke="${edge}" stroke-width="1.4"` : ""}/>` +
+    `<g clip-path="url(#${id("hc")})"><circle cx="${f(cx - 1.6)}" cy="${f(cy - 1.8)}" r="${f(r - 0.6)}" fill="${base}"/>` +
+    `<ellipse cx="${f(cx - 6)}" cy="${f(cy - 8)}" rx="${f(r * 0.32)}" ry="${f(r * 0.2)}" fill="${hi}" opacity=".7"/></g>`;
+  const shadedBody = (d, cx, cy, rx, ry, base, shade, hi, edge) =>
+    `<path d="${d}" fill="${shade}"${edge ? ` stroke="${edge}" stroke-width="1.4" stroke-linejoin="round"` : ""}/>` +
+    `<g clip-path="url(#${id("bc")})"><ellipse cx="${f(cx - 3)}" cy="${f(cy - 4)}" rx="${rx}" ry="${ry}" fill="${base}"/>` +
+    `<ellipse cx="${f(cx - 8)}" cy="${f(cy - 10)}" rx="${f(rx * 0.3)}" ry="${f(ry * 0.22)}" fill="${hi}" opacity=".6"/></g>`;
+
+  const EGG = "#fbecc8", EGG_SH = "#e2cf9f", EGG_O = "#d3bd90", EGG_HI = "#fff8e6";
 
   let inner = "";
   if (stage === 1) {
-    // ไข่ตาหลับ โยกไปมา
-    inner = `<g class="p-wobble">
-      <ellipse cx="50" cy="58" rx="27" ry="33" fill="#fef3c7" stroke="#f0d9a8" stroke-width="2"/>
-      <ellipse cx="42" cy="42" rx="7" ry="10" fill="#fffbeb" opacity=".8"/>
-      <path d="M36 58 q5 4 10 0 M54 58 q5 4 10 0" stroke="#33261a" stroke-width="2.4" fill="none" stroke-linecap="round"/>
-      ${cheeks(66)}
+    /* Egg: sleeping, rocking, z z */
+    const eggD = "M50 26 C66 26 76 45 76 63 C76 80 64 91 50 91 C36 91 24 80 24 63 C24 45 34 26 50 26z";
+    inner = `<defs><clipPath id="${id("ec")}"><path d="${eggD}"/></clipPath></defs>
+    <g class="p-wobble">
+      <path d="${eggD}" fill="${EGG_SH}"/>
+      <g clip-path="url(#${id("ec")})"><ellipse cx="47" cy="57" rx="26" ry="32" fill="${EGG}"/><ellipse cx="40" cy="42" rx="7" ry="10" fill="${EGG_HI}" transform="rotate(-18 40 42)"/></g>
+      <path d="${eggD}" fill="none" stroke="${EGG_O}" stroke-width="1.6"/>
+      <circle cx="34" cy="50" r="2.6" fill="#f0dcaa"/><circle cx="64" cy="44" r="2.1" fill="#f0dcaa"/><circle cx="60" cy="81" r="2.3" fill="#f0dcaa"/>
+      <path d="M36.5 60.5 q5.5 5 11 0 M52.5 60.5 q5.5 5 11 0" stroke="${EYE}" stroke-width="2.6" fill="none" ${SW}/>
+      ${cheeks(67, 15, 3.6, "#fda4af", ".6")}
+      <text x="68" y="31" font-size="8" font-weight="700" fill="#a5b4fc">z</text><text x="74.5" y="24" font-size="6" font-weight="700" fill="#c7d2fe">z</text>
     </g>`;
   } else if (stage === 2) {
-    // หัวโผล่จากเปลือกไข่
-    inner = `<g class="p-body">
-      <circle cx="50" cy="45" r="22" fill="#fde68a"/>
-      <ellipse cx="43" cy="34" rx="6" ry="8" fill="#fef3c7" opacity=".7"/>
-      ${eyes(44)}${beak(51)}${cheeks(51)}
-      <path d="M46 24 q4 -6 8 0" stroke="#fbbf24" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+    /* Hatchling: downy chick in a scalloped shell, shell cap on the head */
+    const shellFront = "M26 62 a6.2 4.5 0 0 1 12 0 a6.2 4.5 0 0 1 12 0 a6.2 4.5 0 0 1 12 0 a6.2 4.5 0 0 1 12 0 L74 70 C74 85 62 91 50 91 C38 91 26 85 26 70z";
+    const face = "#fde68a", fShade = "#efc44c", fHi = "#fff5c7";
+    /* shell cap: dome hugging the head's upper-right, soft scalloped rim (local coords, tilted to follow the head curve) */
+    const cap = `M-11 0 C-11 -13.5 11 -13.5 11 0 a3.6 3.6 0 0 1 -5.5 1.2 a3.6 3.6 0 0 1 -5.5 -0.8 a3.6 3.6 0 0 1 -5.5 1 a3.6 3.6 0 0 1 -5.5 -1.4z`;
+    inner = `<defs><clipPath id="${id("hc")}"><circle cx="50" cy="44" r="16"/></clipPath><clipPath id="${id("sc")}"><path d="${shellFront}"/></clipPath></defs>
+    <path d="M27 59 L73 59 L74 70 C74 85 62 91 50 91 C38 91 26 85 26 70z" fill="#cfb88a"/>
+    <g class="p-body">
+      <ellipse class="p-belly" cx="50" cy="66" rx="12" ry="10" fill="${fHi}"/>
+      ${feather(42.5, 32, 36.5, 23.5, 1.7, 1.6, face, fShade)}${feather(46, 30, 43.5, 20.5, 1.8, 1, face, fShade)}
+      ${shadedHead(50, 44, 16, face, fShade, fHi)}
+      <g class="p-wing p-wing-l"><path d="M38 57 C33 57 29 61 28 66 C30 68 34 67 37 64z" fill="${fShade}"/><path d="M38 57 C34 57.5 30.5 60.5 30 65 C32 66 35 65 37 62.5z" fill="${face}"/></g>
+      <g class="p-wing p-wing-r"><g transform="matrix(-1 0 0 1 100 0)"><path d="M38 57 C33 57 29 61 28 66 C30 68 34 67 37 64z" fill="${fShade}"/><path d="M38 57 C34 57.5 30.5 60.5 30 65 C32 66 35 65 37 62.5z" fill="${face}"/></g></g>
+      <g transform="translate(57 31.5) rotate(14)"><path d="${cap}" fill="${EGG}" stroke="${EGG_O}" stroke-width="1.4" stroke-linejoin="round"/><path d="M-7.2 -3 C-7.2 -6 -5.5 -8.5 -3 -9.5" fill="none" stroke="${EGG_HI}" stroke-width="1.6" ${SW} opacity=".9"/><path d="M4.5 -9.5 q2.4 2.4 0.6 6" fill="none" stroke="${EGG_O}" stroke-width="1.2" ${SW}/></g>
+      <g clip-path="url(#${id("hc")})">${cheeks(51, 12.5, 2.2, "#F9C48F", ".9")}</g>
+      ${eyes(43.5, 6.5, 4.5)}
+      ${beak(48.5, 0.62, "#f59e0b", "#d97706")}
     </g>
-    <path d="M26 62 L34 54 L42 62 L50 54 L58 62 L66 54 L74 62 L74 74 Q74 90 50 90 Q26 90 26 74 Z"
-      fill="#fef3c7" stroke="#f0d9a8" stroke-width="2"/>`;
+    <path d="${shellFront}" fill="${EGG_SH}"/>
+    <g clip-path="url(#${id("sc")})"><path d="M22 52 L47 52 L48 62 C46 72 42 84 46 96 L22 96z" fill="${EGG}"/><path d="M47 52 L74 52 L74 96 L46 96 C42 84 46 72 48 62z" fill="#f4e2b6"/><ellipse cx="35" cy="73" rx="4" ry="6" fill="${EGG_HI}" opacity=".8"/></g>
+    <path d="${shellFront}" fill="none" stroke="${EGG_O}" stroke-width="1.6" stroke-linejoin="round"/>`;
   } else {
-    // ---- Cockatiel: หงอนเหลืองสูง หน้าเหลือง แก้มส้มกลม ตัวเทา หางยาว ----
-    const crest1 = (c) => `<path d="M50 34 C49 24 48 18 45 13" stroke="${c}" stroke-width="4" fill="none" stroke-linecap="round"/>`;
-    const crest2 = (c) => crest1(c) + `<path d="M53 34 C55 24 57 18 61 14" stroke="${c}" stroke-width="3.4" fill="none" stroke-linecap="round"/>`;
-    const crest3 = (c) => crest2(c) + `<path d="M47 35 C43 26 40 21 34 18" stroke="${c}" stroke-width="2.8" fill="none" stroke-linecap="round"/>`;
-    const flameCrest = `<g class="p-flame">
-        <path d="M50 34 C49 22 48 16 44 10 C50 14 51 20 52 24 C53 17 56 13 61 10 C58 17 57 24 55 30z" fill="#f97316"/>
-        <path d="M50 32 C50 24 50 19 48 15 C52 18 53 23 53 27z" fill="#fcd34d"/>
-      </g>`;
-    const cfg = {
-      3: { // ลูกนก: เทาอ่อน หน้าเหลืองจาง หงอนสั้น แก้มส้มอ่อน
-        body: "#d3d8e0", belly: "#eef0f4", wing: "#b6bdc9", face: "#fdf0b6", faceR: 15,
-        cheek: "#fdba74", cheekR: 3.6, crest: crest1("#fbbf24"), tail: "",
-      },
-      4: { // นกรุ่น: หงอน 2 เส้น หน้าเหลืองชัด หางสั้น
-        body: "#c9ced9", belly: "#e9ebf0", wing: "#a8b0bf", face: "#fde68a", faceR: 17,
-        cheek: "#fb923c", cheekR: 4.4, crest: crest2("#fbbf24"),
-        tail: `<g class="p-tail"><path d="M68 78 q8 6 9 15 l-7 -3 q-4 -5 -7 -9z" fill="#a8b0bf"/></g>`,
-      },
-      5: { // ค็อกคาเทลเต็มวัย: หงอน 3 เส้น แก้มส้มกลมใหญ่ หางยาว + ผิวปาก ♪
-        body: "#c3c9d4", belly: "#e6e8ee", wing: "#9aa3b3", face: "#fde047", faceR: 19,
-        cheek: "#fb923c", cheekR: 5.2, crest: crest3("#facc15") +
-          `<text class="p-note" x="79" y="30" font-size="13" fill="#6366f1">♪</text>`,
-        tail: `<g class="p-tail">
-               <path d="M69 76 q11 7 13 21 l-8 -4 q-6 -8 -10 -13z" fill="#9aa3b3"/>
-               <path d="M72 79 q7 6 8 15 l-5 -3 q-3 -6 -6 -9z" fill="#fde047" opacity=".85"/>
-               </g>`,
-      },
-      6: { // Pearl Tiel: ลายมุกขาว-เทา หงอนฟู
-        body: "#e4e7ec", belly: "#f7f8fa", wing: "#c5cbd6", face: "#fef3c7", faceR: 18,
-        cheek: "#fdba74", cheekR: 5, crest: crest3("#e5c84f") +
-          `<circle cx="30" cy="70" r="2" fill="#fff" opacity=".9"/><circle cx="42" cy="76" r="2" fill="#fff" opacity=".9"/>
-           <circle cx="58" cy="76" r="2" fill="#fff" opacity=".9"/><circle cx="70" cy="70" r="2" fill="#fff" opacity=".9"/>`,
-        tail: `<g class="p-tail"><path d="M69 76 q11 7 13 21 l-8 -4 q-6 -8 -10 -13z" fill="#c5cbd6"/></g>`,
-      },
-      7: { // Phoenix Tiel: หงอนไฟ หางไฟ
-        body: "#fdba74", belly: "#fef0d9", wing: "#f97316", face: "#fde047", faceR: 19,
-        cheek: "#ef4444", cheekR: 5.2, crest: flameCrest,
-        tail: `<g class="p-flame"><path d="M69 76 q12 7 14 20 l-8 -4 q-6 -7 -10 -12z" fill="#f97316"/>
-               <path d="M72 79 q7 6 8 14 l-5 -3 q-3 -5 -6 -8z" fill="#fcd34d"/></g>`,
-      },
+    const C = {
+      3: { body: "#C9CCD4", shade: "#A3A9B6", hi: "#DDE0E6", belly: "#E6E8ED", wing: "#B9BEC9", wShade: "#929AA9", wHi: "#D3D7DE",
+           face: "#FCEFB8", fShade: "#EBD07A", fHi: "#FFFAE6", cheek: "#F9C48F", crest: "#F6D25C", crShade: "#D9AE2C" },
+      4: { body: "#C3C8D2", shade: "#969EAD", hi: "#D9DCE3", belly: "#E9EAEE", wing: "#A9B1BF", wShade: "#828D9C", wHi: "#C9CFD8",
+           face: "#FDE35A", fShade: "#EDC22E", fHi: "#FFF2B8", cheek: "#F5A05A", crest: "#FBBF24", crShade: "#D99B0A" },
+      5: { body: "#B8BEC9", shade: "#8B93A2", hi: "#D3D8DF", belly: "#E3E6EC", wing: "#9AA3B3", wShade: "#75808F", wHi: "#BCC4D0",
+           face: "#FDE047", fShade: "#E6B512", fHi: "#FFF0A6", cheek: "#F5A05A", crest: "#FDE047", crShade: "#DBA90C" },
+      6: { body: "#F2EEE4", shade: "#D3CCB9", hi: "#FBF9F4", belly: "#FAF8F2", wing: "#E6E0D0", wShade: "#C4BBA4", wHi: "#F6F2E8",
+           face: "#FDE68A", fShade: "#EBC451", fHi: "#FFF5CC", cheek: "#F5A05A", crest: "#FDE047", crShade: "#DBA90C", edge: "#B9B19C", pearl: "#A9A6A0" },
+      7: { body: "#F97316", shade: "#C2410C", hi: "#FB923C", belly: "#FDE68A", wing: "#EA580C", wShade: "#9A3412", wHi: "#FDBA74",
+           face: "#FDE047", fShade: "#F59E0B", fHi: "#FFF3B0", cheek: "#F5A05A", crest: "#F97316", crShade: "#DC2626" },
     }[stage];
-    inner = `<g class="p-body">
-      ${cfg.tail}
-      <ellipse cx="50" cy="60" rx="29" ry="27" fill="${cfg.body}"/>
-      <ellipse class="p-belly" cx="50" cy="70" rx="16" ry="12" fill="${cfg.belly}"/>
-      <ellipse cx="50" cy="50" rx="${cfg.faceR}" ry="${cfg.faceR - 2}" fill="${cfg.face}"/>
-      <ellipse class="p-wing p-wing-l" cx="23" cy="60" rx="7.5" ry="13" fill="${cfg.wing}"/>
-      <ellipse class="p-wing p-wing-r" cx="77" cy="60" rx="7.5" ry="13" fill="${cfg.wing}"/>
-      ${cfg.crest}
-      ${eyes(50)}${beak(57)}
-      <circle cx="33" cy="58" r="${cfg.cheekR}" fill="${cfg.cheek}" opacity=".85"/>
-      <circle cx="67" cy="58" r="${cfg.cheekR}" fill="${cfg.cheek}" opacity=".85"/>
-    </g>${feet}`;
+
+    /* per-stage geometry */
+    const G = {
+      3: { hcx: 50, hcy: 44, hr: 20, eyeY: 43, eyeDx: 8, eyeR: 5.6, cheekY: 52.5, cheekDx: 15.5, cheekR: 2.2, cheekOp: ".85", beakY: 50, beakS: 0.7,
+           bodyD: "M34.5 71 a15.5 13 0 1 0 31 0 a15.5 13 0 1 0 -31 0z",
+           bcx: 50, bcy: 71, brx: 16, bry: 13, belly: [50, 74, 9, 7], wingS: 0.58, wingX: 40.5, wingY: 61.5, feetY: 82.5, feetDx: 6, feetLen: 4.2 },
+      4: { hcx: 50, hcy: 43, hr: 17, eyeY: 42, eyeDx: 7, eyeR: 4.8, cheekY: 50.5, cheekDx: 14, cheekR: 2.4, cheekOp: ".9", beakY: 48, beakS: 0.78,
+           bodyD: "M50 49 C35 49 26.5 59 26.5 68 C26.5 76 35 81 50 81 C65 81 73.5 76 73.5 68 C73.5 59 65 49 50 49z",
+           bcx: 50, bcy: 66, brx: 24, bry: 16, belly: [50, 68.5, 13, 9.5], wingS: 0.84, wingX: 37.5, wingY: 51, feetY: 79.5, feetDx: 8, feetLen: 4.6 },
+      5: { hcx: 50, hcy: 41, hr: 17, eyeY: 40, eyeDx: 7, eyeR: 4.8, cheekY: 48.5, cheekDx: 14, cheekR: 2.6, cheekOp: ".95", beakY: 46, beakS: 0.85,
+           bodyD: "M50 47 C34 47 25.5 58 25.5 67 C25.5 76 35 81 50 81 C65 81 74.5 76 74.5 67 C74.5 58 66 47 50 47z",
+           bcx: 50, bcy: 65, brx: 25, bry: 17, belly: [50, 67.5, 14, 10], wingS: 0.92, wingX: 37, wingY: 49, feetY: 79.5, feetDx: 8.5, feetLen: 4.6 },
+    };
+    G[6] = G[5]; G[7] = G[5];
+    const g = G[stage];
+
+    /* crest per stage */
+    const crest5 = (base, shade) =>
+      feather(44, 29, 33.5, 14.5, 2.4, 5, base, shade) + feather(46.5, 27, 39, 10, 2.8, 6, base, shade) +
+      feather(50, 25.5, 45, 8, 3, 6.2, base, shade) + feather(53.5, 26.5, 51.5, 9, 2.8, 5.2, base, shade) +
+      feather(56.5, 28.5, 57.5, 13.5, 2.4, 3.6, base, shade);
+    let crest = "";
+    if (stage === 3) {
+      crest = feather(45, 27, 39, 20, 1.8, 2.2, C.crest, C.crShade) + feather(55, 27, 61, 20, 1.8, -2.2, C.crest, C.crShade) +
+        feather(50, 26, 50.5, 12, 2.1, 1.8, C.crest, C.crShade);
+    } else if (stage === 4) {
+      crest = feather(45.5, 31, 37.5, 16.5, 2.5, 4, C.crest, C.crShade) + feather(50, 29, 44.5, 13.5, 2.8, 4.2, C.crest, C.crShade) + feather(54.5, 30.5, 52, 16, 2.5, 3.4, C.crest, C.crShade);
+    } else if (stage === 7) {
+      crest = `<g class="p-flame">${crest5("#F97316", "#DC2626")}` +
+        `<path d="${leafD(47, 26, 44, 12, 1.2, 3.5)}" fill="#FDE047" opacity=".9"/><path d="${leafD(50.5, 25, 46.5, 10.5, 1.3, 3.6)}" fill="#FDE047" opacity=".9"/><path d="${leafD(53.5, 26, 51.8, 12, 1.2, 3)}" fill="#FDE047" opacity=".9"/></g>`;
+    } else {
+      crest = crest5(C.crest, C.crShade);
+    }
+
+    /* tail per stage */
+    let tailStr = "";
+    if (stage === 4) tailStr = tail(34, 60, 21, 7, 10, C.wing, C.body, C.wShade);
+    else if (stage === 5) tailStr = tail(37, 58, 31, 8.5, 10, C.wing, C.face, C.wShade);
+    else if (stage === 6) tailStr = tail(37, 58, 31, 8.5, 10, C.wing, C.face, C.edge);
+    else if (stage === 7) {
+      /* one flame feather: same anchor/angle/length as the stage 5 tail (37,58 / 10deg / ~31 long), 3 tongues at the end */
+      const T = "M-5.2 0 L5.2 0 L5.2 19 C5.6 24 4.8 28.5 3.3 32 C2.2 30 1.7 28.6 1.5 27.4 C0.9 29.8 0 31.4 -0.8 33 C-2 30.8 -2.7 28.8 -2.9 27.2 C-3.6 28.9 -4.3 30 -5 30.8 C-5.5 27 -5.4 23 -5.2 19z";
+      tailStr = `<g class="p-flame"><g transform="translate(37 58) rotate(10)"><path d="${T}" fill="#DC2626"/><path d="${T}" transform="scale(.7 .93)" fill="#F97316"/><path d="${T}" transform="scale(.38 .84)" fill="#FDE047"/></g></g>`;
+    }
+
+    /* stage-specific decoration */
+    let wingExtra = null, bodyExtra = "";
+    if (stage === 6) {
+      const sc = (P, x, y) => `<path d="M${P(x - 2.4, y)} a2.4 2.4 0 0 0 4.8 0" fill="none" stroke="${C.pearl}" stroke-width="1.3"/>`;
+      wingExtra = (P) => sc(P, -9, 12) + sc(P, -4, 15) + sc(P, -11, 19) + sc(P, -6, 22) + sc(P, -9, 27) + sc(P, -4, 27);
+      const S = (x, y) => `<path d="M${x - 2.4} ${y} a2.4 2.4 0 0 0 4.8 0" fill="none" stroke="${C.pearl}" stroke-width="1.3"/>`;
+      bodyExtra = S(50, 55) + S(46, 60) + S(54, 60) + S(50, 65) + S(30, 71) + S(70, 71);
+    }
+    const ticks = stage === 3
+      ? `<path d="M41.5 28.5 l-1.8 -3.8 M47.5 25.8 l-0.6 -4 M58.5 28.5 l1.8 -3.8" fill="none" stroke="${C.fShade}" stroke-width="1.3" ${SW}/>`
+      : "";
+    const sparkles = stage === 7
+      ? `<circle cx="26" cy="27" r="1.7" fill="#FDE047"/><circle cx="75" cy="21" r="1.4" fill="#FBBF24"/><circle cx="79" cy="43" r="1.2" fill="#FDE047"/><circle cx="21" cy="47" r="1.2" fill="#FBBF24"/>`
+      : "";
+    const note = stage === 5 ? `<text class="p-note" x="66" y="25" font-size="11" font-weight="700" fill="#6366f1">♪</text>` : "";
+    const edge = C.edge || "";
+
+    inner = `<defs><clipPath id="${id("hc")}"><circle cx="${g.hcx}" cy="${g.hcy}" r="${g.hr}"/></clipPath><clipPath id="${id("bc")}"><path d="${g.bodyD}"/></clipPath></defs>
+    ${feet(g.feetY, g.feetDx, g.feetLen)}
+    <g class="p-body">
+      ${tailStr}
+      ${shadedBody(g.bodyD, g.bcx, g.bcy, g.brx, g.bry, C.body, C.shade, C.hi, edge)}
+      <ellipse class="p-belly" cx="${g.belly[0]}" cy="${g.belly[1]}" rx="${g.belly[2]}" ry="${g.belly[3]}" fill="${C.belly}"/>
+      ${bodyExtra}
+      ${wings(g.wingS, g.wingX, g.wingY, C.wing, C.wShade, C.wHi, wingExtra)}
+      ${crest}
+      ${shadedHead(g.hcx, g.hcy, g.hr, C.face, C.fShade, C.fHi, edge)}
+      ${ticks}
+      <g clip-path="url(#${id("hc")})">${cheeks(g.cheekY, g.cheekDx, g.cheekR, C.cheek, g.cheekOp)}</g>
+      ${eyes(g.eyeY, g.eyeDx, g.eyeR)}
+      ${beak(g.beakY, g.beakS, stage === 7 ? "#FBBF24" : "#F59E0B", "#D97706")}
+      ${sparkles}${note}
+    </g>`;
   }
   return `<svg class="pet-svg" viewBox="0 0 100 100" role="img" aria-label="${PET_STAGES[stage - 1].name}">${inner}</svg>`;
 }
