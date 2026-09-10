@@ -98,13 +98,16 @@
   /* home overview */
   .today-date { font-size: .8rem; color: var(--muted); margin: -0.75rem 0 1rem; }
   .ov-grid { display: grid; grid-template-columns: 1fr 1fr; gap: .6rem; align-items: start; }
+  /* จอมือถือ: การ์ด 2 คอลัมน์แคบเกินไป (วงแหวน+ปุ่มลูกศรกินที่จนชื่อเหลือไม่กี่สิบพิกเซล) -> คอลัมน์เดียว */
+  @media (max-width: 29.99rem) { .ov-grid { grid-template-columns: 1fr; } }
   .ov-card {
     background: var(--card); border: 1px solid var(--edge); border-radius: var(--r-md);
     padding: .9rem; display: flex; flex-direction: column; gap: .55rem;
     color: var(--fg); position: relative; box-shadow: var(--shadow); min-width: 0;
   }
   .ov-head { display: flex; align-items: center; gap: .55rem; font-size: .86rem; font-weight: 700; min-width: 0; }
-  .ov-head .name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  /* ชื่อหมวดขึ้นบรรทัดใหม่ได้ (ไม่ตัดเป็น "AI W...") แต่ไม่หั่นกลางคำ นอกจากคำนั้นยาวเกินจริงๆ */
+  .ov-head .name { flex: 1; min-width: 0; overflow-wrap: break-word; line-height: 1.25; }
   .cat-ico {
     flex-shrink: 0; width: 2rem; height: 2rem; border-radius: .65rem;
     display: flex; align-items: center; justify-content: center;
@@ -1297,6 +1300,7 @@ const AGENT_CAT_PREFIX = "AI · ";
 const AGENT_CAT_FALLBACK = "AI Work";   // แถวที่ไม่ได้ระบุโปรเจกต์
 const AGENT_CAT_ICON = "chart";
 const AGENT_CAT_LEGACY_COLOR = "#ec4899";   // สีที่ V4.9 ใช้ตอนสร้างหมวด "AI Work" อัตโนมัติ
+const AI_HUB_COLOR = "#6366f1";             // สีการ์ด/หัวข้อของหน้ารวมงาน AI
 const AGENT_CAT_MAX = 20;               // กันหมวดงอกไม่สิ้นสุดถ้า project เพี้ยน
 
 /** หมวดของโปรเจกต์นั้น — หาไม่เจอก็สร้างใหม่ (สีวนตาม COLORS ให้แต่ละโปรเจกต์ต่างกัน) */
@@ -2987,7 +2991,20 @@ function fmtSpan(t) {
 }
 
 /* ---------- views ---------- */
-let todayCat = null; // null = overview, "none" = no-category group, otherwise category id
+let todayCat = null; // null = overview, "none" = no-category group, "ai" = หน้ารวมงาน AI, อื่นๆ = category id
+// ค่าพิเศษสำหรับหน้ารวม AI — ตั้งชื่อให้ไม่มีทางตรงกับ id ที่ uid() สร้าง (timestamp+random)
+// กันเคสไฟล์ backup ที่ import เข้ามามีหมวด id ตรงกันแล้วเปิดหมวดนั้นไม่ได้
+const AI_HUB = "__ai_hub__";
+
+/** หมวดที่ระบบสร้างให้งาน AI (หน้าแรกยุบรวมเป็นใบเดียว ไม่กระจายเต็มหน้า) */
+function isAgentCategory(c) {
+  return !!c && (c.name === AGENT_CAT_FALLBACK || c.name.startsWith(AGENT_CAT_PREFIX));
+}
+function agentCategories() { return activeCategories().filter(isAgentCategory); }
+/** ชื่อโปรเจกต์ล้วนๆ (ตัด "AI · " ออก) */
+function agentCatLabel(c) {
+  return c.name.startsWith(AGENT_CAT_PREFIX) ? c.name.slice(AGENT_CAT_PREFIX.length) : c.name;
+}
 
 /** งานของ "วันนี้": เลยกำหนด(ยังไม่จบช่วง), ช่วง/วันนี้อยู่ในกำหนด, ไม่มีกำหนด, หรือเสร็จแล้ววันนี้ */
 function todayTasksOf(catKey) {
@@ -3087,7 +3104,9 @@ function renderHome() {
   const d = new Date();
   if (todayCat !== null) return renderTodayDetail();
 
-  const groups = activeCategories().map(c => ({ key: c.id, name: c.name, color: c.color, icon: c.icon || "tag" }));
+  // หมวดงาน AI ไม่กระจายเป็นใบๆ บนหน้าแรก — ยุบเป็นการ์ดเดียว กดเข้าไปเลือกโปรเจกต์ทีหลัง
+  const groups = activeCategories().filter(c => !isAgentCategory(c))
+    .map(c => ({ key: c.id, name: c.name, color: c.color, icon: c.icon || "tag" }));
   if (todayTasksOf("none").length) groups.push({ key: "none", name: "No category", color: "#94a3b8", icon: "tag" });
 
   // สรุปรวมด้านบน
@@ -3131,11 +3150,35 @@ function renderHome() {
 
   // หมวดที่ "ถึงเวลา" ตอนนี้ → ชูเด่นอันเดียวด้านบน ที่เหลือต่อด้านล่าง
   const activeCat = activeCategories().find(scheduleActive);
-  const featuredHtml = activeCat
-    ? buildCard(groups.find(g => g.key === activeCat.id), true) : "";
+  const featuredGroup = activeCat ? groups.find(g => g.key === activeCat.id) : null;
+  const featuredHtml = featuredGroup ? buildCard(featuredGroup, true) : "";
   const cards = groups
-    .filter(g => !activeCat || g.key !== activeCat.id)
+    .filter(g => !featuredGroup || g.key !== featuredGroup.key)
     .map(g => buildCard(g, false)).join("");
+
+  // การ์ดรวมงาน AI ใบเดียว — กดแล้วเข้าไปเลือกโปรเจกต์ที่หน้า AI hub
+  const aiCats = agentCategories();
+  let aiCardHtml = "";
+  if (aiCats.length) {
+    const aiTasks = aiCats.flatMap(c => allTasksOf(c.id));
+    const aiDoneToday = aiTasks.filter(t => t.status === "done" && t.doneAt && isToday(new Date(t.doneAt))).length;
+    const aiOpen = aiTasks.filter(t => t.status === "open").length;
+    const sub = [
+      `${aiCats.length} project${aiCats.length > 1 ? "s" : ""}`,
+      aiDoneToday ? `${aiDoneToday} done today` : "",
+      aiOpen ? `${aiOpen} open` : "",
+    ].filter(Boolean).join(" · ");
+    const pct = aiTasks.length ? Math.round(aiTasks.filter(t => t.status === "done").length / aiTasks.length * 100) : 0;
+    aiCardHtml = `<div class="ov-card">
+      <div class="ov-head">
+        <span class="cat-ring">${ringSvg(pct, AI_HUB_COLOR)}<span class="cat-ico" style="background:color-mix(in srgb, ${AI_HUB_COLOR} 16%, var(--card));color:color-mix(in srgb, ${AI_HUB_COLOR} 55%, var(--fg))">${icon(AGENT_CAT_ICON, 14)}</span></span>
+        <span class="name">AI Work
+          <span class="ov-sub" style="display:block;font-weight:600">${sub}</span>
+        </span>
+        <button class="ov-more" aria-label="Open AI Work" onclick="goCat('${AI_HUB}')">${icon("right", 14)}</button>
+      </div>
+    </div>`;
+  }
 
   // กราฟ done 7 วันล่าสุด
   const weekAgo = startOfDay(new Date());
@@ -3276,7 +3319,7 @@ function renderHome() {
     <h2 class="section-title">Checklists</h2>
     <div class="ov-grid">${checklistCards}${newChecklistBtn}</div>
     <h2 class="section-title">${featuredHtml ? "Other categories" : "By category"}</h2>
-    <div class="ov-grid">${cards}</div>
+    <div class="ov-grid">${cards}${aiCardHtml}</div>
     ${tomorrowCard ? `<h2 class="section-title">Tomorrow</h2><div class="ov-grid">${tomorrowCard}</div>` : ""}
     <h2 class="section-title">Completed — last 7 days</h2>
     <div class="card"><div class="week-chart">${weekChart}</div></div>
@@ -3288,7 +3331,51 @@ let todayDetailScope = "all";
 function allTasksOf(catKey) {
   return state.tasks.filter(t => catKey === "none" ? (!t.categoryId || !catById(t.categoryId)) : t.categoryId === catKey);
 }
+/** หน้ารวมงาน AI — เลือกโปรเจกต์ก่อน แล้วค่อยเข้าไปดูงานของโปรเจกต์นั้น */
+function renderAiHub() {
+  const rows = agentCategories().map(c => {
+    const tasks = allTasksOf(c.id);
+    const done = tasks.filter(t => t.status === "done").length;
+    // งานล่าสุดของโปรเจกต์ ใช้จัดเรียงและโชว์ว่าแตะล่าสุดเมื่อไหร่
+    let last = null;
+    for (const t of tasks) {
+      const d = t.doneAt || t.dueAt || t.createdAt;
+      if (d && (!last || d > last)) last = d;
+    }
+    return { cat: c, total: tasks.length, done, last };
+  }).sort((a, b) => (b.last || "").localeCompare(a.last || ""));
+
+  const totalTasks = rows.reduce((n, r) => n + r.total, 0);
+  const cards = rows.map(r => {
+    const pct = r.total ? Math.round(r.done / r.total * 100) : 0;
+    const sub = [
+      `${r.total} task${r.total > 1 ? "s" : ""}`,
+      r.last ? fmtDate(new Date(r.last)) : "",
+    ].filter(Boolean).join(" · ");
+    return `<div class="ov-card">
+      <div class="ov-head">
+        <span class="cat-ring">${ringSvg(pct, r.cat.color)}<span class="cat-ico" style="background:color-mix(in srgb, ${r.cat.color} 16%, var(--card));color:color-mix(in srgb, ${r.cat.color} 55%, var(--fg))">${icon(r.cat.icon || AGENT_CAT_ICON, 14)}</span></span>
+        <span class="name">${esc(agentCatLabel(r.cat))}
+          <span class="ov-sub" style="display:block;font-weight:600">${sub}</span>
+        </span>
+        <button class="ov-more" aria-label="Open ${esc(agentCatLabel(r.cat))}" onclick="goCat('${r.cat.id}')">${icon("right", 14)}</button>
+      </div>
+    </div>`;
+  }).join("");
+
+  return `<button class="back-btn" onclick="goHome()">${icon("left", 15)} Home</button>
+    <div class="page-head" style="margin-bottom:.5rem">
+      <h1 class="cat-head" style="font-size:1.25rem">
+        <span class="cat-ico" style="background:color-mix(in srgb, ${AI_HUB_COLOR} 16%, var(--card));color:color-mix(in srgb, ${AI_HUB_COLOR} 55%, var(--fg))">${icon(AGENT_CAT_ICON, 15)}</span>
+        AI Work</h1>
+    </div>
+    <p class="hint" style="margin:0 0 .9rem">${rows.length} project${rows.length > 1 ? "s" : ""} · ${totalTasks} task${totalTasks > 1 ? "s" : ""} — เลือกโปรเจกต์เพื่อดูงานทั้งหมด</p>
+    ${rows.length ? `<div class="ov-grid">${cards}</div>` : `<p class="empty">ยังไม่มีงานจาก AI</p>`}`;
+}
+
 function renderTodayDetail() {
+  // ถ้าบังเอิญมีหมวดจริง id ตรงกับค่าพิเศษ ให้หมวดจริงชนะ จะได้ไม่มีหมวดไหนเปิดไม่ได้
+  if (todayCat === AI_HUB && !catById(AI_HUB)) return renderAiHub();
   const isNone = todayCat === "none";
   const cat = isNone ? null : catById(todayCat);
   if (!isNone && !cat) { todayCat = null; return renderToday(); }
@@ -3306,11 +3393,16 @@ function renderTodayDetail() {
       onclick="todayDetailScope='${s}';render()">${s === "today" ? "Today" : "All"}</button>`).join("")}
   </div>`;
   const emptyMsg = todayDetailScope === "today" ? "Nothing due today in this category" : "No tasks in this category yet";
-  return `<button class="back-btn" onclick="goHome()">${icon("left", 15)} Home</button>
+  // มาจากหน้ารวม AI ก็ให้ย้อนกลับไปหน้ารวม ไม่ใช่เด้งกลับหน้าแรก
+  const fromAi = !isNone && isAgentCategory(cat);
+  const backBtn = fromAi
+    ? `<button class="back-btn" onclick="goCat('${AI_HUB}')">${icon("left", 15)} AI Work</button>`
+    : `<button class="back-btn" onclick="goHome()">${icon("left", 15)} Home</button>`;
+  return `${backBtn}
     <div class="page-head" style="margin-bottom:.5rem">
       <h1 class="cat-head" style="font-size:1.25rem">
         <span class="cat-ico" style="background:color-mix(in srgb, ${color} 16%, var(--card));color:color-mix(in srgb, ${color} 55%, var(--fg))">${icon(catIcon, 15)}</span>
-        ${esc(name)}</h1>
+        ${esc(fromAi ? agentCatLabel(cat) : name)}</h1>
     </div>
     ${scopeToggle}
     ${open.length === 0 && done.length === 0 ? `<p class="empty">${emptyMsg}</p>` : ""}
