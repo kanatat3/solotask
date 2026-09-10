@@ -715,6 +715,33 @@
   .cat-note-body { white-space: pre-wrap; overflow-wrap: anywhere; font-size: .84rem; line-height: 1.5; }
   .cat-note-body.auto { color: var(--muted); }
   .cat-note-meta { font-size: .7rem; color: var(--muted); margin-top: .45rem; }
+  /* หน้าสรุปโปรเจกต์: ภาพรวม + ความเปลี่ยนแปลง */
+  .ps-list { margin: 0; padding-left: 1.1rem; font-size: .84rem; line-height: 1.55; }
+  .ps-list li { margin: .1rem 0; overflow-wrap: anywhere; }
+  .ps-mynote {
+    margin-top: .6rem; padding: .55rem .7rem; border-radius: var(--r-sm); background: var(--bg);
+    font-size: .8rem; line-height: 1.5; white-space: pre-wrap; overflow-wrap: anywhere;
+  }
+  .ps-mynote b { display: block; font-size: .7rem; color: var(--muted); margin-bottom: .15rem; }
+  .ps-group + .ps-group { margin-top: .7rem; }
+  .ps-kind { font-size: .74rem; font-weight: 800; margin-bottom: .2rem; }
+  .ps-kind span {
+    font-weight: 700; font-size: .66rem; padding: .02rem .4rem; border-radius: 999px;
+    background: var(--bg); color: var(--muted); margin-left: .2rem;
+  }
+  .ps-item {
+    display: flex; align-items: flex-start; gap: .5rem; width: 100%; text-align: left;
+    background: none; border: none; padding: .38rem .2rem; border-radius: .5rem; cursor: pointer;
+    font: inherit; font-size: .82rem; color: var(--fg); line-height: 1.4;
+  }
+  .ps-item:hover { background: var(--bg); }
+  .ps-dot { flex-shrink: 0; width: .45rem; height: .45rem; border-radius: 50%; margin-top: .42rem; }
+  .ps-text { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+  .ps-date { flex-shrink: 0; font-size: .68rem; color: var(--muted); margin-top: .1rem; }
+  .ps-more {
+    background: none; border: none; cursor: pointer; font: inherit; font-size: .74rem; font-weight: 700;
+    color: var(--primary); padding: .3rem .2rem 0 1.15rem;
+  }
 
   /* ---- bottom bar: แคปซูลลอย + ปุ่ม + แยกออกมาทางขวา (แบบ reference Iconly) ---- */
   .fab {
@@ -1314,6 +1341,7 @@ async function pullCloud() {
     cloudPulling = false;
   }
   migrateAgentCategories();   // ย้ายงาน AI ที่ import ไว้ด้วยเวอร์ชันเก่าเข้าหมวดตามโปรเจกต์ (ทำครั้งเดียว)
+  absorbOverviewTasks();      // แถวภาพรวมที่แอปเวอร์ชันเก่าเผลอ import เป็น task -> ดูดกลับเป็นภาพรวม
   await importAgentLog();
 }
 
@@ -1351,6 +1379,90 @@ function agentCategoryFor(project) {
   cat = { id: uid(), name, color: COLORS[agentCats.length % COLORS.length], icon: AGENT_CAT_ICON };
   state.categories.push(cat);
   return cat;
+}
+
+/* ---------- โน้ตงาน AI แบบมีโครงสร้าง ----------
+   log-task.ps1 ส่งโน้ตเป็นหัวข้อ:  [overview-only] [overview] [added] [changed] [fixed] [details]
+   รายการในหัวข้อ list ขึ้นต้น "- "; แอป import จะแปะบรรทัด "⏱ ช่วงเวลา" ไว้บนสุดอีกที
+   โน้ตแบบเก่า (ไม่มีหัวข้อ) ยังอ่านได้: ทั้งก้อนถือเป็นรายละเอียด */
+const AGENT_LIST_SECTIONS = ["overview", "added", "changed", "fixed"];
+const CHANGE_KINDS = [
+  { key: "added",   label: "เพิ่ม",     color: "#10b981" },
+  { key: "changed", label: "ปรับปรุง",  color: "#6366f1" },
+  { key: "fixed",   label: "แก้บั๊ก",   color: "#f97316" },
+];
+
+function parseAgentNote(note) {
+  const out = { structured: false, overviewOnly: false, time: "",
+                overview: [], added: [], changed: [], fixed: [], details: "" };
+  const lines = String(note || "").replace(/\r/g, "").split("\n");
+  let sec = null;                 // null = ก่อนเจอหัวข้อแรก
+  const pre = [], det = [];
+  for (const raw of lines) {
+    const line = raw.trim();
+    const m = /^\[([a-z-]+)\]$/.exec(line);
+    if (m && (m[1] === "overview-only" || m[1] === "details" || AGENT_LIST_SECTIONS.includes(m[1]))) {
+      out.structured = true;
+      if (m[1] === "overview-only") out.overviewOnly = true;
+      else sec = m[1];
+      continue;
+    }
+    if (sec === null) { pre.push(raw); continue; }
+    if (sec === "details") { det.push(raw); continue; }
+    if (line) out[sec].push(line.startsWith("- ") ? line.slice(2).trim() : line);
+  }
+  // บรรทัด ⏱ ที่แอปแปะไว้บนสุด -> แยกเก็บเป็นเวลาทำงาน
+  const firstIdx = pre.findIndex(s => s.trim());
+  if (firstIdx >= 0 && pre[firstIdx].trim().startsWith("⏱")) {
+    out.time = pre[firstIdx].trim();
+    pre.splice(firstIdx, 1);
+  }
+  out.details = [pre.join("\n").trim(), det.join("\n").trim()].filter(Boolean).join("\n\n");
+  return out;
+}
+
+/** เก็บกวาด task ที่จริงๆ เป็นแถว "อัปเดตภาพรวมอย่างเดียว" ([overview-only])
+ *  เกิดได้ถ้าแท็บที่เปิดค้างไว้ยังเป็นแอปเวอร์ชันเก่า (ไม่รู้จักหัวข้อนี้) แล้ว import ไปเป็น task ธรรมดา
+ *  -> ย้ายภาพรวมไปไว้ที่หมวด (ถ้าใหม่กว่า) แล้วลบ task นั้นทิ้ง; ปลอดภัยที่จะรันทุกครั้งที่ sync */
+function absorbOverviewTasks() {
+  let changed = false;
+  const keep = [];
+  for (const t of state.tasks) {
+    if (t.agentLogId && String(t.note || "").includes("[overview-only]")) {
+      const p = parseAgentNote(t.note);
+      if (p.overviewOnly) {
+        let cat = catById(t.categoryId);
+        // แอป V4.9 เคย import ทุกอย่างเข้าหมวดรวม "AI Work" แล้วใส่ [ชื่อโปรเจกต์] นำหน้าชื่อ
+        // -> หาหมวดโปรเจกต์ที่ถูกต้องจาก prefix ไม่งั้นภาพรวมจะไปติดหมวดรวมแทนหน้าโปรเจกต์
+        const pm = /^\[([^\]]+)\]\s*/.exec(t.title || "");
+        if ((!cat || cat.name === AGENT_CAT_FALLBACK) && pm && pm[1].trim()) {
+          cat = agentCategoryFor(pm[1].trim());
+        }
+        const at = t.doneAt || t.createdAt || new Date().toISOString();
+        if (cat && p.overview.length && (!cat.overviewAt || new Date(at) >= new Date(cat.overviewAt))) {
+          cat.overview = p.overview.slice(0, 40);
+          cat.overviewAt = at;
+        }
+        changed = true;
+        continue;
+      }
+    }
+    keep.push(t);
+  }
+  if (changed) { state.tasks = keep; save(); }
+}
+
+/** เดาประเภทจากชื่องาน (ใช้กับงานเก่าที่บันทึกก่อนมีหัวข้อ เพิ่ม/ปรับ/แก้บั๊ก) — ตรรกะเดียวกับ hook */
+function guessChangeKind(text) {
+  const s = String(text || "").trim();
+  if (/^(feat|feature)(\(.*?\))?!?:/i.test(s)) return "added";
+  if (/^(fix|bugfix|hotfix)(\(.*?\))?!?:/i.test(s)) return "fixed";
+  if (/^(refactor|perf|style|chore|docs|test|build|ci)(\(.*?\))?!?:/i.test(s)) return "changed";
+  const head = s.replace(/^(v?\d+(\.\d+)*\s*[:\-–]\s*|\[[^\]]*\]\s*)/i, "").slice(0, 40);
+  if (/^(fix|fixed|fixes|hotfix|resolve|patch|harden)\b/i.test(head) || /^(แก้บั๊ก|แก้ปัญหา|แก้ไขบั๊ก|แก้บัก)/.test(head)) return "fixed";
+  if (/^(add|adds|added|feat|new|introduce|create|support|implement|enable|integrate)\b/i.test(head)
+      || /^(เพิ่ม|สร้าง|รองรับ|ทำระบบ|ทำฟีเจอร์)/.test(head)) return "added";
+  return "changed";
 }
 
 /** ย้ายงาน AI ที่เวอร์ชันก่อนหน้า import ไว้ในหมวดรวม "AI Work" (ชื่องานขึ้นต้นด้วย [ชื่อโปรเจกต์])
@@ -1396,7 +1508,22 @@ async function importAgentLog() {
     if (error || !rows || rows.length === 0) return;
 
     let added = 0;
+    let touched = false;            // มีการเปลี่ยน state นอกจากเพิ่ม task (เช่น อัปเดตภาพรวมโปรเจกต์)
+    const overviewOnlyIds = [];
     for (const r of rows) {
+      // ภาพรวมโปรเจกต์ ("แอปนี้มีอะไรบ้าง") — เอาชุดล่าสุดแทนชุดเดิมทั้งชุด
+      const parsed = parseAgentNote(r.note);
+      if (parsed.overview.length) {
+        const oc = agentCategoryFor((r.project || "").trim());
+        const at = r.done_at || new Date().toISOString();
+        if (!oc.overviewAt || new Date(at) >= new Date(oc.overviewAt)) {
+          oc.overview = parsed.overview.slice(0, 40);
+          oc.overviewAt = at;
+          touched = true;
+        }
+      }
+      // แถวที่อัปเดตภาพรวมอย่างเดียว ไม่ใช่งาน -> ไม่สร้าง task
+      if (parsed.overviewOnly) { overviewOnlyIds.push(r.id); continue; }
       // กันซ้ำ: ถ้าเคย import แถวนี้แล้ว (เช่น mark imported ไม่สำเร็จรอบก่อน) ข้ามไป
       if (state.tasks.some(t => t.agentLogId === r.id)) continue;
       const doneAt = r.done_at || new Date().toISOString();
@@ -1429,11 +1556,12 @@ async function importAgentLog() {
       });
       added++;
     }
-    if (added > 0) save(); // ลง localStorage ก่อน — ถ้าขั้นถัดไปล้ม งานไม่หาย และรอบหน้า dedupe ด้วย agentLogId
+    if (added > 0 || touched) save(); // ลง localStorage ก่อน — ถ้าขั้นถัดไปล้ม งานไม่หาย และรอบหน้า dedupe ด้วย agentLogId
     // mark ว่า import แล้ว "หลัง" state ที่มี task เหล่านี้ขึ้น cloud สำเร็จเท่านั้น —
     // กันเคสแท็บปิดก่อน debounced save ทัน (แถว log ถูกกินทิ้งแต่ task ไม่เคยถึง cloud)
     // และ mark เฉพาะแถวที่มี task ใน state จริง (แถวที่ dedupe ข้ามก็ผ่านเงื่อนไขนี้เพราะ task เดิมอยู่ใน state)
-    const doneIds = rows.filter(r => state.tasks.some(t => t.agentLogId === r.id)).map(r => r.id);
+    // แถว overview-only ไม่มี task — ผลของมัน (ภาพรวมบนหมวด) อยู่ใน state ที่จะ upsert ข้างล่างแล้ว จึง mark ได้เลย
+    const doneIds = rows.filter(r => overviewOnlyIds.includes(r.id) || state.tasks.some(t => t.agentLogId === r.id)).map(r => r.id);
     if (!doneIds.length) return;
     const { error: upErr } = await sb.from("app_state").upsert({
       user_id: sbUser.id, data: state, updated_at: new Date().toISOString(),
@@ -1443,6 +1571,7 @@ async function importAgentLog() {
       .update({ imported: true }).in("id", doneIds);
     if (markErr) console.warn("agent_log mark imported failed:", markErr.message);
     if (added > 0) { showToast(`🤖 Imported ${added} task${added > 1 ? "s" : ""} from Claude`); render(); }
+    else if (touched) render();
   } catch (e) {
     console.warn("agent_log import failed:", e);
   }
@@ -2964,8 +3093,13 @@ function taskHtml(t, hideCat) {
 /** บรรทัดตัวอย่างใต้ชื่องาน — ข้ามบรรทัดที่ระบบใส่เอง ("⏱ ช่วงเวลา", "(auto) สรุปจาก git...")
  *  ไปเอาบรรทัดเนื้อหาจริงก่อน ไม่งั้นงาน AI ทุกอันจะโชว์แค่เวลาเหมือนกันหมด */
 function firstNoteLine(note) {
-  const lines = String(note || "").split("\n").map(s => s.trim()).filter(Boolean);
-  const line = lines.find(l => !l.startsWith("⏱") && !l.startsWith("(auto)")) || lines[0] || "";
+  const p = parseAgentNote(note);
+  const firstText = s => s.split("\n").map(x => x.trim()).find(x => x && !x.startsWith("(auto)")) || "";
+  let line = "";
+  if (p.added[0]) line = "เพิ่ม: " + p.added[0];
+  else if (p.changed[0]) line = "ปรับ: " + p.changed[0];
+  else if (p.fixed[0]) line = "แก้บั๊ก: " + p.fixed[0];
+  else line = firstText(p.details) || p.time;
   return line.length > 140 ? line.slice(0, 137) + "…" : line;
 }
 
@@ -2980,9 +3114,22 @@ function openTaskDetail(id) {
     `<span class="chip" style="background:color-mix(in srgb, ${t.status === "done" ? "#10b981" : "#6366f1"} 16%, var(--card));color:color-mix(in srgb, ${t.status === "done" ? "#10b981" : "#6366f1"} 55%, var(--fg))">${t.status === "done" ? "Done" : "Open"}</span>`,
     t.recurrence && t.recurrence !== "none" ? `<span class="chip" style="background:var(--bg);color:var(--muted)">${icon("repeat", 10)} ${RECURRENCE_LABELS[t.recurrence]}</span>` : "",
   ].join("");
+  const p = parseAgentNote(t.note);
   const rows = [];
+  if (p.time) rows.push(`<div class="detail-row"><span class="k">ใช้เวลา</span><span>${esc(p.time.replace(/^⏱\s*/, ""))}</span></div>`);
   if (t.dueAt) rows.push(`<div class="detail-row"><span class="k">${isRangeTask(t) ? "Dates" : "Due"}</span><span>${fmtSpan(t)}</span></div>`);
   if (t.status === "done" && t.doneAt) rows.push(`<div class="detail-row"><span class="k">Finished</span><span>${fmtDateTime(new Date(t.doneAt))}</span></div>`);
+  // โน้ตแบบมีหัวข้อ -> แยกเป็นกลุ่ม เพิ่ม/ปรับปรุง/แก้บั๊ก + รายละเอียด; แบบเก่า -> โชว์ทั้งก้อน
+  const kindBlocks = CHANGE_KINDS.filter(k => p[k.key].length).map(k => `
+    <div class="ps-group" style="margin-bottom:.6rem">
+      <div class="ps-kind" style="color:color-mix(in srgb, ${k.color} 70%, var(--fg))">${k.label} <span>${p[k.key].length}</span></div>
+      <ul class="ps-list">${p[k.key].map(x => `<li>${esc(x)}</li>`).join("")}</ul>
+    </div>`).join("");
+  // บรรทัด ⏱ ถูกย้ายไปแถว "ใช้เวลา" แล้ว — รายละเอียดจึงเอาส่วนที่เหลือ (ทั้งโน้ตแบบใหม่และแบบเก่า)
+  const detailsText = p.details;
+  const bodyHtml = (kindBlocks || detailsText)
+    ? `${kindBlocks}${detailsText ? `${kindBlocks ? `<div class="ps-kind" style="color:var(--muted)">รายละเอียด</div>` : ""}<div class="detail-note">${esc(detailsText)}</div>` : ""}`
+    : `<p class="hint">No details</p>`;
   document.getElementById("modal").innerHTML = `
   <div class="overlay" onclick="if(event.target===this)closeForm()">
     <div class="sheet" role="dialog" aria-label="Task details">
@@ -2992,7 +3139,7 @@ function openTaskDetail(id) {
       </div>
       <div class="detail-chips">${chips}</div>
       ${rows.join("")}
-      ${t.note ? `<div class="detail-note">${esc(t.note)}</div>` : `<p class="hint">No details</p>`}
+      <div style="margin-top:.7rem">${bodyHtml}</div>
       <button class="btn btn-outline" onclick="closeForm();openForm('${t.id}')">${icon("edit", 14)} Edit</button>
     </div>
   </div>`;
@@ -3398,46 +3545,79 @@ let todayDetailScope = "all";
 function allTasksOf(catKey) {
   return state.tasks.filter(t => catKey === "none" ? (!t.categoryId || !catById(t.categoryId)) : t.categoryId === catKey);
 }
-/** งานที่มีความเคลื่อนไหวล่าสุดในหมวดนั้น */
-function latestTaskOf(catId) {
-  let best = null, bestAt = "";
-  for (const t of allTasksOf(catId)) {
-    const at = t.doneAt || t.dueAt || t.createdAt || "";
-    if (!best || at > bestAt) { best = t; bestAt = at; }
-  }
-  return best;
-}
-
-/** การ์ด "กำลังทำอะไรอยู่" บนหัวหน้าโปรเจกต์ AI
- *  - ถ้าผู้ใช้เขียนโน้ตไว้ -> โชว์โน้ตนั้น
- *  - ถ้ายังไม่เขียน -> สรุปอัตโนมัติจากงานล่าสุดของโปรเจกต์ (ชื่องาน + โน้ตไม่กี่บรรทัดแรก) */
-function catNoteHtml(cat) {
-  if (!cat || !isAgentCategory(cat)) return "";
-  const manual = String(cat.note || "").trim();
-  let body = "", meta = "", auto = false;
-  if (manual) {
-    body = esc(manual);
-    if (cat.noteAt) meta = "แก้ไขล่าสุด " + fmtDateTime(new Date(cat.noteAt));
-  } else {
-    const latest = latestTaskOf(cat.id);
-    if (latest) {
-      auto = true;
-      const lines = String(latest.note || "").split("\n").map(s => s.trim()).filter(Boolean).slice(0, 4);
-      body = esc(latest.title) + (lines.length ? "\n" + esc(lines.join("\n")) : "");
-      const at = latest.doneAt || latest.dueAt || latest.createdAt;
-      meta = "สรุปจากงานล่าสุด" + (at ? " · " + fmtDate(new Date(at)) : "") + " — กด Edit เพื่อเขียนโน้ตเอง";
+/** รวมความเปลี่ยนแปลงของทั้งโปรเจกต์ แยกเป็น เพิ่ม / ปรับปรุง / แก้บั๊ก (ใหม่สุดก่อน)
+ *  งานเก่าที่ยังไม่มีหัวข้อ -> เอาชื่องานมาเป็น 1 รายการ แล้วเดาประเภทจากคำขึ้นต้น */
+function projectChanges(catId) {
+  const groups = { added: [], changed: [], fixed: [] };
+  const when = t => t.doneAt || t.dueAt || t.createdAt || "";
+  const tasks = allTasksOf(catId).slice().sort((a, b) => when(b).localeCompare(when(a)));
+  for (const t of tasks) {
+    const p = parseAgentNote(t.note);
+    const at = when(t);
+    if (p.added.length + p.changed.length + p.fixed.length) {
+      for (const k of ["added", "changed", "fixed"]) for (const text of p[k]) groups[k].push({ text, task: t, at });
     } else {
-      auto = true;
-      body = "ยังไม่มีงานในโปรเจกต์นี้";
+      groups[guessChangeKind(t.title)].push({ text: t.title, task: t, at });
     }
   }
-  return `<div class="cat-note">
-    <div class="cat-note-head">${icon("doc", 13)} กำลังทำอะไรอยู่<span class="spacer"></span>
-      <button class="link-primary" style="font-size:.78rem" onclick="openCatNote('${cat.id}')">Edit</button>
+  return groups;
+}
+
+const CHANGES_PER_KIND = 6;
+// กลุ่มที่ผู้ใช้กด "ดูทั้งหมด" ไว้ (ขยายในหน้าเดิม ไม่ต้องไปไล่หาใน task)  key = `${catId}:${kind}`
+let psExpanded = {};
+function togglePsGroup(catId, kind) {
+  const k = catId + ":" + kind;
+  psExpanded[k] = !psExpanded[k];
+  render();
+}
+
+/** หน้าสรุปโปรเจกต์ AI หน้าเดียว: แอปมีอะไรบ้าง -> เพิ่มอะไร -> ปรับอะไร -> แก้บั๊กอะไร
+ *  รายละเอียดเชิงลึกของแต่ละข้อ กดเข้าไปอ่านใน task ต้นทาง */
+function projectSummaryHtml(cat) {
+  if (!cat || !isAgentCategory(cat)) return "";
+  // ---- 1) ภาพรวม: แอปนี้มีอะไรบ้าง ----
+  const ov = Array.isArray(cat.overview) ? cat.overview.filter(Boolean) : [];
+  const manual = String(cat.note || "").trim();
+  const ovBody = ov.length
+    ? `<ul class="ps-list">${ov.map(x => `<li>${esc(x)}</li>`).join("")}</ul>`
+    : `<div class="cat-note-body auto">ยังไม่มีภาพรวม — Claude จะเติมให้ตอนบันทึกงานครั้งถัดไป</div>`;
+  const overviewCard = `<div class="cat-note">
+    <div class="cat-note-head">${icon("doc", 13)} แอปนี้มีอะไรบ้าง<span class="spacer"></span>
+      <button class="link-primary" style="font-size:.78rem" onclick="openCatNote('${cat.id}')">${manual ? "แก้โน้ต" : "+ โน้ต"}</button>
     </div>
-    <div class="cat-note-body ${auto ? "auto" : ""}">${body}</div>
-    ${meta ? `<div class="cat-note-meta">${meta}</div>` : ""}
+    ${ovBody}
+    ${manual ? `<div class="ps-mynote"><b>โน้ตของฉัน</b>${esc(manual)}</div>` : ""}
+    ${cat.overviewAt ? `<div class="cat-note-meta">อัปเดตภาพรวม ${fmtDate(new Date(cat.overviewAt))}</div>` : ""}
   </div>`;
+
+  // ---- 2) ความเปลี่ยนแปลง ----
+  const groups = projectChanges(cat.id);
+  const total = groups.added.length + groups.changed.length + groups.fixed.length;
+  const sections = CHANGE_KINDS.filter(k => groups[k.key].length).map(k => {
+    const items = groups[k.key];
+    const expanded = !!psExpanded[cat.id + ":" + k.key];
+    const rows = (expanded ? items : items.slice(0, CHANGES_PER_KIND)).map(it => `
+      <button class="ps-item" onclick="openTaskDetail('${it.task.id}')" aria-label="${esc(k.label)}: ${esc(it.text)} — open task">
+        <span class="ps-dot" style="background:${k.color}"></span>
+        <span class="ps-text">${esc(it.text)}</span>
+        <span class="ps-date">${it.at ? fmtDate(new Date(it.at)) : ""}</span>
+      </button>`).join("");
+    const more = items.length > CHANGES_PER_KIND
+      ? `<button class="ps-more" onclick="togglePsGroup('${cat.id}','${k.key}')">${expanded ? "ย่อ" : `ดูทั้งหมด (+${items.length - CHANGES_PER_KIND})`}</button>` : "";
+    return `<div class="ps-group">
+      <div class="ps-kind" style="color:color-mix(in srgb, ${k.color} 70%, var(--fg))">${k.label} <span>${items.length}</span></div>
+      ${rows}${more}
+    </div>`;
+  }).join("");
+  const changesCard = `<div class="cat-note">
+    <div class="cat-note-head">${icon("repeat", 13)} ความเปลี่ยนแปลง<span class="spacer"></span>
+      <span class="cat-note-meta" style="margin:0">ใหม่สุดก่อน · กดเพื่อดูรายละเอียด</span>
+    </div>
+    ${total ? sections : `<div class="cat-note-body auto">ยังไม่มีบันทึกการเปลี่ยนแปลง</div>`}
+  </div>`;
+
+  return overviewCard + changesCard;
 }
 
 function openCatNote(catId) {
@@ -3451,10 +3631,10 @@ function openCatNote(catId) {
         <h2>${esc(label)}</h2>
         <button class="x-btn" aria-label="Close" onclick="closeForm()">✕</button>
       </div>
-      <label class="fld">โปรเจกต์นี้กำลังทำอะไรอยู่ / เป้าหมาย / ค้างอะไร
-        <textarea id="catNoteInput" rows="7" maxlength="4000" placeholder="เช่น กำลังทำ Auto Tabulation Task 2 — ค้าง human GUI check ก่อน merge">${esc(cat.note || "")}</textarea>
+      <label class="fld">โน้ตของฉัน — เป้าหมาย / สิ่งที่ค้าง / อะไรที่อยากจำ
+        <textarea id="catNoteInput" rows="7" maxlength="4000" placeholder="เช่น ค้าง human GUI check ก่อน merge">${esc(cat.note || "")}</textarea>
       </label>
-      <p class="hint" style="margin:-.35rem 0 .75rem">เว้นว่างไว้ = กลับไปใช้สรุปอัตโนมัติจากงานล่าสุด</p>
+      <p class="hint" style="margin:-.35rem 0 .75rem">ภาพรวม "แอปนี้มีอะไรบ้าง" Claude อัปเดตให้เองตอนบันทึกงาน · เว้นโน้ตว่างไว้ = ไม่แสดง</p>
       <button class="btn btn-primary" onclick="saveCatNote('${cat.id}')">Save</button>
     </div>
   </div>`;
@@ -3544,7 +3724,7 @@ function renderTodayDetail() {
         <span class="cat-ico" style="background:color-mix(in srgb, ${color} 16%, var(--card));color:color-mix(in srgb, ${color} 55%, var(--fg))">${icon(catIcon, 15)}</span>
         ${esc(fromAi ? agentCatLabel(cat) : name)}</h1>
     </div>
-    ${fromAi ? catNoteHtml(cat) : ""}
+    ${fromAi ? projectSummaryHtml(cat) : ""}
     ${scopeToggle}
     ${open.length === 0 && done.length === 0 ? `<p class="empty">${emptyMsg}</p>` : ""}
     ${open.map(t => taskHtml(t, true)).join("")}
