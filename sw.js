@@ -1,4 +1,4 @@
-const CACHE_NAME = "solo-task-v1";
+const CACHE_NAME = "kodo-v1";
 const APP_SHELL = ["/", "/index.html", "/manifest.json"];
 
 self.addEventListener("install", (e) => {

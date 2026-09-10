@@ -5,15 +5,16 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
-<meta name="apple-mobile-web-app-title" content="Solo Task">
+<meta name="apple-mobile-web-app-title" content="Kodo">
 <meta name="theme-color" content="#6366f1">
 <link rel="manifest" href="manifest.json">
-<link rel="apple-touch-icon" href="icon-180.png">
-<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="kodo-180.png">
+<link rel="icon" type="image/png" sizes="32x32" href="kodo-32.png">
+<link rel="icon" type="image/png" sizes="192x192" href="kodo-192.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;600;700;800&display=swap">
-<title>Solo Task</title>
+<title>Kodo</title>
 <style>
   /* กฎสี 60-30-10: 60% พื้นหลังตามช่วงเวลา · 30% พื้นผิวการ์ด/เมนู · 10% สี accent (indigo) */
   :root, :root[data-theme="day"] {
@@ -568,7 +569,7 @@
   }
   #splash.hide { opacity: 0; pointer-events: none; }
   .splash-logo {
-    width: 4.5rem; height: 4.5rem; border-radius: 1.1rem; background: var(--primary); color: #fff;
+    width: 5.5rem; height: 5.5rem; filter: drop-shadow(0 10px 18px rgba(79, 70, 229, .35));
     display: flex; align-items: center; justify-content: center;
     animation: splashIn .55s cubic-bezier(.16, 1, .3, 1) both;
   }
@@ -625,9 +626,11 @@
     to { opacity: 1; transform: translateY(0); }
   }
   .login-logo {
-    width: 3.6rem; height: 3.6rem; border-radius: .9rem; background: var(--primary); color: #fff;
+    width: 4.2rem; height: 4.2rem; filter: drop-shadow(0 8px 14px rgba(79, 70, 229, .3));
     display: flex; align-items: center; justify-content: center; margin-bottom: .25rem;
   }
+  .login-logo svg { width: 100%; height: 100%; display: block; }
+  .login-brand { font-size: .78rem; font-weight: 800; letter-spacing: .14em; text-transform: uppercase; color: var(--primary); margin: -.35rem 0 .1rem; }
   .login h1 { font-size: 1.4rem; margin: 0; }
   .login .tagline { font-size: .8rem; color: var(--muted); margin-bottom: .75rem; }
   .login input { margin: 0; }
@@ -737,6 +740,9 @@
   .ps-item:hover { background: var(--bg); }
   .ps-dot { flex-shrink: 0; width: .45rem; height: .45rem; border-radius: 50%; margin-top: .42rem; }
   .ps-text { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+  /* "English topic — คำอธิบายไทย": หัวข้อเด่น คำอธิบายจางลง */
+  .ps-topic { font-weight: 700; color: var(--fg); }
+  .ps-desc { color: var(--muted); }
   .ps-date { flex-shrink: 0; font-size: .68rem; color: var(--muted); margin-top: .1rem; }
   .ps-more {
     background: none; border: none; cursor: pointer; font: inherit; font-size: .74rem; font-weight: 700;
@@ -973,7 +979,7 @@
       flex-direction: column; align-items: stretch; padding-top: .75rem; gap: .2rem;
     }
     .nav-inner::before {
-      content: "Solo Task"; font-size: 1.1rem; font-weight: 800; letter-spacing: -.02em;
+      content: "Kodo"; font-size: 1.1rem; font-weight: 800; letter-spacing: -.02em;
       padding: .75rem 1.25rem 1rem; color: var(--fg);
     }
     .nav-btn {
@@ -990,8 +996,8 @@
 </head>
 <body>
 <div id="splash" aria-hidden="true">
-  <div class="splash-logo"><svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg></div>
-  <div class="splash-name">Solo Task</div>
+  <div class="splash-logo"><svg width="100%" height="100%" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><defs><linearGradient id="ks-bg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#8b8ff9"/><stop offset=".55" stop-color="#6366f1"/><stop offset="1" stop-color="#4a3fd6"/></linearGradient><radialGradient id="ks-glow" cx=".28" cy=".2" r=".75"><stop offset="0" stop-color="#ffffff" stop-opacity=".32"/><stop offset=".55" stop-color="#ffffff" stop-opacity="0"/></radialGradient><radialGradient id="ks-face" cx=".42" cy=".36" r=".72"><stop offset="0" stop-color="#fff6a8"/><stop offset=".55" stop-color="#fde047"/><stop offset="1" stop-color="#f5c518"/></radialGradient><linearGradient id="ks-crest" x1="0" y1="1" x2="0" y2="0"><stop offset="0" stop-color="#f5c518"/><stop offset="1" stop-color="#fff3a0"/></linearGradient></defs><rect width="512" height="512" rx="116" fill="url(#ks-bg)"/><rect width="512" height="512" rx="116" fill="url(#ks-glow)"/><g transform=""><ellipse cx="244" cy="428" rx="118" ry="22" fill="#2e2699" opacity=".28"/><path d="M232 168 C 214 118, 186 86, 150 70 C 186 70, 222 96, 248 150 Z" fill="url(#ks-crest)"/><path d="M250 160 C 244 104, 226 62, 196 34 C 238 44, 268 90, 272 154 Z" fill="url(#ks-crest)"/><path d="M270 160 C 280 108, 300 74, 332 54 C 314 92, 298 128, 292 170 Z" fill="url(#ks-crest)"/><circle cx="244" cy="290" r="136" fill="url(#ks-face)"/><circle cx="166" cy="322" r="30" fill="#fb923c" opacity=".92"/><circle cx="322" cy="322" r="30" fill="#fb923c" opacity=".92"/><circle cx="198" cy="272" r="30" fill="#2a1d14"/><circle cx="290" cy="272" r="30" fill="#2a1d14"/><circle cx="188" cy="261" r="11" fill="#fff"/><circle cx="280" cy="261" r="11" fill="#fff"/><circle cx="208" cy="284" r="5" fill="#fff" opacity=".9"/><circle cx="300" cy="284" r="5" fill="#fff" opacity=".9"/><path d="M226 312 Q 244 302 262 312 Q 256 338 244 344 Q 232 338 226 312 Z" fill="#f59e0b"/><path d="M230 314 Q 244 307 258 314" stroke="#fcd34d" stroke-width="4" fill="none" stroke-linecap="round"/><circle cx="384" cy="386" r="62" fill="#ffffff"/><circle cx="384" cy="386" r="50" fill="#10b981"/><path d="M360 388 L 378 406 L 410 370" stroke="#fff" stroke-width="15" fill="none" stroke-linecap="round" stroke-linejoin="round"/></g></svg></div>
+  <div class="splash-name">Kodo</div>
 </div>
 <div class="app">
   <div id="view" class="page"></div>
@@ -1341,14 +1347,20 @@ async function pullCloud() {
     cloudPulling = false;
   }
   migrateAgentCategories();   // ย้ายงาน AI ที่ import ไว้ด้วยเวอร์ชันเก่าเข้าหมวดตามโปรเจกต์ (ทำครั้งเดียว)
+  mergeProjectAliases();      // หมวด "AI · Solo Task" / "AI · Task_Studio" -> "AI · Kodo"
   absorbOverviewTasks();      // แถวภาพรวมที่แอปเวอร์ชันเก่าเผลอ import เป็น task -> ดูดกลับเป็นภาพรวม
   await importAgentLog();
+}
+
+/** โลโก้ Kodo (SVG เดียวกับไอคอนแอป) — prefix แยก id ของ gradient ต่อจุดที่ใช้ ไม่ให้ชนกับตัวใน splash */
+function kodoLogo(p) {
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><defs><linearGradient id="${p}bg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#8b8ff9"/><stop offset=".55" stop-color="#6366f1"/><stop offset="1" stop-color="#4a3fd6"/></linearGradient><radialGradient id="${p}glow" cx=".28" cy=".2" r=".75"><stop offset="0" stop-color="#ffffff" stop-opacity=".32"/><stop offset=".55" stop-color="#ffffff" stop-opacity="0"/></radialGradient><radialGradient id="${p}face" cx=".42" cy=".36" r=".72"><stop offset="0" stop-color="#fff6a8"/><stop offset=".55" stop-color="#fde047"/><stop offset="1" stop-color="#f5c518"/></radialGradient><linearGradient id="${p}crest" x1="0" y1="1" x2="0" y2="0"><stop offset="0" stop-color="#f5c518"/><stop offset="1" stop-color="#fff3a0"/></linearGradient></defs><rect width="512" height="512" rx="116" fill="url(#${p}bg)"/><rect width="512" height="512" rx="116" fill="url(#${p}glow)"/><g transform=""><ellipse cx="244" cy="428" rx="118" ry="22" fill="#2e2699" opacity=".28"/><path d="M232 168 C 214 118, 186 86, 150 70 C 186 70, 222 96, 248 150 Z" fill="url(#${p}crest)"/><path d="M250 160 C 244 104, 226 62, 196 34 C 238 44, 268 90, 272 154 Z" fill="url(#${p}crest)"/><path d="M270 160 C 280 108, 300 74, 332 54 C 314 92, 298 128, 292 170 Z" fill="url(#${p}crest)"/><circle cx="244" cy="290" r="136" fill="url(#${p}face)"/><circle cx="166" cy="322" r="30" fill="#fb923c" opacity=".92"/><circle cx="322" cy="322" r="30" fill="#fb923c" opacity=".92"/><circle cx="198" cy="272" r="30" fill="#2a1d14"/><circle cx="290" cy="272" r="30" fill="#2a1d14"/><circle cx="188" cy="261" r="11" fill="#fff"/><circle cx="280" cy="261" r="11" fill="#fff"/><circle cx="208" cy="284" r="5" fill="#fff" opacity=".9"/><circle cx="300" cy="284" r="5" fill="#fff" opacity=".9"/><path d="M226 312 Q 244 302 262 312 Q 256 338 244 344 Q 232 338 226 312 Z" fill="#f59e0b"/><path d="M230 314 Q 244 307 258 314" stroke="#fcd34d" stroke-width="4" fill="none" stroke-linecap="round"/><circle cx="384" cy="386" r="62" fill="#ffffff"/><circle cx="384" cy="386" r="50" fill="#10b981"/><path d="M360 388 L 378 406 L 410 370" stroke="#fff" stroke-width="15" fill="none" stroke-linecap="round" stroke-linejoin="round"/></g></svg>`;
 }
 
 /* ---------- agent log import ----------
    Claude Code (หรือ agent อื่น) บันทึกงานที่ทำเสร็จลงตาราง agent_log ผ่าน service role key
    ฝั่งแอปดึงแถวที่ยัง imported=false มาสร้างเป็น task สถานะ done โดยแยกหมวดตามโปรเจกต์
-   ("AI · BI Studio", "AI · Solo Task", ...) แล้ว mark ว่า import แล้ว
+   ("AI · BI Studio", "AI · Kodo", ...) แล้ว mark ว่า import แล้ว
    ทำหลัง pullCloud เสมอ เพื่อให้เขียนทับ state ล่าสุดจาก cloud */
 const AGENT_CAT_PREFIX = "AI · ";
 const AGENT_CAT_FALLBACK = "AI Work";   // แถวที่ไม่ได้ระบุโปรเจกต์
@@ -1356,12 +1368,19 @@ const AGENT_CAT_ICON = "chart";
 const AGENT_CAT_LEGACY_COLOR = "#ec4899";   // สีที่ V4.9 ใช้ตอนสร้างหมวด "AI Work" อัตโนมัติ
 const AI_HUB_COLOR = "#6366f1";             // สีการ์ด/หัวข้อของหน้ารวมงาน AI
 const AGENT_CAT_MAX = 20;               // กันหมวดงอกไม่สิ้นสุดถ้า project เพี้ยน
+// ชื่อเก่า/ชื่อโฟลเดอร์ของโปรเจกต์ -> ชื่อปัจจุบัน (แอปนี้เปลี่ยนชื่อจาก Solo Task / Task Studio เป็น Kodo)
+// hook อัตโนมัติตั้งชื่อโปรเจกต์จากชื่อโฟลเดอร์ ("Task_Studio") จึงต้องรวมเข้าหมวดเดียวกันด้วย
+const PROJECT_ALIASES = { "solo task": "Kodo", "task studio": "Kodo", "task_studio": "Kodo" };
+
+function canonicalProject(project) {
+  const p = String(project || "").trim();
+  return PROJECT_ALIASES[p.toLowerCase()] || p;
+}
 
 /** หมวดของโปรเจกต์นั้น — หาไม่เจอก็สร้างใหม่ (สีวนตาม COLORS ให้แต่ละโปรเจกต์ต่างกัน) */
 function agentCategoryFor(project) {
-  const name = project && String(project).trim()
-    ? AGENT_CAT_PREFIX + String(project).trim()
-    : AGENT_CAT_FALLBACK;
+  const proj = canonicalProject(project);
+  const name = proj ? AGENT_CAT_PREFIX + proj : AGENT_CAT_FALLBACK;
   const key = name.toLowerCase();
   let cat = state.categories.find(c => c.name.toLowerCase() === key);
   if (cat) return cat;
@@ -1387,10 +1406,18 @@ function agentCategoryFor(project) {
    โน้ตแบบเก่า (ไม่มีหัวข้อ) ยังอ่านได้: ทั้งก้อนถือเป็นรายละเอียด */
 const AGENT_LIST_SECTIONS = ["overview", "added", "changed", "fixed"];
 const CHANGE_KINDS = [
-  { key: "added",   label: "เพิ่ม",     color: "#10b981" },
-  { key: "changed", label: "ปรับปรุง",  color: "#6366f1" },
-  { key: "fixed",   label: "แก้บั๊ก",   color: "#f97316" },
+  { key: "added",   label: "Added",    color: "#10b981" },
+  { key: "changed", label: "Improved", color: "#6366f1" },
+  { key: "fixed",   label: "Fixed",    color: "#f97316" },
 ];
+
+/** รายการรูปแบบ "English topic — คำอธิบายภาษาไทย" (ที่ log-task ใช้) -> หัวข้อตัวหนา + คำอธิบายสีจาง
+ *  แยกเฉพาะเมื่อหัวไม่มีอักษรไทยและท้ายมีอักษรไทย ข้อความรูปแบบอื่นแสดงตามเดิม */
+function topicHtml(text) {
+  const s = String(text || "");
+  const m = /^([^\u0E00-\u0E7F]{2,90}?)\s+[—–-]\s+(.*[\u0E00-\u0E7F][\s\S]*)$/.exec(s);
+  return m ? `<b class="ps-topic">${esc(m[1])}</b> <span class="ps-desc">${esc(m[2])}</span>` : esc(s);
+}
 
 function parseAgentNote(note) {
   const out = { structured: false, overviewOnly: false, time: "",
@@ -1498,6 +1525,39 @@ function migrateAgentCategories() {
   if (moved) render();
 }
 
+/** รวมหมวด AI ที่ใช้ชื่อโปรเจกต์เก่า (PROJECT_ALIASES) เข้าหมวดชื่อปัจจุบัน
+ *  ไม่มีหมวดปลายทาง -> เปลี่ยนชื่อหมวดเดิมเลย (เก็บสี/id ไว้); มีแล้ว -> ย้าย task + ภาพรวม/โน้ต แล้วลบหมวดเก่า
+ *  ปลอดภัยที่จะรันทุกครั้งที่ sync (ไม่มีหมวดชื่อเก่าเหลือ = ไม่ทำอะไร) */
+function mergeProjectAliases() {
+  let changed = false;
+  for (const old of state.categories.slice()) {
+    if (!old.name.startsWith(AGENT_CAT_PREFIX)) continue;
+    const proj = old.name.slice(AGENT_CAT_PREFIX.length).trim();
+    const target = canonicalProject(proj);
+    if (target === proj) continue;
+    const targetName = AGENT_CAT_PREFIX + target;
+    const into = state.categories.find(c => c !== old && c.name.toLowerCase() === targetName.toLowerCase());
+    changed = true;
+    if (!into) { old.name = targetName; continue; }
+    for (const t of state.tasks) if (t.categoryId === old.id) t.categoryId = into.id;
+    for (const r of state.routines || []) if (r.categoryId === old.id) r.categoryId = into.id;
+    // ภาพรวม: เอาชุดที่ใหม่กว่า / โน้ต: รวมกันถ้ามีทั้งคู่
+    if (Array.isArray(old.overview) && old.overview.length
+        && (!into.overviewAt || (old.overviewAt && new Date(old.overviewAt) > new Date(into.overviewAt)))) {
+      into.overview = old.overview; into.overviewAt = old.overviewAt;
+    }
+    const a = String(into.note || "").trim(), b = String(old.note || "").trim();
+    if (b && b !== a) { into.note = a ? a + "\n\n" + b : b; into.noteAt = new Date().toISOString(); }
+    // ค่าตั้งอื่นของหมวดเก่า (เช่น schedule / enabled) ที่หมวดปลายทางยังไม่มี -> ยกไปด้วย ไม่ให้หายตอนลบหมวดเก่า
+    for (const k of Object.keys(old)) {
+      if (!["id", "name", "overview", "overviewAt", "note", "noteAt"].includes(k) && into[k] === undefined) into[k] = old[k];
+    }
+    if (todayCat === old.id) todayCat = into.id;
+    state.categories = state.categories.filter(c => c.id !== old.id);
+  }
+  if (changed) save();
+}
+
 async function importAgentLog() {
   if (!sb || !sbUser) return;
   try {
@@ -1543,7 +1603,7 @@ async function importAgentLog() {
       const spansDays = startedAt && dateKey(new Date(startedAt)) !== dateKey(new Date(doneAt));
       // ปกติชื่อโปรเจกต์อยู่ที่หมวดแล้ว ไม่ต้องใส่หน้าชื่องานซ้ำ
       // ยกเว้นตอนถูกเทรวมไว้หมวดกลาง (โควตาเต็ม) — ต้องใส่ไว้ ไม่งั้นไม่รู้ว่างานมาจากโปรเจกต์ไหน
-      const proj = (r.project || "").trim();   // trim ที่เดียว ใช้ค่าเดียวกันทั้งชื่อหมวดและชื่องาน
+      const proj = canonicalProject(r.project);   // trim + ชื่อปัจจุบัน ที่เดียว ใช้ค่าเดียวกันทั้งชื่อหมวดและชื่องาน
       const agentCat = agentCategoryFor(proj);
       const pooled = agentCat.name === AGENT_CAT_FALLBACK && proj;
       state.tasks.push({
@@ -3096,9 +3156,9 @@ function firstNoteLine(note) {
   const p = parseAgentNote(note);
   const firstText = s => s.split("\n").map(x => x.trim()).find(x => x && !x.startsWith("(auto)")) || "";
   let line = "";
-  if (p.added[0]) line = "เพิ่ม: " + p.added[0];
-  else if (p.changed[0]) line = "ปรับ: " + p.changed[0];
-  else if (p.fixed[0]) line = "แก้บั๊ก: " + p.fixed[0];
+  if (p.added[0]) line = "Added: " + p.added[0];
+  else if (p.changed[0]) line = "Improved: " + p.changed[0];
+  else if (p.fixed[0]) line = "Fixed: " + p.fixed[0];
   else line = firstText(p.details) || p.time;
   return line.length > 140 ? line.slice(0, 137) + "…" : line;
 }
@@ -3116,19 +3176,19 @@ function openTaskDetail(id) {
   ].join("");
   const p = parseAgentNote(t.note);
   const rows = [];
-  if (p.time) rows.push(`<div class="detail-row"><span class="k">ใช้เวลา</span><span>${esc(p.time.replace(/^⏱\s*/, ""))}</span></div>`);
+  if (p.time) rows.push(`<div class="detail-row"><span class="k">Time spent</span><span>${esc(p.time.replace(/^⏱\s*/, ""))}</span></div>`);
   if (t.dueAt) rows.push(`<div class="detail-row"><span class="k">${isRangeTask(t) ? "Dates" : "Due"}</span><span>${fmtSpan(t)}</span></div>`);
   if (t.status === "done" && t.doneAt) rows.push(`<div class="detail-row"><span class="k">Finished</span><span>${fmtDateTime(new Date(t.doneAt))}</span></div>`);
   // โน้ตแบบมีหัวข้อ -> แยกเป็นกลุ่ม เพิ่ม/ปรับปรุง/แก้บั๊ก + รายละเอียด; แบบเก่า -> โชว์ทั้งก้อน
   const kindBlocks = CHANGE_KINDS.filter(k => p[k.key].length).map(k => `
     <div class="ps-group" style="margin-bottom:.6rem">
       <div class="ps-kind" style="color:color-mix(in srgb, ${k.color} 70%, var(--fg))">${k.label} <span>${p[k.key].length}</span></div>
-      <ul class="ps-list">${p[k.key].map(x => `<li>${esc(x)}</li>`).join("")}</ul>
+      <ul class="ps-list">${p[k.key].map(x => `<li>${topicHtml(x)}</li>`).join("")}</ul>
     </div>`).join("");
   // บรรทัด ⏱ ถูกย้ายไปแถว "ใช้เวลา" แล้ว — รายละเอียดจึงเอาส่วนที่เหลือ (ทั้งโน้ตแบบใหม่และแบบเก่า)
   const detailsText = p.details;
   const bodyHtml = (kindBlocks || detailsText)
-    ? `${kindBlocks}${detailsText ? `${kindBlocks ? `<div class="ps-kind" style="color:var(--muted)">รายละเอียด</div>` : ""}<div class="detail-note">${esc(detailsText)}</div>` : ""}`
+    ? `${kindBlocks}${detailsText ? `${kindBlocks ? `<div class="ps-kind" style="color:var(--muted)">Details</div>` : ""}<div class="detail-note">${esc(detailsText)}</div>` : ""}`
     : `<p class="hint">No details</p>`;
   document.getElementById("modal").innerHTML = `
   <div class="overlay" onclick="if(event.target===this)closeForm()">
@@ -3193,7 +3253,7 @@ function googleCalUrl(t) {
     dates = utc(start) + "/" + utc(new Date(start.getTime() + 3600000));
   }
   const cat = catById(t.categoryId);
-  const details = [t.note, cat ? "Category: " + cat.name : "", "— from Solo Task"].filter(Boolean).join("\n\n");
+  const details = [t.note, cat ? "Category: " + cat.name : "", "— from Kodo"].filter(Boolean).join("\n\n");
   const p = new URLSearchParams({ action: "TEMPLATE", text: t.title, dates, details });
   return "https://calendar.google.com/calendar/render?" + p.toString();
 }
@@ -3580,15 +3640,15 @@ function projectSummaryHtml(cat) {
   const ov = Array.isArray(cat.overview) ? cat.overview.filter(Boolean) : [];
   const manual = String(cat.note || "").trim();
   const ovBody = ov.length
-    ? `<ul class="ps-list">${ov.map(x => `<li>${esc(x)}</li>`).join("")}</ul>`
+    ? `<ul class="ps-list">${ov.map(x => `<li>${topicHtml(x)}</li>`).join("")}</ul>`
     : `<div class="cat-note-body auto">ยังไม่มีภาพรวม — Claude จะเติมให้ตอนบันทึกงานครั้งถัดไป</div>`;
   const overviewCard = `<div class="cat-note">
-    <div class="cat-note-head">${icon("doc", 13)} แอปนี้มีอะไรบ้าง<span class="spacer"></span>
-      <button class="link-primary" style="font-size:.78rem" onclick="openCatNote('${cat.id}')">${manual ? "แก้โน้ต" : "+ โน้ต"}</button>
+    <div class="cat-note-head">${icon("doc", 13)} What's in this app<span class="spacer"></span>
+      <button class="link-primary" style="font-size:.78rem" onclick="openCatNote('${cat.id}')">${manual ? "Edit note" : "+ Note"}</button>
     </div>
     ${ovBody}
-    ${manual ? `<div class="ps-mynote"><b>โน้ตของฉัน</b>${esc(manual)}</div>` : ""}
-    ${cat.overviewAt ? `<div class="cat-note-meta">อัปเดตภาพรวม ${fmtDate(new Date(cat.overviewAt))}</div>` : ""}
+    ${manual ? `<div class="ps-mynote"><b>My note</b>${esc(manual)}</div>` : ""}
+    ${cat.overviewAt ? `<div class="cat-note-meta">Overview updated ${fmtDate(new Date(cat.overviewAt))}</div>` : ""}
   </div>`;
 
   // ---- 2) ความเปลี่ยนแปลง ----
@@ -3600,19 +3660,19 @@ function projectSummaryHtml(cat) {
     const rows = (expanded ? items : items.slice(0, CHANGES_PER_KIND)).map(it => `
       <button class="ps-item" onclick="openTaskDetail('${it.task.id}')" aria-label="${esc(k.label)}: ${esc(it.text)} — open task">
         <span class="ps-dot" style="background:${k.color}"></span>
-        <span class="ps-text">${esc(it.text)}</span>
+        <span class="ps-text">${topicHtml(it.text)}</span>
         <span class="ps-date">${it.at ? fmtDate(new Date(it.at)) : ""}</span>
       </button>`).join("");
     const more = items.length > CHANGES_PER_KIND
-      ? `<button class="ps-more" onclick="togglePsGroup('${cat.id}','${k.key}')">${expanded ? "ย่อ" : `ดูทั้งหมด (+${items.length - CHANGES_PER_KIND})`}</button>` : "";
+      ? `<button class="ps-more" onclick="togglePsGroup('${cat.id}','${k.key}')">${expanded ? "Show less" : `Show all (+${items.length - CHANGES_PER_KIND})`}</button>` : "";
     return `<div class="ps-group">
       <div class="ps-kind" style="color:color-mix(in srgb, ${k.color} 70%, var(--fg))">${k.label} <span>${items.length}</span></div>
       ${rows}${more}
     </div>`;
   }).join("");
   const changesCard = `<div class="cat-note">
-    <div class="cat-note-head">${icon("repeat", 13)} ความเปลี่ยนแปลง<span class="spacer"></span>
-      <span class="cat-note-meta" style="margin:0">ใหม่สุดก่อน · กดเพื่อดูรายละเอียด</span>
+    <div class="cat-note-head">${icon("repeat", 13)} Changes<span class="spacer"></span>
+      <span class="cat-note-meta" style="margin:0">Newest first · tap for details</span>
     </div>
     ${total ? sections : `<div class="cat-note-body auto">ยังไม่มีบันทึกการเปลี่ยนแปลง</div>`}
   </div>`;
@@ -3631,10 +3691,10 @@ function openCatNote(catId) {
         <h2>${esc(label)}</h2>
         <button class="x-btn" aria-label="Close" onclick="closeForm()">✕</button>
       </div>
-      <label class="fld">โน้ตของฉัน — เป้าหมาย / สิ่งที่ค้าง / อะไรที่อยากจำ
+      <label class="fld">My note — เป้าหมาย / สิ่งที่ค้าง / อะไรที่อยากจำ
         <textarea id="catNoteInput" rows="7" maxlength="4000" placeholder="เช่น ค้าง human GUI check ก่อน merge">${esc(cat.note || "")}</textarea>
       </label>
-      <p class="hint" style="margin:-.35rem 0 .75rem">ภาพรวม "แอปนี้มีอะไรบ้าง" Claude อัปเดตให้เองตอนบันทึกงาน · เว้นโน้ตว่างไว้ = ไม่แสดง</p>
+      <p class="hint" style="margin:-.35rem 0 .75rem">ภาพรวม "What's in this app" Claude อัปเดตให้เองตอนบันทึกงาน · เว้นโน้ตว่างไว้ = ไม่แสดง</p>
       <button class="btn btn-primary" onclick="saveCatNote('${cat.id}')">Save</button>
     </div>
   </div>`;
@@ -4010,7 +4070,7 @@ function renderSettings() {
       const label = on
         ? (gcalState === "syncing" ? "Connected — syncing…"
           : gcalState === "error" ? "Connected — sync error, will retry"
-          : "Connected — tasks sync to a “Solo Task” calendar")
+          : "Connected — tasks sync to a “Kodo” calendar")
         : gcalState === "reauth" ? "Disconnected — please reconnect" : "Not connected";
       const sub = on
         ? (last ? "Last sync " + fmtDateTime(new Date(last)) : "Waiting for first sync…")
@@ -4132,7 +4192,7 @@ function renderLogin() {
         ${sel ? "✓ " : ""}${r}</button>`;
     }).join("");
     return `<div class="login setup">
-      <div class="login-logo">${icon("chart", 26)}</div>
+      <div class="login-logo">${kodoLogo("kl-")}</div>
       <h1>Almost there, ${esc(pendingUser?.name || "")}!</h1>
       <p class="tagline">Quick setup — so the app fits your day from the start</p>
       <div class="setup-q">
@@ -4150,6 +4210,8 @@ function renderLogin() {
 
   if (authView === "signup") {
     return `<div class="login-wrap">${hero}<div class="login">
+      <div class="login-logo">${kodoLogo("kl-")}</div>
+      <div class="login-brand">Kodo</div>
       <h1>Create account</h1>
       <p class="tagline">Your day, organised — work, life and routines</p>
       ${icField("user", `<input id="suName" placeholder="Your name" autocomplete="name">`)}
@@ -4166,6 +4228,8 @@ function renderLogin() {
   }
 
   return `<div class="login-wrap">${hero}<div class="login">
+    <div class="login-logo">${kodoLogo("kl-")}</div>
+    <div class="login-brand">Kodo</div>
     <h1>Welcome back</h1>
     <p class="tagline">Track your day — work, life and routines</p>
     ${icField("mail", `<input id="loginEmail" type="email" placeholder="Email" autocomplete="email">`)}
@@ -4462,7 +4526,7 @@ function exportData() {
   const d = new Date();
   const p = n => String(n).padStart(2, "0");
   a.href = URL.createObjectURL(blob);
-  a.download = `solo-task-backup-${d.getFullYear()}${p(d.getMonth()+1)}${p(d.getDate())}.json`;
+  a.download = `kodo-backup-${d.getFullYear()}${p(d.getMonth()+1)}${p(d.getDate())}.json`;
   a.click();
   URL.revokeObjectURL(a.href);
 }
@@ -4483,7 +4547,7 @@ function importData(input) {
       save(); render();
       alert("Import complete ✅");
     } catch (e) {
-      alert("Invalid file — must be a Solo Task export");
+      alert("Invalid file — must be a Kodo (or Solo Task) export");
     }
   };
   reader.readAsText(file);
