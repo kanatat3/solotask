@@ -1284,6 +1284,7 @@ async function pullCloud() {
   } finally {
     cloudPulling = false;
   }
+  migrateAgentCategories();   // ย้ายงาน AI ที่ import ไว้ด้วยเวอร์ชันเก่าเข้าหมวดตามโปรเจกต์ (ทำครั้งเดียว)
   await importAgentLog();
 }
 
@@ -1295,6 +1296,7 @@ async function pullCloud() {
 const AGENT_CAT_PREFIX = "AI · ";
 const AGENT_CAT_FALLBACK = "AI Work";   // แถวที่ไม่ได้ระบุโปรเจกต์
 const AGENT_CAT_ICON = "chart";
+const AGENT_CAT_LEGACY_COLOR = "#ec4899";   // สีที่ V4.9 ใช้ตอนสร้างหมวด "AI Work" อัตโนมัติ
 const AGENT_CAT_MAX = 20;               // กันหมวดงอกไม่สิ้นสุดถ้า project เพี้ยน
 
 /** หมวดของโปรเจกต์นั้น — หาไม่เจอก็สร้างใหม่ (สีวนตาม COLORS ให้แต่ละโปรเจกต์ต่างกัน) */
@@ -1319,6 +1321,39 @@ function agentCategoryFor(project) {
   cat = { id: uid(), name, color: COLORS[agentCats.length % COLORS.length], icon: AGENT_CAT_ICON };
   state.categories.push(cat);
   return cat;
+}
+
+/** ย้ายงาน AI ที่เวอร์ชันก่อนหน้า import ไว้ในหมวดรวม "AI Work" (ชื่องานขึ้นต้นด้วย [ชื่อโปรเจกต์])
+ *  ให้ไปอยู่หมวดของโปรเจกต์ตัวเอง — ทำครั้งเดียว แล้วปักธงไว้ใน state ที่ sync ข้ามเครื่อง */
+function migrateAgentCategories() {
+  if (state.meta.agentCatV2) return;
+  const legacy = state.categories.find(c => c.name === AGENT_CAT_FALLBACK);
+  let moved = 0;
+  if (legacy) {
+    for (const t of state.tasks) {
+      if (!t.agentLogId || t.categoryId !== legacy.id) continue;
+      // ยอมให้ส่วนท้ายว่างได้ (ชื่อที่มีแต่ prefix) ไม่งั้นงานนั้นจะค้างที่เดิมถาวรเพราะธงถูกปักแล้ว
+      const m = /^\[([^\]]+)\]\s*([\s\S]*)$/.exec(t.title || "");
+      if (!m) continue;
+      const proj = m[1].trim();
+      if (!proj) continue;
+      const cat = agentCategoryFor(proj);
+      if (cat.id === legacy.id) continue;   // โควตาเต็ม -> ปล่อยไว้ที่เดิม พร้อม prefix เหมือนเดิม
+      t.title = m[2].trim() || proj;        // เหลือแต่ prefix -> ใช้ชื่อโปรเจกต์เป็นชื่องานแทนชื่อว่าง
+      t.categoryId = cat.id;
+      moved++;
+    }
+    // หมวดรวมว่างแล้วก็เอาออก ไม่ให้เหลือการ์ดเปล่าคาหน้าจอ
+    // แต่ลบเฉพาะตัวที่แอปสร้างเองเท่านั้น (สี/ไอคอนตรงกับค่าที่ V4.9 ใช้ตอน auto-create)
+    // ถ้าผู้ใช้บังเอิญตั้งหมวดชื่อ "AI Work" เองไว้ ห้ามลบของเขา
+    const autoCreated = legacy.color === AGENT_CAT_LEGACY_COLOR && legacy.icon === AGENT_CAT_ICON;
+    if (moved && autoCreated && !state.tasks.some(t => t.categoryId === legacy.id)) {
+      state.categories = state.categories.filter(c => c.id !== legacy.id);
+    }
+  }
+  state.meta.agentCatV2 = 1;
+  save();
+  if (moved) render();
 }
 
 async function importAgentLog() {
