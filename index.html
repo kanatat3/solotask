@@ -690,6 +690,31 @@
   }
   .task-meta .overdue { color: var(--danger-text); font-weight: 600; }
   .chip { border-radius: 999px; padding: .1rem .5rem; font-size: .65rem; font-weight: 600; }
+  /* โน้ตย่อใต้ชื่องาน (บรรทัดเดียว) — กดปุ่มรายละเอียดเพื่ออ่านเต็ม */
+  .task-note {
+    font-size: .74rem; color: var(--muted); margin-top: .2rem;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .task.is-done .task-note { opacity: .8; }
+  /* หน้ารายละเอียดงาน */
+  .detail-chips { display: flex; flex-wrap: wrap; gap: .35rem; margin-bottom: .75rem; }
+  .detail-row { display: flex; gap: .5rem; align-items: baseline; font-size: .82rem; margin-bottom: .35rem; }
+  .detail-row .k { color: var(--muted); min-width: 4.5rem; flex-shrink: 0; }
+  .detail-note {
+    white-space: pre-wrap; overflow-wrap: anywhere; font-size: .86rem; line-height: 1.55;
+    background: var(--bg); border-radius: var(--r-sm); padding: .8rem .9rem; margin: .6rem 0 .9rem;
+    max-height: 50dvh; overflow-y: auto;
+  }
+  /* โน้ตของโปรเจกต์/หมวด บนหัวหน้ารายละเอียด */
+  .cat-note {
+    background: var(--card); border: 1px solid var(--edge); border-radius: var(--r-md);
+    box-shadow: var(--shadow); padding: .85rem .95rem; margin-bottom: .9rem;
+  }
+  .cat-note-head { display: flex; align-items: center; gap: .45rem; font-size: .8rem; font-weight: 800; margin-bottom: .4rem; }
+  .cat-note-head .spacer { flex: 1; }
+  .cat-note-body { white-space: pre-wrap; overflow-wrap: anywhere; font-size: .84rem; line-height: 1.5; }
+  .cat-note-body.auto { color: var(--muted); }
+  .cat-note-meta { font-size: .7rem; color: var(--muted); margin-top: .45rem; }
 
   /* ---- bottom bar: แคปซูลลอย + ปุ่ม + แยกออกมาทางขวา (แบบ reference Iconly) ---- */
   .fab {
@@ -977,6 +1002,7 @@ const ICONS = {
   logout: '<path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/>',
   x: '<line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>',
   check: '<polyline points="20 6 9 17 4 12"/>',
+  doc: '<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/>',
   clock: '<circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>',
   checksquare: '<polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/>',
   refresh: '<polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/>',
@@ -2913,6 +2939,7 @@ function taskHtml(t, hideCat) {
   const span = taskSpan(t);
   const isRange = isRangeTask(t);
   const overdue = t.status === "open" && span && span.end.getTime() < startOfDay(new Date()).getTime();
+  const hasNote = !!firstNoteLine(t.note);
   return `<div class="task ${t.status === "done" ? "is-done" : ""} ${t.id === lastToggled ? "just-done" : ""}" onclick="toggleDone('${t.id}')"
     role="button" tabindex="0"
     onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();toggleDone('${t.id}')}"
@@ -2925,9 +2952,49 @@ function taskHtml(t, hideCat) {
         ${t.recurrence !== "none" ? `<span>${icon("repeat", 11)} ${RECURRENCE_LABELS[t.recurrence]}</span>` : ""}
         ${cat && !hideCat ? `<span class="chip" style="background:color-mix(in srgb, ${cat.color} 16%, var(--card));color:color-mix(in srgb, ${cat.color} 55%, var(--fg))">${esc(cat.name)}</span>` : ""}
       </div>
+      ${hasNote ? `<div class="task-note">${esc(firstNoteLine(t.note))}</div>` : ""}
     </div>
+    ${hasNote ? `<button class="edit-btn" aria-label="Read details of ${esc(t.title)}" onclick="event.stopPropagation();openTaskDetail('${t.id}')"
+      onkeydown="event.stopPropagation()">${icon("doc", 15)}</button>` : ""}
     <button class="edit-btn" aria-label="Edit task" onclick="event.stopPropagation();openForm('${t.id}')"
       onkeydown="event.stopPropagation()">${icon("edit", 15)}</button>
+  </div>`;
+}
+
+/** บรรทัดตัวอย่างใต้ชื่องาน — ข้ามบรรทัดที่ระบบใส่เอง ("⏱ ช่วงเวลา", "(auto) สรุปจาก git...")
+ *  ไปเอาบรรทัดเนื้อหาจริงก่อน ไม่งั้นงาน AI ทุกอันจะโชว์แค่เวลาเหมือนกันหมด */
+function firstNoteLine(note) {
+  const lines = String(note || "").split("\n").map(s => s.trim()).filter(Boolean);
+  const line = lines.find(l => !l.startsWith("⏱") && !l.startsWith("(auto)")) || lines[0] || "";
+  return line.length > 140 ? line.slice(0, 137) + "…" : line;
+}
+
+/** หน้าอ่านรายละเอียดงาน (อ่านอย่างเดียว — มีปุ่มไปแก้ไข) */
+function openTaskDetail(id) {
+  const t = state.tasks.find(x => x.id === id);
+  if (!t) return;
+  const cat = catById(t.categoryId);
+  const catName = cat ? (isAgentCategory(cat) ? agentCatLabel(cat) : cat.name) : "No category";
+  const chips = [
+    cat ? `<span class="chip" style="background:color-mix(in srgb, ${cat.color} 16%, var(--card));color:color-mix(in srgb, ${cat.color} 55%, var(--fg))">${esc(catName)}</span>` : "",
+    `<span class="chip" style="background:color-mix(in srgb, ${t.status === "done" ? "#10b981" : "#6366f1"} 16%, var(--card));color:color-mix(in srgb, ${t.status === "done" ? "#10b981" : "#6366f1"} 55%, var(--fg))">${t.status === "done" ? "Done" : "Open"}</span>`,
+    t.recurrence && t.recurrence !== "none" ? `<span class="chip" style="background:var(--bg);color:var(--muted)">${icon("repeat", 10)} ${RECURRENCE_LABELS[t.recurrence]}</span>` : "",
+  ].join("");
+  const rows = [];
+  if (t.dueAt) rows.push(`<div class="detail-row"><span class="k">${isRangeTask(t) ? "Dates" : "Due"}</span><span>${fmtSpan(t)}</span></div>`);
+  if (t.status === "done" && t.doneAt) rows.push(`<div class="detail-row"><span class="k">Finished</span><span>${fmtDateTime(new Date(t.doneAt))}</span></div>`);
+  document.getElementById("modal").innerHTML = `
+  <div class="overlay" onclick="if(event.target===this)closeForm()">
+    <div class="sheet" role="dialog" aria-label="Task details">
+      <div class="sheet-head">
+        <h2 style="overflow-wrap:anywhere">${esc(t.title)}</h2>
+        <button class="x-btn" aria-label="Close" onclick="closeForm()">✕</button>
+      </div>
+      <div class="detail-chips">${chips}</div>
+      ${rows.join("")}
+      ${t.note ? `<div class="detail-note">${esc(t.note)}</div>` : `<p class="hint">No details</p>`}
+      <button class="btn btn-outline" onclick="closeForm();openForm('${t.id}')">${icon("edit", 14)} Edit</button>
+    </div>
   </div>`;
 }
 
@@ -3331,6 +3398,79 @@ let todayDetailScope = "all";
 function allTasksOf(catKey) {
   return state.tasks.filter(t => catKey === "none" ? (!t.categoryId || !catById(t.categoryId)) : t.categoryId === catKey);
 }
+/** งานที่มีความเคลื่อนไหวล่าสุดในหมวดนั้น */
+function latestTaskOf(catId) {
+  let best = null, bestAt = "";
+  for (const t of allTasksOf(catId)) {
+    const at = t.doneAt || t.dueAt || t.createdAt || "";
+    if (!best || at > bestAt) { best = t; bestAt = at; }
+  }
+  return best;
+}
+
+/** การ์ด "กำลังทำอะไรอยู่" บนหัวหน้าโปรเจกต์ AI
+ *  - ถ้าผู้ใช้เขียนโน้ตไว้ -> โชว์โน้ตนั้น
+ *  - ถ้ายังไม่เขียน -> สรุปอัตโนมัติจากงานล่าสุดของโปรเจกต์ (ชื่องาน + โน้ตไม่กี่บรรทัดแรก) */
+function catNoteHtml(cat) {
+  if (!cat || !isAgentCategory(cat)) return "";
+  const manual = String(cat.note || "").trim();
+  let body = "", meta = "", auto = false;
+  if (manual) {
+    body = esc(manual);
+    if (cat.noteAt) meta = "แก้ไขล่าสุด " + fmtDateTime(new Date(cat.noteAt));
+  } else {
+    const latest = latestTaskOf(cat.id);
+    if (latest) {
+      auto = true;
+      const lines = String(latest.note || "").split("\n").map(s => s.trim()).filter(Boolean).slice(0, 4);
+      body = esc(latest.title) + (lines.length ? "\n" + esc(lines.join("\n")) : "");
+      const at = latest.doneAt || latest.dueAt || latest.createdAt;
+      meta = "สรุปจากงานล่าสุด" + (at ? " · " + fmtDate(new Date(at)) : "") + " — กด Edit เพื่อเขียนโน้ตเอง";
+    } else {
+      auto = true;
+      body = "ยังไม่มีงานในโปรเจกต์นี้";
+    }
+  }
+  return `<div class="cat-note">
+    <div class="cat-note-head">${icon("doc", 13)} กำลังทำอะไรอยู่<span class="spacer"></span>
+      <button class="link-primary" style="font-size:.78rem" onclick="openCatNote('${cat.id}')">Edit</button>
+    </div>
+    <div class="cat-note-body ${auto ? "auto" : ""}">${body}</div>
+    ${meta ? `<div class="cat-note-meta">${meta}</div>` : ""}
+  </div>`;
+}
+
+function openCatNote(catId) {
+  const cat = catById(catId);
+  if (!cat) return;
+  const label = isAgentCategory(cat) ? agentCatLabel(cat) : cat.name;
+  document.getElementById("modal").innerHTML = `
+  <div class="overlay" onclick="if(event.target===this)closeForm()">
+    <div class="sheet" role="dialog" aria-label="Project note">
+      <div class="sheet-head">
+        <h2>${esc(label)}</h2>
+        <button class="x-btn" aria-label="Close" onclick="closeForm()">✕</button>
+      </div>
+      <label class="fld">โปรเจกต์นี้กำลังทำอะไรอยู่ / เป้าหมาย / ค้างอะไร
+        <textarea id="catNoteInput" rows="7" maxlength="4000" placeholder="เช่น กำลังทำ Auto Tabulation Task 2 — ค้าง human GUI check ก่อน merge">${esc(cat.note || "")}</textarea>
+      </label>
+      <p class="hint" style="margin:-.35rem 0 .75rem">เว้นว่างไว้ = กลับไปใช้สรุปอัตโนมัติจากงานล่าสุด</p>
+      <button class="btn btn-primary" onclick="saveCatNote('${cat.id}')">Save</button>
+    </div>
+  </div>`;
+  setTimeout(() => document.getElementById("catNoteInput")?.focus(), 50);
+}
+
+function saveCatNote(catId) {
+  const cat = catById(catId);
+  const el = document.getElementById("catNoteInput");
+  if (!cat || !el) return;
+  const v = el.value.trim();
+  cat.note = v;
+  cat.noteAt = v ? new Date().toISOString() : null;
+  save(); closeForm(); render();
+}
+
 /** หน้ารวมงาน AI — เลือกโปรเจกต์ก่อน แล้วค่อยเข้าไปดูงานของโปรเจกต์นั้น */
 function renderAiHub() {
   const rows = agentCategories().map(c => {
@@ -3404,6 +3544,7 @@ function renderTodayDetail() {
         <span class="cat-ico" style="background:color-mix(in srgb, ${color} 16%, var(--card));color:color-mix(in srgb, ${color} 55%, var(--fg))">${icon(catIcon, 15)}</span>
         ${esc(fromAi ? agentCatLabel(cat) : name)}</h1>
     </div>
+    ${fromAi ? catNoteHtml(cat) : ""}
     ${scopeToggle}
     ${open.length === 0 && done.length === 0 ? `<p class="empty">${emptyMsg}</p>` : ""}
     ${open.map(t => taskHtml(t, true)).join("")}
