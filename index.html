@@ -1289,9 +1289,37 @@ async function pullCloud() {
 
 /* ---------- agent log import ----------
    Claude Code (หรือ agent อื่น) บันทึกงานที่ทำเสร็จลงตาราง agent_log ผ่าน service role key
-   ฝั่งแอปดึงแถวที่ยัง imported=false มาสร้างเป็น task สถานะ done ในหมวด "AI Work"
-   แล้ว mark ว่า import แล้ว — ทำหลัง pullCloud เสมอ เพื่อให้เขียนทับ state ล่าสุดจาก cloud */
-const AGENT_CAT = { name: "AI Work", color: "#ec4899", icon: "chart" };
+   ฝั่งแอปดึงแถวที่ยัง imported=false มาสร้างเป็น task สถานะ done โดยแยกหมวดตามโปรเจกต์
+   ("AI · BI Studio", "AI · Solo Task", ...) แล้ว mark ว่า import แล้ว
+   ทำหลัง pullCloud เสมอ เพื่อให้เขียนทับ state ล่าสุดจาก cloud */
+const AGENT_CAT_PREFIX = "AI · ";
+const AGENT_CAT_FALLBACK = "AI Work";   // แถวที่ไม่ได้ระบุโปรเจกต์
+const AGENT_CAT_ICON = "chart";
+const AGENT_CAT_MAX = 20;               // กันหมวดงอกไม่สิ้นสุดถ้า project เพี้ยน
+
+/** หมวดของโปรเจกต์นั้น — หาไม่เจอก็สร้างใหม่ (สีวนตาม COLORS ให้แต่ละโปรเจกต์ต่างกัน) */
+function agentCategoryFor(project) {
+  const name = project && String(project).trim()
+    ? AGENT_CAT_PREFIX + String(project).trim()
+    : AGENT_CAT_FALLBACK;
+  const key = name.toLowerCase();
+  let cat = state.categories.find(c => c.name.toLowerCase() === key);
+  if (cat) return cat;
+
+  // เต็มโควตาแล้ว -> เทรวมไว้ที่หมวดกลาง ไม่สร้างเพิ่ม
+  // นับเฉพาะหมวดที่ขึ้นต้นด้วย prefix (ไม่นับ "AI Work" ที่เป็นหมวดกลาง) โควตาจึงคงที่เสมอ
+  const agentCats = state.categories.filter(c => c.name.startsWith(AGENT_CAT_PREFIX));
+  if (agentCats.length >= AGENT_CAT_MAX) {
+    cat = state.categories.find(c => c.name === AGENT_CAT_FALLBACK);
+    if (cat) return cat;
+    cat = { id: uid(), name: AGENT_CAT_FALLBACK, color: COLORS[0], icon: AGENT_CAT_ICON };
+    state.categories.push(cat);
+    return cat;
+  }
+  cat = { id: uid(), name, color: COLORS[agentCats.length % COLORS.length], icon: AGENT_CAT_ICON };
+  state.categories.push(cat);
+  return cat;
+}
 
 async function importAgentLog() {
   if (!sb || !sbUser) return;
@@ -1301,9 +1329,6 @@ async function importAgentLog() {
       .eq("user_id", sbUser.id).eq("imported", false)
       .order("done_at", { ascending: true }).limit(100);
     if (error || !rows || rows.length === 0) return;
-
-    let cat = state.categories.find(c => c.name.toLowerCase() === AGENT_CAT.name.toLowerCase());
-    if (!cat) { cat = { id: uid(), ...AGENT_CAT }; state.categories.push(cat); }
 
     let added = 0;
     for (const r of rows) {
@@ -1324,10 +1349,15 @@ async function importAgentLog() {
       }
       const dueAt = startedAt || doneAt;
       const spansDays = startedAt && dateKey(new Date(startedAt)) !== dateKey(new Date(doneAt));
+      // ปกติชื่อโปรเจกต์อยู่ที่หมวดแล้ว ไม่ต้องใส่หน้าชื่องานซ้ำ
+      // ยกเว้นตอนถูกเทรวมไว้หมวดกลาง (โควตาเต็ม) — ต้องใส่ไว้ ไม่งั้นไม่รู้ว่างานมาจากโปรเจกต์ไหน
+      const proj = (r.project || "").trim();   // trim ที่เดียว ใช้ค่าเดียวกันทั้งชื่อหมวดและชื่องาน
+      const agentCat = agentCategoryFor(proj);
+      const pooled = agentCat.name === AGENT_CAT_FALLBACK && proj;
       state.tasks.push({
         id: uid(), agentLogId: r.id,
-        title: r.project ? `[${r.project}] ${r.title}` : r.title,
-        note, categoryId: cat.id,
+        title: pooled ? `[${proj}] ${r.title}` : r.title,
+        note, categoryId: agentCat.id,
         dueAt, endDate: spansDays ? dateKey(new Date(doneAt)) : null,
         reminderMin: null, recurrence: "none",
         status: "done", doneAt, notifiedAt: null, createdAt: dueAt,
