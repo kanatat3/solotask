@@ -737,6 +737,7 @@
   .task-meta .overdue { color: var(--danger-text); font-weight: 600; }
   .chip { border-radius: 999px; padding: .1rem .5rem; font-size: .65rem; font-weight: 600; }
   /* โน้ตย่อใต้ชื่องาน (บรรทัดเดียว) — กดปุ่มรายละเอียดเพื่ออ่านเต็ม */
+  .task-title, .task-note { user-select: text; }
   .task-note {
     font-size: .74rem; color: var(--muted); margin-top: .2rem;
     white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
@@ -781,6 +782,8 @@
     font: inherit; font-size: .82rem; color: var(--fg); line-height: 1.4;
   }
   .ps-item:hover { background: var(--bg); }
+  .ps-item { user-select: text; }
+  .ps-item:focus-visible { outline: 2px solid var(--primary); outline-offset: 1px; }
   .ps-dot { flex-shrink: 0; width: .45rem; height: .45rem; border-radius: 50%; margin-top: .42rem; }
   .ps-text { flex: 1; min-width: 0; overflow-wrap: anywhere; }
   /* "English topic — คำอธิบายไทย": หัวข้อเด่น คำอธิบายจางลง */
@@ -3416,6 +3419,27 @@ function autoCheckin() {
   showToast(`🔥 Checked in — ${streak} day${streak === 1 ? "" : "s"} streak! +10 XP`);
 }
 
+/** ผู้ใช้กำลังลากเลือกข้อความอยู่ -> คลิกนั้นคือการเลือกข้อความ ไม่ใช่กดเปิดรายละเอียด/ติ๊กงาน */
+function textSelected() {
+  const sel = window.getSelection ? window.getSelection() : null;
+  return !!sel && !sel.isCollapsed && sel.toString().trim().length > 0;
+}
+/** คัดลอกข้อความลง clipboard (สำรองด้วย execCommand สำหรับเบราว์เซอร์/บริบทที่ไม่มี Clipboard API) */
+async function copyText(text, what) {
+  try {
+    await navigator.clipboard.writeText(text);
+    showToast("📋 Copied " + what);
+  } catch {
+    const ta = document.createElement("textarea");
+    ta.value = text; ta.setAttribute("readonly", ""); ta.style.cssText = "position:fixed;top:0;left:0;opacity:0";
+    document.body.appendChild(ta); ta.select();
+    let ok = false;
+    try { ok = document.execCommand("copy"); } catch { ok = false; }
+    ta.remove();
+    showToast(ok ? "📋 Copied " + what : "❌ Copy failed — select the text and copy instead");
+  }
+}
+
 function showToast(msg) {
   document.querySelector(".toast")?.remove();
   const el = document.createElement("div");
@@ -3676,7 +3700,7 @@ function taskHtml(t, hideCat) {
   const overdue = t.status === "open" && span && span.end.getTime() < startOfDay(new Date()).getTime();
   const hasNote = !!firstNoteLine(t.note);
   const proj = projectOf(t);
-  return `<div class="task ${t.status === "done" ? "is-done" : ""} ${t.id === lastToggled ? "just-done" : ""}" onclick="toggleDone('${t.id}')"
+  return `<div class="task ${t.status === "done" ? "is-done" : ""} ${t.id === lastToggled ? "just-done" : ""}" onclick="if(!textSelected())toggleDone('${t.id}')"
     role="button" tabindex="0"
     onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();toggleDone('${t.id}')}"
     aria-label="${esc(t.title)} — ${t.status === "done" ? "done, press to reopen" : "press to mark as done"}">
@@ -3748,6 +3772,7 @@ function openTaskDetail(id) {
       <div class="detail-chips">${chips}</div>
       ${rows.join("")}
       <div style="margin-top:.7rem">${bodyHtml}</div>
+      <button class="btn btn-outline" onclick="copyTaskDetail('${t.id}')">Copy text</button>
       <button class="btn btn-outline" onclick="closeForm();openForm('${t.id}')">${icon("edit", 14)} Edit</button>
     </div>
   </div>`;
@@ -4192,6 +4217,7 @@ function projectSummaryHtml(cat) {
     : `<div class="cat-note-body auto">ยังไม่มีภาพรวม — Claude จะเติมให้ตอนบันทึกงานครั้งถัดไป</div>`;
   const overviewCard = `<div class="cat-note">
     <div class="cat-note-head">${icon("doc", 13)} What's in this app<span class="spacer"></span>
+      ${ov.length || manual ? `<button class="link-primary" style="font-size:.78rem" onclick="copyOverview('${cat.id}')">Copy</button>` : ""}
       <button class="link-primary" style="font-size:.78rem" onclick="openCatNote('${cat.id}')">${manual ? "Edit note" : "+ Note"}</button>
     </div>
     ${ovBody}
@@ -4206,11 +4232,13 @@ function projectSummaryHtml(cat) {
     const items = groups[k.key];
     const expanded = !!psExpanded[cat.id + ":" + k.key];
     const rows = (expanded ? items : items.slice(0, CHANGES_PER_KIND)).map(it => `
-      <button class="ps-item" onclick="openTaskDetail('${it.task.id}')" aria-label="${esc(k.label)}: ${esc(it.text)} — open task">
+      <div class="ps-item" role="button" tabindex="0" onclick="if(!textSelected())openTaskDetail('${it.task.id}')"
+        onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();openTaskDetail('${it.task.id}')}"
+        aria-label="${esc(k.label)}: ${esc(it.text)} — open task">
         <span class="ps-dot" style="background:${k.color}"></span>
         <span class="ps-text">${topicHtml(it.text)}</span>
         <span class="ps-date">${it.at ? fmtDate(new Date(it.at)) : ""}</span>
-      </button>`).join("");
+      </div>`).join("");
     const more = items.length > CHANGES_PER_KIND
       ? `<button class="ps-more" onclick="togglePsGroup('${cat.id}','${k.key}')">${expanded ? "Show less" : `Show all (+${items.length - CHANGES_PER_KIND})`}</button>` : "";
     return `<div class="ps-group">
@@ -4221,11 +4249,51 @@ function projectSummaryHtml(cat) {
   const changesCard = `<div class="cat-note">
     <div class="cat-note-head">${icon("repeat", 13)} Changes<span class="spacer"></span>
       <span class="cat-note-meta" style="margin:0">Newest first · tap for details</span>
+      ${total ? `<button class="link-primary" style="font-size:.78rem" onclick="copyChanges('${cat.id}')">Copy</button>` : ""}
     </div>
     ${total ? sections : `<div class="cat-note-body auto">ยังไม่มีบันทึกการเปลี่ยนแปลง</div>`}
   </div>`;
 
   return overviewCard + changesCard;
+}
+
+function copyOverview(catId) {
+  const cat = catById(catId);
+  if (!cat) return;
+  const ov = Array.isArray(cat.overview) ? cat.overview.filter(Boolean) : [];
+  const note = String(cat.note || "").trim();
+  const lines = [`What's in this app — ${agentCatLabel(cat)}`, ...ov.map(x => "• " + x)];
+  if (note) lines.push("", "My note:", note);
+  copyText(lines.join("\n"), "overview");
+}
+
+function copyChanges(catId) {
+  const cat = catById(catId);
+  if (!cat) return;
+  const groups = projectChanges(cat.id);
+  const lines = [`Changes — ${agentCatLabel(cat)}`];
+  for (const k of CHANGE_KINDS) {
+    if (!groups[k.key].length) continue;
+    lines.push("", k.label);
+    for (const it of groups[k.key]) lines.push(`• ${it.text}${it.at ? " (" + dateKey(new Date(it.at)) + ")" : ""}`);
+  }
+  copyText(lines.join("\n"), "changes");
+}
+
+function copyTaskDetail(id) {
+  const t = state.tasks.find(x => x.id === id);
+  if (!t) return;
+  const p = parseAgentNote(t.note);
+  const lines = [t.title];
+  if (p.time) lines.push("Time spent: " + p.time.replace(/^⏱\s*/, ""));
+  // วันที่จริง (ไม่ใช่ "Today") เพราะข้อความจะถูกเอาไปวางที่อื่น/วันอื่น
+  if (t.status === "done" && t.doneAt) { const d = new Date(t.doneAt); lines.push("Finished: " + dateKey(d) + " " + d.toTimeString().slice(0, 5)); }
+  for (const k of CHANGE_KINDS) {
+    if (!p[k.key].length) continue;
+    lines.push("", k.label, ...p[k.key].map(x => "• " + x));
+  }
+  if (p.details) lines.push("", "Details", p.details);
+  copyText(lines.join("\n"), "task details");
 }
 
 function openCatNote(catId) {
