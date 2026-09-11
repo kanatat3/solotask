@@ -599,6 +599,26 @@
   }
   .login-wave { position: absolute; inset: auto 0 0 0; width: 100%; height: 11vh; min-height: 5.5rem; }
   .login-wave svg { width: 100%; height: 100%; display: block; }
+  /* การ์ดงานจิ๋วลอยบนบล็อบ/คลื่น (ธีมเดียวกับไอคอนแอป: ติ๊กเขียว + ขีดรายการ) */
+  .login-chip {
+    position: absolute; display: flex; align-items: center; gap: .4rem;
+    padding: .45rem .7rem .45rem .45rem; border-radius: .8rem;
+    background: rgba(255, 255, 255, .95); box-shadow: 0 10px 24px -10px rgba(30, 27, 75, .45);
+    animation: chipFloat 5s ease-in-out infinite;
+  }
+  .login-chip .lc-tick {
+    width: 1.35rem; height: 1.35rem; border-radius: .45rem; background: #10b981; padding: .2rem; flex-shrink: 0;
+  }
+  .login-chip i { display: block; width: 3.6rem; height: .42rem; border-radius: 1rem; background: #c7cbee; }
+  .login-chip i.short { width: 2.2rem; background: #6366f1; opacity: .8; }
+  .login-chip.lc-1 { top: max(3.2rem, 9vh); right: max(1.2rem, 7vw); flex-wrap: wrap; width: 6.6rem; row-gap: .35rem; transform: rotate(4deg); }
+  .login-chip.lc-1 i.short { margin-left: 1.75rem; }
+  .login-chip.lc-2 { bottom: max(1rem, 2.4vh); left: max(1.2rem, 7vw); transform: rotate(-5deg) scale(.88); animation-delay: -2.5s; }
+  @keyframes chipFloat {
+    0%, 100% { translate: 0 0; }
+    50% { translate: 0 -6px; }
+  }
+  @media (prefers-reduced-motion: reduce) { .login-chip { animation: none; } }
   .setup-q { width: 100%; margin-bottom: .35rem; }
   .setup-label { font-size: .8rem; font-weight: 600; margin-bottom: .5rem; }
   .setup-chips { display: flex; flex-wrap: wrap; gap: .45rem; }
@@ -4168,6 +4188,8 @@ function togglePwd(btn) {
   btn.setAttribute("aria-label", showing ? "Show password" : "Hide password");
 }
 
+const LOGIN_TICK = `<span class="lc-tick"><svg viewBox="0 0 24 24" width="100%" height="100%" fill="none" stroke="#fff" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"><path d="M6 12.5l4 4 8-9"/></svg></span>`;
+
 function renderLogin() {
   // บล็อบสีโค้งมนเต็มจอ (สไตล์เดียวกับ reference) แต่ใช้โทนสีของแอพเราเอง — ปรับตามธีมกลางวัน/กลางคืนอัตโนมัติผ่าน CSS var
   // บล็อบมุมบนขวาใช้ div วงกลม CSS ยึดมุม + คลื่นล่างเป็น SVG แถบยึดขอบล่างของตัวเอง — ยังเห็นครบไม่ว่าจอจะทรงตั้งหรือกว้าง
@@ -4178,9 +4200,10 @@ function renderLogin() {
       <svg viewBox="0 0 400 160" preserveAspectRatio="none">
         <path d="M0 160 V70 Q100 10 220 60 T400 40 V160 Z" fill="var(--primary-dark)"/>
         <path d="M0 78 Q100 18 220 66 T400 46" fill="none" stroke="var(--primary)" stroke-width="4" opacity=".7" stroke-linecap="round"/>
-        <g opacity=".95" transform="translate(296 10)">${petSvg(3).replace('class="pet-svg"', 'width="74" height="74"')}</g>
       </svg>
     </div>
+    <div class="login-chip lc-1">${LOGIN_TICK}<i></i><i class="short"></i></div>
+    <div class="login-chip lc-2">${LOGIN_TICK}<i></i></div>
   </div>`;
 
   if (authView === "setup") {
