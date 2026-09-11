@@ -677,6 +677,7 @@
     display: inline-flex; align-items: center; justify-content: center; gap: .5rem;
   }
   .login .demo-note { font-size: .68rem; color: var(--muted); text-align: center; margin-top: .5rem; }
+  .head-actions { display: inline-flex; gap: .15rem; }
   .proj-head { display: flex; align-items: center; justify-content: space-between; margin: .2rem 0 .6rem; }
   .back-btn {
     background: none; border: none; color: var(--primary); font-size: .875rem; font-weight: 600;
@@ -1038,6 +1039,7 @@ const ICONS = {
   list: '<line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/>',
   gear: '<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/>',
   edit: '<path d="M17 3a2.83 2.83 0 0 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/>',
+  trash: '<polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/>',
   plus: '<line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>',
   repeat: '<polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/>',
   right: '<polyline points="9 18 15 12 9 6"/>',
@@ -2118,11 +2120,11 @@ const XP_PER_LEVEL = 100;
 const PET_STAGES = [
   { name: "Egg" },
   { name: "Hatchling" },
-  { name: "Baby Tiel" },
-  { name: "Young Tiel" },
-  { name: "Cockatiel" },
-  { name: "Pearl Tiel" },
-  { name: "Phoenix Tiel" },
+  { name: "Baby Parrotlet" },
+  { name: "Young Parrotlet" },
+  { name: "Parrotlet" },
+  { name: "Cobalt Parrotlet" },
+  { name: "Sky Parrotlet" },
 ];
 
 /** ไฟ streak — เปลวทรงหยดน้ำโค้งเรียบ ไล่สีเหลือง→ส้ม→แดง + ไส้ในสว่าง (lit=false = เทาซีด) */
@@ -2153,6 +2155,140 @@ function flameSvg(size, lit, flick) {
 }
 
 /** สัตว์เลี้ยงแบบ SVG — ค็อกคาเทล 7 ช่วงวัย วาดใหม่ (flat vector + ตาแบบ plush) — อนิเมชันอยู่ใน CSS ผ่าน class p-* */
+/* นก Pacific parrotlet สีฟ้า (มุมหน้าตรง) — ร่าง 3..7 ของสัตว์เลี้ยง
+   คืนค่า "inner" ของ <svg viewBox="0 0 100 100"> ; id(k) ต้องสร้าง id ไม่ซ้ำต่ออินสแตนซ์ */
+function parrotletInner(stage, id) {
+  const f = (v) => String(Math.round(v * 100) / 100);
+  const SW = 'stroke-linecap="round" stroke-linejoin="round"';
+
+  // สี: ฟ้าหัว/หลัง, ครีมหน้าอก, ปีกโคบอลต์, ปาก/เท้าชมพูอ่อน, ตาน้ำตาลเข้ม (ตาม reference)
+  const PAL = {
+    baby:  { b0: "#d9f0fa", b1: "#b4dcf0", b2: "#8cc3e2", edge: "#6fa9cf", w0: "#a9cdef", w1: "#86aee6", w2: "#6c93d6", wLine: "#5b7fc6", tail: "#7fb2dc" },
+    young: { b0: "#c6e9f7", b1: "#98d0ec", b2: "#6bb2dc", edge: "#4f93c4", w0: "#86c0ea", w1: "#5b8ddc", w2: "#3f68c4", wLine: "#35599f", tail: "#3c86c0" },
+    adult: { b0: "#bfe7f7", b1: "#8ccbea", b2: "#5ea8d6", edge: "#4488bd", w0: "#79bde8", w1: "#4f86d8", w2: "#3560c2", wLine: "#223f95", tail: "#2c7fb6" },
+    cobalt:{ b0: "#b3e0f6", b1: "#7cc0e8", b2: "#4b98cf", edge: "#3776b0", w0: "#5fa6e6", w1: "#3563cf", w2: "#1f3fa6", wLine: "#172f7c", tail: "#1f64a8" },
+  };
+  const S = {
+    3: { hx: 50, hy: 40, hr: 22, by: 66, brx: 23.5, bry: 19, eyeY: 39, eyeDx: 11.5, eyeR: 4.2, beak: 0.9, beakY: 42.5, pal: "baby", tail: 0, wingLen: 0.78, fuzz: true },
+    4: { hx: 50, hy: 35.5, hr: 19.8, by: 64, brx: 26.5, bry: 22, eyeY: 34, eyeDx: 10.8, eyeR: 3.8, beak: 1.05, beakY: 38, pal: "young", tail: 2.5, wingLen: 0.92 },
+    5: { hx: 50, hy: 33, hr: 18.6, by: 63, brx: 28.5, bry: 25, eyeY: 31.5, eyeDx: 10.2, eyeR: 3.4, beak: 1.15, beakY: 35, pal: "adult", tail: 4, wingLen: 1 },
+    6: { hx: 50, hy: 33, hr: 18.6, by: 63, brx: 28.5, bry: 25, eyeY: 31.5, eyeDx: 10.2, eyeR: 3.4, beak: 1.15, beakY: 35, pal: "cobalt", tail: 4, wingLen: 1 },
+    7: { hx: 50, hy: 33, hr: 18.6, by: 63, brx: 28.5, bry: 25, eyeY: 31.5, eyeDx: 10.2, eyeR: 3.4, beak: 1.15, beakY: 35, pal: "adult", tail: 4, wingLen: 1, halo: true },
+  }[stage];
+  const C = PAL[S.pal];
+  const { hx, hy, hr, by, brx, bry } = S;
+
+  // โครงหัว+ตัวเป็นก้อนเดียวแบบลูกแพร์ (parrotlet ไม่มีคอให้เห็น)
+  const side = (m) => {   // m = +1 ขวา, -1 ซ้าย (วาดจากยอดหัวลงไปก้น)
+    const X = (dx) => f(hx + m * dx);
+    return `C${X(hr * 0.6)} ${f(hy - hr)} ${X(hr)} ${f(hy - hr * 0.58)} ${X(hr)} ${f(hy)} ` +
+      `C${X(hr)} ${f(hy + hr * 0.5)} ${X(brx * 0.84)} ${f(by - bry * 0.66)} ${X(brx * 0.97)} ${f(by - bry * 0.12)} ` +
+      `C${X(brx * 1.03)} ${f(by + bry * 0.38)} ${X(brx * 0.78)} ${f(by + bry * 0.96)} ${f(hx)} ${f(by + bry)}`;
+  };
+  const right = side(1);
+  const leftBack = (() => {  // ด้านซ้ายย้อนจากก้นขึ้นหัว
+    const X = (dx) => f(hx - dx);
+    return `C${X(brx * 0.78)} ${f(by + bry * 0.96)} ${X(brx * 1.03)} ${f(by + bry * 0.38)} ${X(brx * 0.97)} ${f(by - bry * 0.12)} ` +
+      `C${X(brx * 0.84)} ${f(by - bry * 0.66)} ${X(hr)} ${f(hy + hr * 0.5)} ${X(hr)} ${f(hy)} ` +
+      `C${X(hr)} ${f(hy - hr * 0.58)} ${X(hr * 0.6)} ${f(hy - hr)} ${f(hx)} ${f(hy - hr)}z`;
+  })();
+  const bodyD = `M${f(hx)} ${f(hy - hr)} ${right} ${leftBack}`;
+
+  // หน้าอก/ท้องสีครีม ไล่ขึ้นไปถึงคอ (ขอบจางด้วย gradient)
+  const bellyD = (() => {
+    const t = hy + hr * 0.36;
+    const R = `C${f(hx + brx * 0.55)} ${f(t)} ${f(hx + brx * 0.74)} ${f(by - bry * 0.42)} ${f(hx + brx * 0.72)} ${f(by + bry * 0.12)} ` +
+      `C${f(hx + brx * 0.7)} ${f(by + bry * 0.72)} ${f(hx + brx * 0.36)} ${f(by + bry * 0.97)} ${f(hx)} ${f(by + bry * 0.98)} `;
+    const L = `C${f(hx - brx * 0.36)} ${f(by + bry * 0.97)} ${f(hx - brx * 0.7)} ${f(by + bry * 0.72)} ${f(hx - brx * 0.72)} ${f(by + bry * 0.12)} ` +
+      `C${f(hx - brx * 0.74)} ${f(by - bry * 0.42)} ${f(hx - brx * 0.55)} ${f(t)} ${f(hx)} ${f(t)}z`;
+    return `M${f(hx)} ${f(t)} ${R}${L}`;
+  })();
+
+  // ปีกพับข้างตัว: ขนคลุมไหล่ฟ้าอ่อน -> โคบอลต์ -> ขนปลายปีกเข้ม
+  const wl = S.wingLen;
+  const P = (ax, ay) => `${f(hx - brx * ax)} ${f(by + bry * ay)}`;
+  const wingD = `M${P(0.8, -0.62)} C${P(0.99, -0.38)} ${P(1.05, 0.25 * wl)} ${P(0.96, 0.6 * wl)} ` +
+    `C${P(0.88, 0.86 * wl)} ${P(0.74, 1.0 * wl)} ${P(0.52, 1.07 * wl)} ` +
+    `C${P(0.46, 0.62 * wl)} ${P(0.5, 0)} ${P(0.62, -0.4)} C${P(0.67, -0.53)} ${P(0.73, -0.61)} ${P(0.8, -0.62)}z`;
+  const wingLines = stage === 3 ? "" : [
+    `M${P(1.0, 0.3 * wl)} C${P(0.92, 0.62 * wl)} ${P(0.78, 0.88 * wl)} ${P(0.56, 1.05 * wl)}`,
+    `M${P(0.93, 0.08 * wl)} C${P(0.84, 0.44 * wl)} ${P(0.7, 0.72 * wl)} ${P(0.52, 0.88 * wl)}`,
+    `M${P(0.84, -0.1)} C${P(0.76, 0.2 * wl)} ${P(0.64, 0.46 * wl)} ${P(0.52, 0.6 * wl)}`,
+  ].map(d => `<path d="${d}" fill="none" stroke="${C.wLine}" stroke-width=".75" opacity=".55" ${SW}/>`).join("") +
+    // เกล็ดขนคลุมไหล่
+    [[0.86, -0.36], [0.74, -0.3], [0.9, -0.2], [0.78, -0.14], [0.66, -0.2]].map(([ax, ay]) =>
+      `<path d="M${P(ax + 0.07, ay)} q${f(brx * 0.07)} ${f(bry * 0.07)} ${f(brx * 0.14)} 0" fill="none" stroke="#d4eefa" stroke-width=".6" opacity=".7" ${SW}/>`).join("");
+  const wingInner = `<path d="${wingD}" fill="url(#${id("wg")})" stroke="${C.wLine}" stroke-width=".5" stroke-opacity=".45"/>${wingLines}`;
+  const wings = `<g class="p-wing p-wing-l">${wingInner}</g><g class="p-wing p-wing-r"><g transform="matrix(-1 0 0 1 100 0)">${wingInner}</g></g>`;
+
+  // หางสั้นโผล่ใต้ท้อง (อยู่หลังตัว)
+  const tail = S.tail ? `<g class="p-tail"><path d="M${f(hx - 4.4)} ${f(by + bry - 3)} L${f(hx + 4.4)} ${f(by + bry - 3)} L${f(hx + 3.2)} ${f(by + bry + S.tail)} Q${f(hx)} ${f(by + bry + S.tail + 2.2)} ${f(hx - 3.2)} ${f(by + bry + S.tail)}z" fill="${C.tail}"/></g>` : "";
+
+  // เท้าชมพู 3 นิ้วเกาะพื้น
+  const fy = by + bry - 1.8, fdx = brx * 0.36;
+  const foot = (x) => {
+    const toes = `M${f(x)} ${f(fy)} l${f(-2.8)} ${f(3.4)} M${f(x)} ${f(fy)} l0 ${f(4)} M${f(x)} ${f(fy)} l${f(2.8)} ${f(3.4)}`;
+    return `<path d="${toes}" stroke="#d9999b" stroke-width="2.6" fill="none" ${SW}/><path d="${toes}" stroke="#f3c3c2" stroke-width="1.5" fill="none" ${SW}/>`;
+  };
+  const feet = `<g class="p-feet">${foot(hx - fdx)}${foot(hx + fdx)}</g>`;
+
+  // ตาน้ำตาลเข้มกลม มีขอบเปลือกตาจางๆ + แสงสะท้อน
+  const eye = (cx) => {
+    const r = S.eyeR, cy = S.eyeY;
+    return `<g class="p-eye"><circle cx="${f(cx)}" cy="${f(cy)}" r="${f(r + 0.7)}" fill="#e9f7fc" opacity=".85"/>` +
+      `<circle cx="${f(cx)}" cy="${f(cy)}" r="${f(r)}" fill="#2a1a12"/>` +
+      `<circle cx="${f(cx)}" cy="${f(cy + r * 0.25)}" r="${f(r * 0.62)}" fill="#4a2e20" opacity=".8"/>` +
+      `<circle cx="${f(cx - r * 0.34)}" cy="${f(cy - r * 0.36)}" r="${f(r * 0.34)}" fill="#fff"/>` +
+      `<circle cx="${f(cx + r * 0.36)}" cy="${f(cy + r * 0.34)}" r="${f(r * 0.14)}" fill="#fff" opacity=".85"/></g>`;
+  };
+
+  // ปากงุ้มสีชมพูอ่อน
+  const bs = S.beak, bY = S.beakY;
+  const B = (x, y) => `${f(hx + x * bs)} ${f(bY + y * bs)}`;
+  const beak = `<path d="M${B(-5.4, 0.6)} C${B(-5.2, -2.8)} ${B(5.2, -2.8)} ${B(5.4, 0.6)} C${B(5.8, 4.6)} ${B(3.2, 8.6)} ${B(0, 11.4)} C${B(-3.2, 8.6)} ${B(-5.8, 4.6)} ${B(-5.4, 0.6)}z" fill="url(#${id("bk")})"/>` +
+    `<path d="M${B(-3.2, 5.6)} C${B(-1.4, 7.6)} ${B(1.4, 7.6)} ${B(3.2, 5.6)} C${B(2.4, 8.4)} ${B(1.2, 10.4)} ${B(0, 11.8)} C${B(-1.2, 10.4)} ${B(-2.4, 8.4)} ${B(-3.2, 5.6)}z" fill="#cf8c89" opacity=".45"/>` +
+    `<ellipse cx="${f(hx - 1.7 * bs)}" cy="${f(bY + 0.6 * bs)}" rx="${f(1.5 * bs)}" ry="${f(0.9 * bs)}" fill="#fff" opacity=".6"/>` +
+    `<circle cx="${f(hx - 1.6 * bs)}" cy="${f(bY - 1.1 * bs)}" r="${f(0.42 * bs)}" fill="#a97877" opacity=".55"/><circle cx="${f(hx + 1.6 * bs)}" cy="${f(bY - 1.1 * bs)}" r="${f(0.42 * bs)}" fill="#a97877" opacity=".55"/>`;
+
+  // ขนอ่อนฟูบนหัว (ร่างเด็ก)
+  const fuzz = S.fuzz ? `<path d="M${f(hx - 3)} ${f(hy - hr + 0.8)} q-1.6 -3.4 0.8 -5.2 M${f(hx + 0.6)} ${f(hy - hr + 0.2)} q0.4 -3.8 3 -4.6 M${f(hx + 3.8)} ${f(hy - hr + 1)} q2 -2.6 4.4 -2.4" stroke="${C.b1}" stroke-width="1.5" fill="none" ${SW}/>` : "";
+
+  // ขนเกล็ดบนอกจางๆ ให้ดูมีเนื้อขน
+  const chest = [[-5, 0.05], [2, 0.02], [-1.5, 0.28], [5.5, 0.26], [-6, 0.5], [1.5, 0.52]].map(([dx, ay]) =>
+    `<path d="M${f(hx + dx - 2)} ${f(by + bry * ay)} q2 1.5 4 0" fill="none" stroke="#ffffff" stroke-width=".6" opacity=".7" ${SW}/>`).join("");
+
+  const halo = S.halo ? `<circle cx="50" cy="52" r="46" fill="url(#${id("halo")})"/>` +
+    [[14, 20, 3.2], [85, 16, 2.6], [88, 58, 2.2], [11, 62, 2.4]].map(([x, y, r]) =>
+      `<path class="p-note" d="M${x} ${f(y - r)} Q${x} ${y} ${f(x + r)} ${y} Q${x} ${y} ${x} ${f(y + r)} Q${x} ${y} ${f(x - r)} ${y} Q${x} ${y} ${x} ${f(y - r)}z" fill="#fde68a"/>`).join("") : "";
+
+  const defs = `<defs>
+    <radialGradient id="${id("bd")}" cx=".38" cy=".26" r=".8"><stop offset="0" stop-color="${C.b0}"/><stop offset=".55" stop-color="${C.b1}"/><stop offset="1" stop-color="${C.b2}"/></radialGradient>
+    <radialGradient id="${id("bl")}" cx=".5" cy=".62" r=".62"><stop offset="0" stop-color="#fbf7ec"/><stop offset=".55" stop-color="#eef6f2"/><stop offset=".85" stop-color="#d8eff6" stop-opacity=".7"/><stop offset="1" stop-color="${C.b0}" stop-opacity="0"/></radialGradient>
+    <radialGradient id="${id("fc")}" cx=".5" cy=".5" r=".5"><stop offset="0" stop-color="#e6f7fb"/><stop offset=".7" stop-color="#d6f1f9" stop-opacity=".7"/><stop offset="1" stop-color="#d6f1f9" stop-opacity="0"/></radialGradient>
+    <linearGradient id="${id("wg")}" x1="0" y1="0" x2=".25" y2="1"><stop offset="0" stop-color="${C.w0}"/><stop offset=".22" stop-color="${C.w0}"/><stop offset=".48" stop-color="${C.w1}"/><stop offset=".78" stop-color="${C.w2}"/><stop offset="1" stop-color="${C.wLine}"/></linearGradient>
+    <linearGradient id="${id("bk")}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fbe3df"/><stop offset=".6" stop-color="#efbdb8"/><stop offset="1" stop-color="#dc9f9b"/></linearGradient>
+    ${S.halo ? `<radialGradient id="${id("halo")}"><stop offset="0" stop-color="#bfe7ff" stop-opacity=".75"/><stop offset=".7" stop-color="#dbeafe" stop-opacity=".35"/><stop offset="1" stop-color="#dbeafe" stop-opacity="0"/></radialGradient>` : ""}
+    <clipPath id="${id("cl")}"><path d="${bodyD}"/></clipPath>
+  </defs>`;
+
+  return `${defs}${halo}
+    <g class="p-body">
+      ${tail}
+      <path d="${bodyD}" fill="url(#${id("bd")})" stroke="${C.edge}" stroke-width=".8" stroke-opacity=".55"/>
+      <g clip-path="url(#${id("cl")})">
+        <path class="p-belly" d="${bellyD}" fill="url(#${id("bl")})"/>
+        ${chest}
+        <ellipse cx="${f(hx)}" cy="${f(S.beakY + 2)}" rx="${f(hr * 0.72)}" ry="${f(hr * 0.5)}" fill="url(#${id("fc")})"/>
+        <ellipse cx="${f(hx - hr * 0.42)}" cy="${f(hy - hr * 0.55)}" rx="${f(hr * 0.42)}" ry="${f(hr * 0.22)}" fill="#fff" opacity=".35" transform="rotate(-22 ${f(hx - hr * 0.42)} ${f(hy - hr * 0.55)})"/>
+      </g>
+      ${fuzz}
+      ${wings}
+      ${eye(hx - S.eyeDx)}${eye(hx + S.eyeDx)}
+      ${beak}
+      ${feet}
+    </g>`;
+}
+
 let petSvgSeq = 0;
 function petSvg(level) {
   // ปัดเป็นจำนวนเต็มและกัน NaN/undefined (เช่น xp เพี้ยนจากไฟล์ import) — ไม่งั้นตกไป stage ที่ไม่มี config แล้ว throw
@@ -2163,7 +2299,6 @@ function petSvg(level) {
   const id = (k) => `pet${stage}-${k}-${uid}`;
   const f = (v) => String(Math.round(v * 100) / 100);
   const EYE = "#2a1d14";
-  const FOOT = "#8B8E99";
   const SW = 'stroke-linecap="round" stroke-linejoin="round"';
 
   /* tapered sickle leaf from base B to tip T; w = thickness, bend = curvature */
@@ -2196,46 +2331,11 @@ function petSvg(level) {
       `<ellipse cx="${f(50 - 1.5 * s)}" cy="${f(y - 0.4 * s)}" rx="${f(1.1 * s)}" ry="${f(0.7 * s)}" fill="#fff" opacity=".5"/>`;
   };
 
-  /* plush two-toe nub feet, cockatiel grey */
-  const feet = (y, dx, len) => {
-    const toe = (x) => `M${f(x)} ${f(y)} l${f(-len * 0.55)} ${f(len)} M${f(x)} ${f(y)} l${f(len * 0.55)} ${f(len)}`;
-    return `<g class="p-feet"><path d="${toe(50 - dx)} ${toe(50 + dx)}" stroke="${FOOT}" stroke-width="3.2" ${SW} fill="none"/></g>`;
-  };
-
-  /* folded plush wing, rounded tip; local coords, shoulder at (0,0), r side mirrored around x=50 */
-  const wing = (side, sc, ox, oy, base, shade, hi, extra) => {
-    const P = (x, y) => `${f(ox + x * sc)} ${f(oy + y * sc)}`;
-    const body = `M${P(0, 0)} C${P(-9, 1)} ${P(-16, 9)} ${P(-16, 17)} C${P(-16, 25)} ${P(-12, 32)} ${P(-6, 33)} C${P(-1, 33.5)} ${P(1.5, 27)} ${P(1.5, 19)} C${P(2, 12)} ${P(2, 5)} ${P(0, 0)}z`;
-    const band = `M${P(-16, 17)} C${P(-16, 25)} ${P(-12, 32)} ${P(-6, 33)} C${P(-1, 33.5)} ${P(1.5, 27)} ${P(1.5, 19)} C${P(-5, 24)} ${P(-12, 22)} ${P(-16, 17)}z`;
-    const gloss = `M${P(-2, 2)} C${P(-8, 4)} ${P(-13, 9)} ${P(-14, 15)} C${P(-12, 10)} ${P(-7, 6)} ${P(-1, 5)}z`;
-    const inner = `<path d="${body}" fill="${base}"/><path d="${band}" fill="${shade}"/><path d="${gloss}" fill="${hi}" opacity=".85"/>${extra ? extra(P) : ""}`;
-    return side === "l"
-      ? `<g class="p-wing p-wing-l">${inner}</g>`
-      : `<g class="p-wing p-wing-r"><g transform="matrix(-1 0 0 1 100 0)">${inner}</g></g>`;
-  };
-  const wings = (sc, ox, oy, base, shade, hi, extra) => wing("l", sc, ox, oy, base, shade, hi, extra) + wing("r", sc, ox, oy, base, shade, hi, extra);
-
-  /* single tail feather hanging down behind the body, tilted `ang` deg off vertical (tip to the left).
-     Local top-centre = attachment point (hidden behind body); bbox top-right stays next to it for the wag pivot. */
-  const tail = (ox, oy, len, w, ang, outer, stripe, edge) => {
-    const h = w / 2, e = len - 4;
-    const body = `M${f(-h)} 0 L${f(h)} 0 L${f(h)} ${f(e)} C${f(h)} ${f(len + 1.3)} ${f(-h)} ${f(len + 1.3)} ${f(-h)} ${f(e)}z`;
-    const strip = `M${f(-h + 0.6)} 3 L${f(-h + 3.2)} 3 L${f(-h + 3.2)} ${f(e)} C${f(-h + 3)} ${f(len - 0.6)} ${f(-h + 1.4)} ${f(len - 0.2)} ${f(-h + 0.6)} ${f(e - 0.5)}z`;
-    return `<g class="p-tail"><g transform="translate(${f(ox)} ${f(oy)}) rotate(${ang})">` +
-      `<path d="${body}" fill="${outer}" stroke="${edge}" stroke-width="1" stroke-linejoin="round"/>` +
-      `<path d="${strip}" fill="${stripe}"/></g></g>`;
-  };
-
-  /* cel-shaded head circle + body blob */
+  /* cel-shaded head circle */
   const shadedHead = (cx, cy, r, base, shade, hi, edge) =>
     `<circle cx="${cx}" cy="${cy}" r="${r}" fill="${shade}"${edge ? ` stroke="${edge}" stroke-width="1.4"` : ""}/>` +
     `<g clip-path="url(#${id("hc")})"><circle cx="${f(cx - 1.6)}" cy="${f(cy - 1.8)}" r="${f(r - 0.6)}" fill="${base}"/>` +
     `<ellipse cx="${f(cx - 6)}" cy="${f(cy - 8)}" rx="${f(r * 0.32)}" ry="${f(r * 0.2)}" fill="${hi}" opacity=".7"/></g>`;
-  const shadedBody = (d, cx, cy, rx, ry, base, shade, hi, edge) =>
-    `<path d="${d}" fill="${shade}"${edge ? ` stroke="${edge}" stroke-width="1.4" stroke-linejoin="round"` : ""}/>` +
-    `<g clip-path="url(#${id("bc")})"><ellipse cx="${f(cx - 3)}" cy="${f(cy - 4)}" rx="${rx}" ry="${ry}" fill="${base}"/>` +
-    `<ellipse cx="${f(cx - 8)}" cy="${f(cy - 10)}" rx="${f(rx * 0.3)}" ry="${f(ry * 0.22)}" fill="${hi}" opacity=".6"/></g>`;
-
   const EGG = "#fbecc8", EGG_SH = "#e2cf9f", EGG_O = "#d3bd90", EGG_HI = "#fff8e6";
 
   let inner = "";
@@ -2255,7 +2355,7 @@ function petSvg(level) {
   } else if (stage === 2) {
     /* Hatchling: downy chick in a scalloped shell, shell cap on the head */
     const shellFront = "M26 62 a6.2 4.5 0 0 1 12 0 a6.2 4.5 0 0 1 12 0 a6.2 4.5 0 0 1 12 0 a6.2 4.5 0 0 1 12 0 L74 70 C74 85 62 91 50 91 C38 91 26 85 26 70z";
-    const face = "#fde68a", fShade = "#efc44c", fHi = "#fff5c7";
+    const face = "#cdeaf7", fShade = "#9dcde8", fHi = "#eef9fd";
     /* shell cap: dome hugging the head's upper-right, soft scalloped rim (local coords, tilted to follow the head curve) */
     const cap = `M-11 0 C-11 -13.5 11 -13.5 11 0 a3.6 3.6 0 0 1 -5.5 1.2 a3.6 3.6 0 0 1 -5.5 -0.8 a3.6 3.6 0 0 1 -5.5 1 a3.6 3.6 0 0 1 -5.5 -1.4z`;
     inner = `<defs><clipPath id="${id("hc")}"><circle cx="50" cy="44" r="16"/></clipPath><clipPath id="${id("sc")}"><path d="${shellFront}"/></clipPath></defs>
@@ -2267,104 +2367,15 @@ function petSvg(level) {
       <g class="p-wing p-wing-l"><path d="M38 57 C33 57 29 61 28 66 C30 68 34 67 37 64z" fill="${fShade}"/><path d="M38 57 C34 57.5 30.5 60.5 30 65 C32 66 35 65 37 62.5z" fill="${face}"/></g>
       <g class="p-wing p-wing-r"><g transform="matrix(-1 0 0 1 100 0)"><path d="M38 57 C33 57 29 61 28 66 C30 68 34 67 37 64z" fill="${fShade}"/><path d="M38 57 C34 57.5 30.5 60.5 30 65 C32 66 35 65 37 62.5z" fill="${face}"/></g></g>
       <g transform="translate(57 31.5) rotate(14)"><path d="${cap}" fill="${EGG}" stroke="${EGG_O}" stroke-width="1.4" stroke-linejoin="round"/><path d="M-7.2 -3 C-7.2 -6 -5.5 -8.5 -3 -9.5" fill="none" stroke="${EGG_HI}" stroke-width="1.6" ${SW} opacity=".9"/><path d="M4.5 -9.5 q2.4 2.4 0.6 6" fill="none" stroke="${EGG_O}" stroke-width="1.2" ${SW}/></g>
-      <g clip-path="url(#${id("hc")})">${cheeks(51, 12.5, 2.2, "#F9C48F", ".9")}</g>
+      <g clip-path="url(#${id("hc")})">${cheeks(51, 12.5, 2.2, "#f6c9c9", ".8")}</g>
       ${eyes(43.5, 6.5, 4.5)}
-      ${beak(48.5, 0.62, "#f59e0b", "#d97706")}
+      ${beak(48.5, 0.62, "#f2c4c0", "#d99a96")}
     </g>
     <path d="${shellFront}" fill="${EGG_SH}"/>
     <g clip-path="url(#${id("sc")})"><path d="M22 52 L47 52 L48 62 C46 72 42 84 46 96 L22 96z" fill="${EGG}"/><path d="M47 52 L74 52 L74 96 L46 96 C42 84 46 72 48 62z" fill="#f4e2b6"/><ellipse cx="35" cy="73" rx="4" ry="6" fill="${EGG_HI}" opacity=".8"/></g>
     <path d="${shellFront}" fill="none" stroke="${EGG_O}" stroke-width="1.6" stroke-linejoin="round"/>`;
   } else {
-    const C = {
-      3: { body: "#C9CCD4", shade: "#A3A9B6", hi: "#DDE0E6", belly: "#E6E8ED", wing: "#B9BEC9", wShade: "#929AA9", wHi: "#D3D7DE",
-           face: "#FCEFB8", fShade: "#EBD07A", fHi: "#FFFAE6", cheek: "#F9C48F", crest: "#F6D25C", crShade: "#D9AE2C" },
-      4: { body: "#C3C8D2", shade: "#969EAD", hi: "#D9DCE3", belly: "#E9EAEE", wing: "#A9B1BF", wShade: "#828D9C", wHi: "#C9CFD8",
-           face: "#FDE35A", fShade: "#EDC22E", fHi: "#FFF2B8", cheek: "#F5A05A", crest: "#FBBF24", crShade: "#D99B0A" },
-      5: { body: "#B8BEC9", shade: "#8B93A2", hi: "#D3D8DF", belly: "#E3E6EC", wing: "#9AA3B3", wShade: "#75808F", wHi: "#BCC4D0",
-           face: "#FDE047", fShade: "#E6B512", fHi: "#FFF0A6", cheek: "#F5A05A", crest: "#FDE047", crShade: "#DBA90C" },
-      6: { body: "#F2EEE4", shade: "#D3CCB9", hi: "#FBF9F4", belly: "#FAF8F2", wing: "#E6E0D0", wShade: "#C4BBA4", wHi: "#F6F2E8",
-           face: "#FDE68A", fShade: "#EBC451", fHi: "#FFF5CC", cheek: "#F5A05A", crest: "#FDE047", crShade: "#DBA90C", edge: "#B9B19C", pearl: "#A9A6A0" },
-      7: { body: "#F97316", shade: "#C2410C", hi: "#FB923C", belly: "#FDE68A", wing: "#EA580C", wShade: "#9A3412", wHi: "#FDBA74",
-           face: "#FDE047", fShade: "#F59E0B", fHi: "#FFF3B0", cheek: "#F5A05A", crest: "#F97316", crShade: "#DC2626" },
-    }[stage];
-
-    /* per-stage geometry */
-    const G = {
-      3: { hcx: 50, hcy: 44, hr: 20, eyeY: 43, eyeDx: 8, eyeR: 5.6, cheekY: 52.5, cheekDx: 15.5, cheekR: 2.2, cheekOp: ".85", beakY: 50, beakS: 0.7,
-           bodyD: "M34.5 71 a15.5 13 0 1 0 31 0 a15.5 13 0 1 0 -31 0z",
-           bcx: 50, bcy: 71, brx: 16, bry: 13, belly: [50, 74, 9, 7], wingS: 0.58, wingX: 40.5, wingY: 61.5, feetY: 82.5, feetDx: 6, feetLen: 4.2 },
-      4: { hcx: 50, hcy: 43, hr: 17, eyeY: 42, eyeDx: 7, eyeR: 4.8, cheekY: 50.5, cheekDx: 14, cheekR: 2.4, cheekOp: ".9", beakY: 48, beakS: 0.78,
-           bodyD: "M50 49 C35 49 26.5 59 26.5 68 C26.5 76 35 81 50 81 C65 81 73.5 76 73.5 68 C73.5 59 65 49 50 49z",
-           bcx: 50, bcy: 66, brx: 24, bry: 16, belly: [50, 68.5, 13, 9.5], wingS: 0.84, wingX: 37.5, wingY: 51, feetY: 79.5, feetDx: 8, feetLen: 4.6 },
-      5: { hcx: 50, hcy: 41, hr: 17, eyeY: 40, eyeDx: 7, eyeR: 4.8, cheekY: 48.5, cheekDx: 14, cheekR: 2.6, cheekOp: ".95", beakY: 46, beakS: 0.85,
-           bodyD: "M50 47 C34 47 25.5 58 25.5 67 C25.5 76 35 81 50 81 C65 81 74.5 76 74.5 67 C74.5 58 66 47 50 47z",
-           bcx: 50, bcy: 65, brx: 25, bry: 17, belly: [50, 67.5, 14, 10], wingS: 0.92, wingX: 37, wingY: 49, feetY: 79.5, feetDx: 8.5, feetLen: 4.6 },
-    };
-    G[6] = G[5]; G[7] = G[5];
-    const g = G[stage];
-
-    /* crest per stage */
-    const crest5 = (base, shade) =>
-      feather(44, 29, 33.5, 14.5, 2.4, 5, base, shade) + feather(46.5, 27, 39, 10, 2.8, 6, base, shade) +
-      feather(50, 25.5, 45, 8, 3, 6.2, base, shade) + feather(53.5, 26.5, 51.5, 9, 2.8, 5.2, base, shade) +
-      feather(56.5, 28.5, 57.5, 13.5, 2.4, 3.6, base, shade);
-    let crest = "";
-    if (stage === 3) {
-      crest = feather(45, 27, 39, 20, 1.8, 2.2, C.crest, C.crShade) + feather(55, 27, 61, 20, 1.8, -2.2, C.crest, C.crShade) +
-        feather(50, 26, 50.5, 12, 2.1, 1.8, C.crest, C.crShade);
-    } else if (stage === 4) {
-      crest = feather(45.5, 31, 37.5, 16.5, 2.5, 4, C.crest, C.crShade) + feather(50, 29, 44.5, 13.5, 2.8, 4.2, C.crest, C.crShade) + feather(54.5, 30.5, 52, 16, 2.5, 3.4, C.crest, C.crShade);
-    } else if (stage === 7) {
-      crest = `<g class="p-flame">${crest5("#F97316", "#DC2626")}` +
-        `<path d="${leafD(47, 26, 44, 12, 1.2, 3.5)}" fill="#FDE047" opacity=".9"/><path d="${leafD(50.5, 25, 46.5, 10.5, 1.3, 3.6)}" fill="#FDE047" opacity=".9"/><path d="${leafD(53.5, 26, 51.8, 12, 1.2, 3)}" fill="#FDE047" opacity=".9"/></g>`;
-    } else {
-      crest = crest5(C.crest, C.crShade);
-    }
-
-    /* tail per stage */
-    let tailStr = "";
-    if (stage === 4) tailStr = tail(34, 60, 21, 7, 10, C.wing, C.body, C.wShade);
-    else if (stage === 5) tailStr = tail(37, 58, 31, 8.5, 10, C.wing, C.face, C.wShade);
-    else if (stage === 6) tailStr = tail(37, 58, 31, 8.5, 10, C.wing, C.face, C.edge);
-    else if (stage === 7) {
-      /* one flame feather: same anchor/angle/length as the stage 5 tail (37,58 / 10deg / ~31 long), 3 tongues at the end */
-      const T = "M-5.2 0 L5.2 0 L5.2 19 C5.6 24 4.8 28.5 3.3 32 C2.2 30 1.7 28.6 1.5 27.4 C0.9 29.8 0 31.4 -0.8 33 C-2 30.8 -2.7 28.8 -2.9 27.2 C-3.6 28.9 -4.3 30 -5 30.8 C-5.5 27 -5.4 23 -5.2 19z";
-      tailStr = `<g class="p-flame"><g transform="translate(37 58) rotate(10)"><path d="${T}" fill="#DC2626"/><path d="${T}" transform="scale(.7 .93)" fill="#F97316"/><path d="${T}" transform="scale(.38 .84)" fill="#FDE047"/></g></g>`;
-    }
-
-    /* stage-specific decoration */
-    let wingExtra = null, bodyExtra = "";
-    if (stage === 6) {
-      const sc = (P, x, y) => `<path d="M${P(x - 2.4, y)} a2.4 2.4 0 0 0 4.8 0" fill="none" stroke="${C.pearl}" stroke-width="1.3"/>`;
-      wingExtra = (P) => sc(P, -9, 12) + sc(P, -4, 15) + sc(P, -11, 19) + sc(P, -6, 22) + sc(P, -9, 27) + sc(P, -4, 27);
-      const S = (x, y) => `<path d="M${x - 2.4} ${y} a2.4 2.4 0 0 0 4.8 0" fill="none" stroke="${C.pearl}" stroke-width="1.3"/>`;
-      bodyExtra = S(50, 55) + S(46, 60) + S(54, 60) + S(50, 65) + S(30, 71) + S(70, 71);
-    }
-    const ticks = stage === 3
-      ? `<path d="M41.5 28.5 l-1.8 -3.8 M47.5 25.8 l-0.6 -4 M58.5 28.5 l1.8 -3.8" fill="none" stroke="${C.fShade}" stroke-width="1.3" ${SW}/>`
-      : "";
-    const sparkles = stage === 7
-      ? `<circle cx="26" cy="27" r="1.7" fill="#FDE047"/><circle cx="75" cy="21" r="1.4" fill="#FBBF24"/><circle cx="79" cy="43" r="1.2" fill="#FDE047"/><circle cx="21" cy="47" r="1.2" fill="#FBBF24"/>`
-      : "";
-    const note = stage === 5 ? `<text class="p-note" x="66" y="25" font-size="11" font-weight="700" fill="#6366f1">♪</text>` : "";
-    const edge = C.edge || "";
-
-    inner = `<defs><clipPath id="${id("hc")}"><circle cx="${g.hcx}" cy="${g.hcy}" r="${g.hr}"/></clipPath><clipPath id="${id("bc")}"><path d="${g.bodyD}"/></clipPath></defs>
-    ${feet(g.feetY, g.feetDx, g.feetLen)}
-    <g class="p-body">
-      ${tailStr}
-      ${shadedBody(g.bodyD, g.bcx, g.bcy, g.brx, g.bry, C.body, C.shade, C.hi, edge)}
-      <ellipse class="p-belly" cx="${g.belly[0]}" cy="${g.belly[1]}" rx="${g.belly[2]}" ry="${g.belly[3]}" fill="${C.belly}"/>
-      ${bodyExtra}
-      ${wings(g.wingS, g.wingX, g.wingY, C.wing, C.wShade, C.wHi, wingExtra)}
-      ${crest}
-      ${shadedHead(g.hcx, g.hcy, g.hr, C.face, C.fShade, C.fHi, edge)}
-      ${ticks}
-      <g clip-path="url(#${id("hc")})">${cheeks(g.cheekY, g.cheekDx, g.cheekR, C.cheek, g.cheekOp)}</g>
-      ${eyes(g.eyeY, g.eyeDx, g.eyeR)}
-      ${beak(g.beakY, g.beakS, stage === 7 ? "#FBBF24" : "#F59E0B", "#D97706")}
-      ${sparkles}${note}
-    </g>`;
+    inner = parrotletInner(stage, id);   // ร่าง 3-7: นก Pacific parrotlet สีฟ้า
   }
   return `<svg class="pet-svg" viewBox="0 0 100 100" role="img" aria-label="${PET_STAGES[stage - 1].name}">${inner}</svg>`;
 }
@@ -3209,6 +3220,18 @@ function saveProject(e, catId, pid) {
   save(); closeForm(); render();
 }
 
+function deleteAgentProject(catId) {
+  const cat = catById(catId);
+  if (!cat || !isAgentCategory(cat)) return;
+  const n = state.tasks.filter(t => t.categoryId === catId).length;
+  if (!confirm(`Delete project "${agentCatLabel(cat)}" and its ${n} task${n === 1 ? "" : "s"}?\nงานที่ AI บันทึกเข้ามาใหม่ในชื่อนี้จะสร้างโปรเจกต์ขึ้นมาใหม่`)) return;
+  state.categories = state.categories.filter(c => c.id !== catId);
+  state.tasks = state.tasks.filter(t => t.categoryId !== catId);
+  todayCat = agentCategories().length ? AI_HUB : null;
+  todayProject = null;
+  save(); render();
+}
+
 function deleteProject(catId, pid) {
   const cat = catById(catId);
   if (!cat) return;
@@ -3893,7 +3916,10 @@ function renderTodayDetail() {
       : `<button class="back-btn" onclick="goHome()">${icon("left", 15)} Home</button>`;
   const headColor = proj ? proj.color : color;
   const headAction = proj
-    ? `<button class="edit-btn" aria-label="Edit project" onclick="openProjectForm('${cat.id}', '${proj.id}')">${icon("edit", 15)}</button>`
+    ? `<span class="head-actions"><button class="edit-btn" aria-label="Rename project" onclick="openProjectForm('${cat.id}', '${proj.id}')">${icon("edit", 15)}</button>
+        <button class="edit-btn" aria-label="Delete project" onclick="deleteProject('${cat.id}', '${proj.id}')">${icon("trash", 15)}</button></span>`
+    : fromAi
+      ? `<button class="edit-btn" aria-label="Delete project" onclick="deleteAgentProject('${cat.id}')">${icon("trash", 15)}</button>`
     : (!isNone && !fromAi && !projects.length
         ? `<button class="link-primary" style="font-size:.8rem" onclick="openProjectForm('${cat.id}')">+ Project</button>` : "");
   // การ์ดโปรเจกต์ (แบบเดียวกับหน้ารวม AI) — นับจากงานทั้งหมดของโปรเจกต์ ไม่ขึ้นกับปุ่ม Today/All
