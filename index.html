@@ -677,6 +677,7 @@
     display: inline-flex; align-items: center; justify-content: center; gap: .5rem;
   }
   .login .demo-note { font-size: .68rem; color: var(--muted); text-align: center; margin-top: .5rem; }
+  .proj-head { display: flex; align-items: center; justify-content: space-between; margin: .2rem 0 .6rem; }
   .back-btn {
     background: none; border: none; color: var(--primary); font-size: .875rem; font-weight: 600;
     cursor: pointer; font-family: inherit; padding: 0; margin-bottom: .75rem; display: inline-flex; align-items: center; gap: .25rem;
@@ -1050,6 +1051,7 @@ const ICONS = {
   heart: '<path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>',
   book: '<path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>',
   cart: '<circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/>',
+  folder: '<path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>',
   tag: '<path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.83z"/><line x1="7" y1="7" x2="7.01" y2="7"/>',
   dumbbell: '<line x1="7" y1="12" x2="17" y2="12"/><rect x="4.5" y="7.5" width="3" height="9" rx="1"/><rect x="16.5" y="7.5" width="3" height="9" rx="1"/><line x1="2" y1="9.5" x2="2" y2="14.5"/><line x1="22" y1="9.5" x2="22" y2="14.5"/>',
   logout: '<path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/>',
@@ -1135,8 +1137,8 @@ let currentTab = "home";
 let lastToggled = null; // id ล่าสุดที่เพิ่งติ๊ก — ใช้เล่น check animation เฉพาะตัวนั้น
 let viewTransition = false; // true = render ถัดไปเล่นอนิเมชันเข้าหน้า
 
-function goCat(key) { todayCat = key; viewTransition = true; render(); }
-function goHome() { todayCat = null; viewTransition = true; render(); }
+function goCat(key) { todayCat = key; todayProject = null; viewTransition = true; render(); }
+function goHome() { todayCat = null; todayProject = null; viewTransition = true; render(); }
 let allFilter = "";
 let calMonth = startOfMonth(new Date());
 let calSelected = dateKey(new Date());
@@ -1175,7 +1177,15 @@ function migrate(s) {
     if (!c.icon) c.icon = guessIcon(c.name);
     if (c.schedule === undefined) c.schedule = null; // {days:[0-6], start:"HH:MM", end:"HH:MM"}
     if (c.enabled === undefined) c.enabled = true;
+    // โปรเจกต์ย่อย: เก็บเฉพาะรายการที่ id/สี/ชื่อ อยู่ในรูปแบบที่แอปสร้างเอง
+    if (c.projects !== undefined) {
+      c.projects = Array.isArray(c.projects) ? c.projects.filter(p =>
+        p && typeof p.id === "string" && /^[a-z0-9]{1,40}$/i.test(p.id)
+        && typeof p.name === "string" && p.name.trim()
+        && typeof p.color === "string" && /^#[0-9a-f]{3,8}$/i.test(p.color)) : [];
+    }
   });
+  (s.tasks || []).forEach(t => { if (t.projectId != null && (typeof t.projectId !== "string" || !/^[a-z0-9]{1,40}$/i.test(t.projectId))) t.projectId = null; });
   if (!Array.isArray(s.routines)) s.routines = [];
   if (!s.routineLog || typeof s.routineLog !== "object") s.routineLog = {};
   if (!s.meta || typeof s.meta !== "object") s.meta = {};
@@ -3146,6 +3156,69 @@ function esc(s) {
 }
 function catById(id) { return state.categories.find(c => c.id === id); }
 
+/* ---------- โปรเจกต์ย่อยในหมวด (เช่น Work -> ลูกค้า A / งานวิจัย B) ----------
+   เก็บใน cat.projects = [{id, name, color}] + task.projectId — อยู่ใน blob categories/tasks เดิม
+   จึง sync ข้ามเครื่องได้เลยโดยไม่ต้องแก้ส่วน sync; task ที่ projectId หาไม่เจอ (โปรเจกต์ถูกลบ/ย้ายหมวด) ถือว่าไม่มีโปรเจกต์ */
+let todayProject = null;   // โปรเจกต์ที่เปิดอยู่ในหน้าหมวด (null = หน้าหมวดปกติ)
+function catProjects(cat) { return cat && Array.isArray(cat.projects) ? cat.projects : []; }
+function projectOf(t) {
+  if (!t || !t.projectId) return null;
+  return catProjects(catById(t.categoryId)).find(p => p.id === t.projectId) || null;
+}
+function openProject(catId, pid) { todayCat = catId; todayProject = pid; viewTransition = true; render(); }
+
+function openProjectForm(catId, pid) {
+  const cat = catById(catId);
+  if (!cat) return;
+  const p = pid ? catProjects(cat).find(x => x.id === pid) : null;
+  document.getElementById("modal").innerHTML = `
+  <div class="overlay" onclick="if(event.target===this)closeForm()">
+    <div class="sheet" role="dialog" aria-label="${p ? "Edit project" : "New project"}">
+      <div class="sheet-head">
+        <h2>${p ? "Edit project" : "New project in " + esc(cat.name)}</h2>
+        <button class="x-btn" aria-label="Close" onclick="closeForm()">✕</button>
+      </div>
+      <form onsubmit="saveProject(event, '${cat.id}', '${p ? p.id : ""}')">
+        <label class="fld">Project name
+          <input id="pName" required maxlength="60" value="${p ? esc(p.name) : ""}" placeholder="e.g. Client A report">
+        </label>
+        <button type="submit" class="btn btn-primary">Save</button>
+        ${p ? `<button type="button" class="btn btn-danger-outline" onclick="deleteProject('${cat.id}', '${p.id}')">Delete project</button>` : ""}
+      </form>
+    </div>
+  </div>`;
+  setTimeout(() => document.getElementById("pName")?.focus(), 50);
+}
+
+function saveProject(e, catId, pid) {
+  e.preventDefault();
+  const cat = catById(catId);
+  const name = document.getElementById("pName").value.trim();
+  if (!cat || !name) return;
+  if (!Array.isArray(cat.projects)) cat.projects = [];
+  if (cat.projects.some(x => x.id !== pid && x.name.toLowerCase() === name.toLowerCase())) {
+    showToast("❌ มีโปรเจกต์ชื่อนี้ในหมวดนี้แล้ว");
+    return;
+  }
+  if (pid) {
+    const p = cat.projects.find(x => x.id === pid);
+    if (p) p.name = name;
+  } else {
+    cat.projects.push({ id: uid(), name, color: COLORS[cat.projects.length % COLORS.length] });
+  }
+  save(); closeForm(); render();
+}
+
+function deleteProject(catId, pid) {
+  const cat = catById(catId);
+  if (!cat) return;
+  if (!confirm("Delete this project? Its tasks stay in " + cat.name + " without a project.")) return;
+  cat.projects = catProjects(cat).filter(p => p.id !== pid);
+  state.tasks.forEach(t => { if (t.categoryId === catId && t.projectId === pid) t.projectId = null; });
+  if (todayProject === pid) todayProject = null;
+  save(); closeForm(); render();
+}
+
 function taskHtml(t, hideCat) {
   const cat = catById(t.categoryId);
   const due = t.dueAt ? new Date(t.dueAt) : null;
@@ -3153,6 +3226,7 @@ function taskHtml(t, hideCat) {
   const isRange = isRangeTask(t);
   const overdue = t.status === "open" && span && span.end.getTime() < startOfDay(new Date()).getTime();
   const hasNote = !!firstNoteLine(t.note);
+  const proj = projectOf(t);
   return `<div class="task ${t.status === "done" ? "is-done" : ""} ${t.id === lastToggled ? "just-done" : ""}" onclick="toggleDone('${t.id}')"
     role="button" tabindex="0"
     onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();toggleDone('${t.id}')}"
@@ -3164,6 +3238,7 @@ function taskHtml(t, hideCat) {
         ${due ? `<span class="${overdue ? "overdue" : ""}">${isRange ? icon("calendar", 11) + " " : ""}${fmtSpan(t)}</span>` : ""}
         ${t.recurrence !== "none" ? `<span>${icon("repeat", 11)} ${RECURRENCE_LABELS[t.recurrence]}</span>` : ""}
         ${cat && !hideCat ? `<span class="chip" style="background:color-mix(in srgb, ${cat.color} 16%, var(--card));color:color-mix(in srgb, ${cat.color} 55%, var(--fg))">${esc(cat.name)}</span>` : ""}
+        ${proj && !(currentTab === "home" && todayCat === t.categoryId && todayProject === proj.id) ? `<span class="chip" style="background:color-mix(in srgb, ${proj.color} 14%, var(--card));color:color-mix(in srgb, ${proj.color} 55%, var(--fg))">${icon("folder", 10)} ${esc(proj.name)}</span>` : ""}
       </div>
       ${hasNote ? `<div class="task-note">${esc(firstNoteLine(t.note))}</div>` : ""}
     </div>
@@ -3786,7 +3861,17 @@ function renderTodayDetail() {
   const name = isNone ? "No category" : cat.name;
   const color = isNone ? "var(--muted)" : cat.color;
 
-  const tasks = todayDetailScope === "today" ? todayTasksOf(todayCat) : allTasksOf(todayCat);
+  // มาจากหน้ารวม AI ก็ให้ย้อนกลับไปหน้ารวม ไม่ใช่เด้งกลับหน้าแรก
+  const fromAi = !isNone && isAgentCategory(cat);
+  // โปรเจกต์ย่อย: เฉพาะหมวดปกติ (หมวด AI แต่ละหมวดเป็นโปรเจกต์อยู่แล้ว)
+  const projects = !isNone && !fromAi ? catProjects(cat) : [];
+  const proj = todayProject ? projects.find(p => p.id === todayProject) || null : null;
+  if (todayProject && !proj) todayProject = null;   // โปรเจกต์ถูกลบ/ไม่อยู่ในหมวดนี้ -> กลับหน้าหมวด
+
+  let tasks = todayDetailScope === "today" ? todayTasksOf(todayCat) : allTasksOf(todayCat);
+  // หน้าโปรเจกต์ = เฉพาะงานของโปรเจกต์นั้น / หน้าหมวดที่มีโปรเจกต์ = เฉพาะงานที่ไม่อยู่ในโปรเจกต์ไหน
+  if (proj) tasks = tasks.filter(t => t.projectId === proj.id);
+  else if (projects.length) tasks = tasks.filter(t => !projectOf(t));
   const open = sortByDue(tasks.filter(t => t.status === "open"));
   const done = sortByDue(tasks.filter(t => t.status === "done")).reverse();
 
@@ -3796,19 +3881,53 @@ function renderTodayDetail() {
       class="cal-seg-btn ${todayDetailScope === s ? "sel" : ""}"
       onclick="todayDetailScope='${s}';render()">${s === "today" ? "Today" : "All"}</button>`).join("")}
   </div>`;
-  const emptyMsg = todayDetailScope === "today" ? "Nothing due today in this category" : "No tasks in this category yet";
-  // มาจากหน้ารวม AI ก็ให้ย้อนกลับไปหน้ารวม ไม่ใช่เด้งกลับหน้าแรก
-  const fromAi = !isNone && isAgentCategory(cat);
-  const backBtn = fromAi
-    ? `<button class="back-btn" onclick="goCat('${AI_HUB}')">${icon("left", 15)} AI Work</button>`
-    : `<button class="back-btn" onclick="goHome()">${icon("left", 15)} Home</button>`;
+  const emptyMsg = proj
+    ? (todayDetailScope === "today" ? "Nothing due today in this project" : "No tasks in this project yet")
+    : projects.length
+      ? (todayDetailScope === "today" ? "No other tasks due today" : "No tasks outside the projects")
+      : (todayDetailScope === "today" ? "Nothing due today in this category" : "No tasks in this category yet");
+  const backBtn = proj
+    ? `<button class="back-btn" onclick="goCat('${cat.id}')">${icon("left", 15)} ${esc(name)}</button>`
+    : fromAi
+      ? `<button class="back-btn" onclick="goCat('${AI_HUB}')">${icon("left", 15)} AI Work</button>`
+      : `<button class="back-btn" onclick="goHome()">${icon("left", 15)} Home</button>`;
+  const headColor = proj ? proj.color : color;
+  const headAction = proj
+    ? `<button class="edit-btn" aria-label="Edit project" onclick="openProjectForm('${cat.id}', '${proj.id}')">${icon("edit", 15)}</button>`
+    : (!isNone && !fromAi && !projects.length
+        ? `<button class="link-primary" style="font-size:.8rem" onclick="openProjectForm('${cat.id}')">+ Project</button>` : "");
+  // การ์ดโปรเจกต์ (แบบเดียวกับหน้ารวม AI) — นับจากงานทั้งหมดของโปรเจกต์ ไม่ขึ้นกับปุ่ม Today/All
+  const projCards = !proj && projects.length ? projects.map(p => {
+    const pts = allTasksOf(cat.id).filter(t => t.projectId === p.id);
+    const doneN = pts.filter(t => t.status === "done").length;
+    const pct = pts.length ? Math.round(doneN / pts.length * 100) : 0;
+    const sub = pts.length ? `${pts.length - doneN} open · ${pts.length} task${pts.length > 1 ? "s" : ""}` : "No tasks yet";
+    return `<div class="ov-card">
+      <div class="ov-head">
+        <span class="cat-ring">${ringSvg(pct, p.color)}<span class="cat-ico" style="background:color-mix(in srgb, ${p.color} 16%, var(--card));color:color-mix(in srgb, ${p.color} 55%, var(--fg))">${icon("folder", 14)}</span></span>
+        <span class="name">${esc(p.name)}
+          <span class="ov-sub" style="display:block;font-weight:600">${sub}</span>
+        </span>
+        <button class="ov-more" aria-label="Open project ${esc(p.name)}" onclick="openProject('${cat.id}', '${p.id}')">${icon("right", 14)}</button>
+      </div>
+    </div>`;
+  }).join("") : "";
+  const projSection = projCards ? `<div class="proj-head">
+      <h2 class="section-title" style="margin:0">Projects</h2>
+      <button class="link-primary" style="font-size:.8rem" onclick="openProjectForm('${cat.id}')">+ New project</button>
+    </div>
+    <div class="ov-grid" style="margin-bottom:1.1rem">${projCards}</div>
+    <h2 class="section-title" style="margin:0 0 .6rem">Other tasks</h2>` : "";
   return `${backBtn}
     <div class="page-head" style="margin-bottom:.5rem">
       <h1 class="cat-head" style="font-size:1.25rem">
-        <span class="cat-ico" style="background:color-mix(in srgb, ${color} 16%, var(--card));color:color-mix(in srgb, ${color} 55%, var(--fg))">${icon(catIcon, 15)}</span>
-        ${esc(fromAi ? agentCatLabel(cat) : name)}</h1>
+        <span class="cat-ico" style="background:color-mix(in srgb, ${headColor} 16%, var(--card));color:color-mix(in srgb, ${headColor} 55%, var(--fg))">${icon(proj ? "folder" : catIcon, 15)}</span>
+        ${esc(proj ? proj.name : fromAi ? agentCatLabel(cat) : name)}</h1>
+      ${headAction}
     </div>
+    ${proj ? `<p class="hint" style="margin:-.2rem 0 .8rem">Project in ${esc(name)}</p>` : ""}
     ${fromAi ? projectSummaryHtml(cat) : ""}
+    ${projSection}
     ${scopeToggle}
     ${open.length === 0 && done.length === 0 ? `<p class="empty">${emptyMsg}</p>` : ""}
     ${open.map(t => taskHtml(t, true)).join("")}
@@ -4334,7 +4453,7 @@ function addCategory() {
 function deleteCategory(id) {
   if (!confirm("Delete this category? Its tasks will be kept without a category.")) return;
   state.categories = state.categories.filter(c => c.id !== id);
-  state.tasks.forEach(t => { if (t.categoryId === id) t.categoryId = null; });
+  state.tasks.forEach(t => { if (t.categoryId === id) { t.categoryId = null; t.projectId = null; } });
   save(); render();
 }
 
@@ -4362,6 +4481,10 @@ function openForm(taskId) {
       : (currentTab === "home" && todayCat === c.id); // เปิดจากหน้า detail → default หมวดนั้น
     return `<option value="${c.id}" ${sel ? "selected" : ""}>${esc(c.name)}</option>`;
   }).join("");
+  // หมวด/โปรเจกต์เริ่มต้น: งานเดิมใช้ของงาน, งานใหม่ที่เปิดจากหน้าหมวด/โปรเจกต์ใช้หน้านั้น
+  const initCat = t ? t.categoryId : (currentTab === "home" ? todayCat : null);
+  const initProj = t ? t.projectId : (currentTab === "home" && initCat === todayCat ? todayProject : null);
+  const projOpts = projectOptionsHtml(initCat, initProj);
   const remOpts = REMINDER_OPTIONS.map(([v, l]) =>
     `<option value="${v}" ${t && String(t.reminderMin ?? "") === v ? "selected" : ""}>${l}</option>`).join("");
   const recOpts = Object.entries(RECURRENCE_LABELS).map(([v, l]) =>
@@ -4381,11 +4504,14 @@ function openForm(taskId) {
           <textarea id="fNote" rows="2">${t ? esc(t.note || "") : ""}</textarea>
         </label>
         <div class="row2">
-          <label class="fld">Category<select id="fCat">${catOpts}</select></label>
+          <label class="fld">Category<select id="fCat" onchange="refreshFormProjects()">${catOpts}</select></label>
           <label class="fld"><span id="fDueLabelText">${t?.endDate ? "Start date" : "Due date"}</span>
             <input type="${hasTimeInit ? "datetime-local" : "date"}" id="fDue" value="${hasTimeInit ? dueInputVal : dueInputVal.slice(0, 10)}" onkeydown="submitOnEnter(event)">
           </label>
         </div>
+        <label class="fld" id="fProjWrap" style="display:${projOpts ? "" : "none"}">Project
+          <select id="fProj">${projOpts}</select>
+        </label>
         <label class="fld-check">
           <input type="checkbox" id="fTimeOn" ${hasTimeInit ? "checked" : ""} onchange="toggleFormTime()">
           Include time
@@ -4408,6 +4534,21 @@ function openForm(taskId) {
     </div>
   </div>`;
   setTimeout(() => document.getElementById("fTitle")?.focus(), 50);
+}
+
+/** ตัวเลือกโปรเจกต์ของหมวด ("" = หมวดนี้ไม่มีโปรเจกต์ -> ซ่อนช่อง) */
+function projectOptionsHtml(catId, selId) {
+  const ps = catProjects(catById(catId));
+  if (!ps.length) return "";
+  return `<option value="">No project</option>` + ps.map(p =>
+    `<option value="${p.id}" ${p.id === selId ? "selected" : ""}>${esc(p.name)}</option>`).join("");
+}
+/** เปลี่ยนหมวดในฟอร์ม -> เปลี่ยนรายการโปรเจกต์ตาม (โปรเจกต์ของหมวดเก่าใช้ต่อไม่ได้) */
+function refreshFormProjects() {
+  const sel = document.getElementById("fProj");
+  const html = projectOptionsHtml(document.getElementById("fCat").value, sel.value);
+  sel.innerHTML = html;
+  document.getElementById("fProjWrap").style.display = html ? "" : "none";
 }
 
 /** สลับ Due date ระหว่างมีเวลา (datetime-local) กับไม่มีเวลา (date) โดยคงวันที่เดิมไว้ */
@@ -4452,10 +4593,14 @@ function submitForm(e, taskId) {
     showToast("❌ End date can't be before the start date");
     return;
   }
+  const categoryId = document.getElementById("fCat").value || null;
+  const projRaw = document.getElementById("fProj").value;
   const data = {
     title,
     note: document.getElementById("fNote").value.trim(),
-    categoryId: document.getElementById("fCat").value || null,
+    categoryId,
+    // เก็บเฉพาะโปรเจกต์ที่อยู่ในหมวดที่เลือกจริง
+    projectId: projRaw && catProjects(catById(categoryId)).some(p => p.id === projRaw) ? projRaw : null,
     dueAt: dueRaw ? new Date(timeOn ? dueRaw : dueRaw + "T00:00:00").toISOString() : null,
     endDate: (rangeOn && dueRaw && endRaw) ? endRaw : null,
     reminderMin: remRaw === "" ? null : Number(remRaw),
