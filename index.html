@@ -1144,6 +1144,51 @@
   @media (hover: hover) and (pointer: fine) { .gev:hover { background-color: color-mix(in srgb, #4285f4 6%, var(--card)); border-color: #4285f4; } }
   .cal-lbl.g, .gev-wk .wk-title { font-style: italic; }
 
+  /* หน้าเลือกโหมด (ทุกครั้งที่เปิดแอป) */
+  .focus-page { min-height: 100dvh; display: flex; flex-direction: column; justify-content: center; padding: 2rem 0 3rem; max-width: 40rem; margin: 0 auto; }
+  .focus-hi { color: var(--muted); font-weight: 700; margin: 0 0 .2rem; text-align: center; }
+  .focus-q { font-size: 1.45rem; text-align: center; margin: 0 0 1.4rem; text-wrap: balance; }
+  .focus-grid { display: grid; gap: .8rem; }
+  @media (min-width: 40rem) { .focus-grid { grid-template-columns: repeat(3, 1fr); } }
+  .focus-card {
+    position: relative; display: flex; align-items: center; gap: 1rem; text-align: left; width: 100%;
+    padding: 1.3rem 1.2rem; border-radius: var(--r-lg); cursor: pointer; font: inherit; color: var(--fg);
+    background: color-mix(in srgb, var(--fc) 7%, var(--card)); border: 1.5px solid color-mix(in srgb, var(--fc) 22%, var(--edge));
+    box-shadow: var(--shadow); min-height: 6.5rem;
+    /* เข้าแบบเลื่อนขึ้นเล็กน้อยอย่างเดียว (ไม่ซ่อนด้วย opacity) — ถ้า animation ไม่ได้เล่น การ์ดก็ยังมองเห็น */
+    animation: focusIn .4s var(--ease-out); animation-delay: calc(var(--i) * 60ms); animation-fill-mode: none;
+    transition: transform .18s var(--ease-out), box-shadow .2s var(--ease-out), border-color .18s var(--ease-out);
+  }
+  @media (min-width: 40rem) { .focus-card { flex-direction: column; align-items: flex-start; min-height: 13rem; padding: 1.4rem; } }
+  .focus-ico {
+    flex-shrink: 0; width: 3.2rem; height: 3.2rem; border-radius: 1rem; display: flex; align-items: center; justify-content: center;
+    background: var(--fc); color: #fff; box-shadow: 0 10px 22px -12px var(--fc);
+  }
+  .focus-txt { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: .15rem; }
+  .focus-txt b { font-size: 1.15rem; }
+  .focus-txt span { font-size: .8rem; color: var(--muted); }
+  .focus-count { font-size: .72rem; font-weight: 700; color: color-mix(in srgb, var(--fc) 65%, var(--fg)); white-space: nowrap; }
+  .focus-last { position: absolute; top: .6rem; right: .8rem; font-size: .64rem; font-weight: 800; color: var(--muted); }
+  .focus-card:active { transform: scale(.98); }
+  @keyframes focusIn { from { transform: translateY(14px); } to { transform: translateY(0); } }
+  @media (hover: hover) and (pointer: fine) {
+    .focus-card:hover { transform: translateY(-3px); border-color: var(--fc); box-shadow: 0 16px 34px -18px var(--fc), var(--shadow); }
+  }
+  .focus-switch { display: flex; gap: .3rem; background: var(--card); border: 1px solid var(--edge); border-radius: 999px; padding: .25rem; margin: 0 0 .9rem; box-shadow: var(--shadow); }
+  .focus-switch button {
+    flex: 1; display: inline-flex; align-items: center; justify-content: center; gap: .35rem; min-height: 2.2rem;
+    border: none; border-radius: 999px; background: none; color: var(--muted); font: inherit; font-size: .78rem; font-weight: 800; cursor: pointer;
+    transition: background-color .18s var(--ease-out), color .18s var(--ease-out);
+  }
+  .focus-switch button.sel { background: var(--fc); color: #fff; }
+  @media (hover: hover) and (pointer: fine) { .focus-switch button:not(.sel):hover { background: color-mix(in srgb, var(--fc) 12%, transparent); color: var(--fg); } }
+  .focus-pill {
+    flex-shrink: 0; border: 1px solid var(--border); background: var(--bg); color: var(--muted); border-radius: 999px;
+    font: inherit; font-size: .66rem; font-weight: 800; padding: .25rem .55rem; cursor: pointer; min-height: 1.8rem;
+  }
+  .focus-pill.work { color: #6366f1; border-color: color-mix(in srgb, #6366f1 40%, var(--border)); }
+  .focus-pill.personal { color: #059669; border-color: color-mix(in srgb, #10b981 40%, var(--border)); }
+
   /* ตัวเลือกธีมในหน้า Settings */
   .set-row .theme-seg { margin: 0; flex-shrink: 0; }
   .set-row .theme-seg .cal-seg-btn { min-height: 2rem; padding: 0 .7rem; font-size: .74rem; }
@@ -1330,6 +1375,7 @@ function migrate(s) {
     if (!c.icon) c.icon = guessIcon(c.name);
     if (c.schedule === undefined) c.schedule = null; // {days:[0-6], start:"HH:MM", end:"HH:MM"}
     if (c.enabled === undefined) c.enabled = true;
+    if (c.focus !== undefined && c.focus !== "work" && c.focus !== "personal") delete c.focus;
     // โปรเจกต์ย่อย: เก็บเฉพาะรายการที่ id/สี/ชื่อ อยู่ในรูปแบบที่แอปสร้างเอง
     if (c.projects !== undefined) {
       c.projects = Array.isArray(c.projects) ? c.projects.filter(p =>
@@ -2042,6 +2088,7 @@ async function doSignOut() {
   localStorage.removeItem(USER_KEY);
   user = null;
   switchAccount(null); // กลับไป state ว่างของ anonymous — ไม่เห็นข้อมูลบัญชีเดิม
+  focusMode = null;
   currentTab = "home";
   todayCat = null;
   authView = "login";
@@ -4108,15 +4155,15 @@ function renderHome() {
   if (todayCat !== null) return renderTodayDetail();
 
   // หมวดงาน AI ไม่กระจายเป็นใบๆ บนหน้าแรก — ยุบเป็นการ์ดเดียว กดเข้าไปเลือกโปรเจกต์ทีหลัง
-  const groups = activeCategories().filter(c => !isAgentCategory(c))
+  const groups = activeCategories().filter(c => !isAgentCategory(c) && inFocus(c))
     .map(c => ({ key: c.id, name: c.name, color: c.color, icon: c.icon || "tag" }));
   if (todayTasksOf("none").length) groups.push({ key: "none", name: "No category", color: "#94a3b8", icon: "tag" });
 
   // สรุปรวมด้านบน
-  const allOpen = state.tasks.filter(t => t.status === "open");
+  const allOpen = state.tasks.filter(t => t.status === "open" && taskInFocus(t));
   const overdueCount = allOpen.filter(t => t.dueAt && new Date(t.dueAt) < startOfDay(new Date())).length;
   const dueTodayCount = allOpen.filter(t => t.dueAt && isToday(new Date(t.dueAt))).length;
-  const doneTodayCount = state.tasks.filter(t => t.status === "done" && t.doneAt && isToday(new Date(t.doneAt))).length;
+  const doneTodayCount = state.tasks.filter(t => t.status === "done" && t.doneAt && isToday(new Date(t.doneAt)) && taskInFocus(t)).length;
 
   function buildCard(g, featured) {
     const tasks = todayTasksOf(g.key);
@@ -4152,7 +4199,7 @@ function renderHome() {
   }
 
   // หมวดที่ "ถึงเวลา" ตอนนี้ → ชูเด่นอันเดียวด้านบน ที่เหลือต่อด้านล่าง
-  const activeCat = activeCategories().find(scheduleActive);
+  const activeCat = activeCategories().filter(inFocus).find(scheduleActive);
   const featuredGroup = activeCat ? groups.find(g => g.key === activeCat.id) : null;
   const featuredHtml = featuredGroup ? buildCard(featuredGroup, true) : "";
   const cards = groups
@@ -4160,7 +4207,7 @@ function renderHome() {
     .map(g => buildCard(g, false)).join("");
 
   // การ์ดรวมงาน AI ใบเดียว — กดแล้วเข้าไปเลือกโปรเจกต์ที่หน้า AI hub
-  const aiCats = agentCategories();
+  const aiCats = focusMode === "personal" ? [] : agentCategories();
   let aiCardHtml = "";
   if (aiCats.length) {
     const aiTasks = aiCats.flatMap(c => allTasksOf(c.id));
@@ -4186,7 +4233,7 @@ function renderHome() {
   // กราฟ done 7 วันล่าสุด
   const weekAgo = startOfDay(new Date());
   weekAgo.setDate(weekAgo.getDate() - 6);
-  const doneWeek = state.tasks.filter(t => t.status === "done" && t.doneAt && new Date(t.doneAt) >= weekAgo);
+  const doneWeek = state.tasks.filter(t => t.status === "done" && t.doneAt && new Date(t.doneAt) >= weekAgo && taskInFocus(t));
   const dayCounts = [];
   for (let i = 6; i >= 0; i--) {
     const day = startOfDay(new Date());
@@ -4226,7 +4273,7 @@ function renderHome() {
   const tmStart = startOfDay(new Date()); tmStart.setDate(tmStart.getDate() + 1);
   const tmEnd = new Date(tmStart); tmEnd.setDate(tmEnd.getDate() + 1);
   const tomorrowTasks = sortByDue(state.tasks.filter(t =>
-    t.status === "open" && t.dueAt && new Date(t.dueAt) >= tmStart && new Date(t.dueAt) < tmEnd));
+    t.status === "open" && t.dueAt && new Date(t.dueAt) >= tmStart && new Date(t.dueAt) < tmEnd && taskInFocus(t)));
   const tomorrowCard = tomorrowTasks.length ? `<div class="ov-card rt-card tm-card">
     <div class="ov-head">
       <span class="cat-ico" style="background:color-mix(in srgb, #f97316 16%, var(--card));color:color-mix(in srgb, #f97316 55%, var(--fg))">${icon("sunrise", 15)}</span>
@@ -4302,6 +4349,7 @@ function renderHome() {
       ${heroWeekHtml()}
     </section>
     <div class="sheet-body">
+    ${focusSwitchHtml()}
     <div class="stat-row">
       <div class="stat-card">
         <span class="stat-ico" style="background:color-mix(in srgb, #ef4444 14%, var(--card));color:var(--danger-text)">${icon("bell", 13)}</span>
@@ -4317,16 +4365,87 @@ function renderHome() {
       </div>
     </div>
     ${featuredHtml ? `<h2 class="section-title">Right now</h2><div class="ov-grid">${featuredHtml}</div>` : ""}
-    <h2 class="section-title">Daily routine</h2>
+    ${focusMode === "work" ? "" : `<h2 class="section-title">Daily routine</h2>
     <div class="ov-grid">${routineCard}</div>
     <h2 class="section-title">Checklists</h2>
-    <div class="ov-grid">${checklistCards}${newChecklistBtn}</div>
+    <div class="ov-grid">${checklistCards}${newChecklistBtn}</div>`}
     <h2 class="section-title">${featuredHtml ? "Other categories" : "By category"}</h2>
     <div class="ov-grid">${cards}${aiCardHtml}</div>
     ${tomorrowCard ? `<h2 class="section-title">Tomorrow</h2><div class="ov-grid">${tomorrowCard}</div>` : ""}
     <h2 class="section-title">Completed — last 7 days</h2>
     <div class="card"><div class="week-chart">${weekChart}</div></div>
     </div>`;
+}
+
+/* ---------- Focus mode: Work / Personal / Both ----------
+   เลือกทุกครั้งที่เปิดแอป (ค่าเริ่มเป็น null ทุกครั้งที่โหลดหน้า) แล้วหน้าแรก / All / Calendar โชว์เฉพาะหมวดของโหมดนั้น
+   หมวด AI = Work เสมอ; หมวดอื่นใช้ cat.focus ถ้าผู้ใช้ตั้งไว้ ไม่งั้นเดาจากชื่อ; งานที่ไม่มีหมวดโชว์ทุกโหมด (กันงานหาย) */
+let focusMode = null;   // null = ยังไม่ได้เลือกในรอบนี้ -> แสดงหน้าเลือก
+const FOCUS_LAST_KEY = () => "kodo-focus-last:" + stateKey;
+const FOCUS_MODES = {
+  work:     { label: "Work",     icon: "briefcase", color: "#6366f1", sub: "งาน โปรเจกต์ และงานจาก AI" },
+  personal: { label: "Personal", icon: "heart",     color: "#10b981", sub: "ชีวิต สุขภาพ บ้าน และกิจวัตร" },
+  both:     { label: "Both",     icon: "sun",       color: "#f59e0b", sub: "เห็นทุกอย่างในที่เดียว" },
+};
+function catFocus(c) {
+  if (!c) return null;
+  if (isAgentCategory(c)) return "work";
+  if (c.focus === "work" || c.focus === "personal") return c.focus;
+  const n = c.name;
+  if (/workout|housework|homework|exercise|fitness|gym|health|home|house|family|personal|งานบ้าน|บ้าน|ออกกำลัง|สุขภาพ|ส่วนตัว|ครอบครัว/i.test(n)) return "personal";
+  return /\b(work|office|job|client|clients|project|projects|meeting|meetings|business)\b|งาน|ประชุม|ลูกค้า|ออฟฟิศ/i.test(n) ? "work" : "personal";
+}
+function inFocus(c) { return !focusMode || focusMode === "both" || catFocus(c) === focusMode; }
+function taskInFocus(t) { const c = catById(t.categoryId); return !c || inFocus(c); }
+function setFocus(mode) {
+  if (!FOCUS_MODES[mode]) return;
+  focusMode = mode;
+  try { localStorage.setItem(FOCUS_LAST_KEY(), mode); } catch { /* ignore */ }
+  todayCat = null; todayProject = null; allFilter = "";
+  viewTransition = true;
+  render();
+}
+function toggleCatFocus(catId) {
+  const c = catById(catId);
+  if (!c || isAgentCategory(c)) return;
+  c.focus = catFocus(c) === "work" ? "personal" : "work";
+  save(); render();
+}
+function renderFocusPicker() {
+  let last = "";
+  try { last = localStorage.getItem(FOCUS_LAST_KEY()) || ""; } catch { /* ignore */ }
+  const todayOpen = (mode) => state.tasks.filter(t => {
+    if (t.status !== "open") return false;
+    const c = catById(t.categoryId);
+    if (c && c.enabled === false) return false;
+    if (mode !== "both" && c && catFocus(c) !== mode) return false;
+    // งานไม่มีหมวดโชว์ทุกโหมด (เหมือนหน้าแรก)
+    if (!t.dueAt) return false;
+    return taskSpan(t).start <= new Date(new Date().setHours(23, 59, 59, 999));
+  }).length;
+  const g = greeting();
+  const first = user?.name ? esc(user.name.split(" ")[0]) : "";
+  const cards = Object.entries(FOCUS_MODES).map(([k, m], i) => {
+    const n = todayOpen(k);
+    return `<button class="focus-card ${last === k ? "last" : ""}" style="--fc:${m.color};--i:${i}" onclick="setFocus('${k}')">
+      <span class="focus-ico">${icon(m.icon, 26)}</span>
+      <span class="focus-txt"><b>${m.label}</b><span>${m.sub}</span></span>
+      <span class="focus-count">${n ? `${n} to do today` : "Nothing due today"}</span>
+      ${last === k ? `<span class="focus-last">Last time</span>` : ""}
+    </button>`;
+  }).join("");
+  return `<div class="focus-page">
+    <p class="focus-hi">${g.text}${first ? ", " + first : ""}</p>
+    <h1 class="focus-q">What do you want to focus on?</h1>
+    <div class="focus-grid">${cards}</div>
+    <p class="hint" style="text-align:center">You can switch any time from the top of Home</p>
+  </div>`;
+}
+function focusSwitchHtml() {
+  return `<div class="focus-switch" role="radiogroup" aria-label="Focus">
+    ${Object.entries(FOCUS_MODES).map(([k, m]) => `<button role="radio" aria-checked="${focusMode === k}" class="${focusMode === k ? "sel" : ""}"
+      style="--fc:${m.color}" onclick="setFocus('${k}')">${icon(m.icon, 13)} ${m.label}</button>`).join("")}
+  </div>`;
 }
 
 /** เมื่อกดเข้าหมวดหมู่จาก Home: "today" = เฉพาะที่เกี่ยวกับวันนี้ (ค่าตั้งต้นเดิม), "all" = ทุก task ในหมวดไม่ว่าวันไหน */
@@ -4526,6 +4645,12 @@ function renderAiHub() {
 }
 
 function renderTodayDetail() {
+  // เปิดหมวดที่ไม่อยู่ในโหมดปัจจุบัน (เช่น ลิงก์ค้าง/ปุ่มจากที่อื่น) -> กลับหน้าแรกของโหมดนั้น
+  if (focusMode && focusMode !== "both" && todayCat !== "none") {
+    const hub = todayCat === AI_HUB && !catById(AI_HUB);
+    const c = hub ? null : catById(todayCat);
+    if ((hub && focusMode === "personal") || (c && !inFocus(c))) { todayCat = null; todayProject = null; return renderHome(); }
+  }
   // ถ้าบังเอิญมีหมวดจริง id ตรงกับค่าพิเศษ ให้หมวดจริงชนะ จะได้ไม่มีหมวดไหนเปิดไม่ได้
   if (todayCat === AI_HUB && !catById(AI_HUB)) return renderAiHub();
   const isNone = todayCat === "none";
@@ -4852,7 +4977,7 @@ function renderCalendar() {
   const byDay = {};
   const MAX_SPAN_DAYS = 60; // กันช่วงวันยาวผิดปกติทำให้ค้าง
   for (const t of state.tasks) {
-    if (!t.dueAt) continue;
+    if (!t.dueAt || !taskInFocus(t)) continue;
     const span = taskSpan(t);
     const d = new Date(span.start);
     let n = 0;
@@ -5013,10 +5138,10 @@ function calShiftDays(n) {
 }
 
 function renderAll() {
-  const filtered = allFilter ? state.tasks.filter(t => t.categoryId === allFilter) : state.tasks;
+  const filtered = (allFilter ? state.tasks.filter(t => t.categoryId === allFilter) : state.tasks).filter(taskInFocus);
   const open = sortByDue(filtered.filter(t => t.status === "open"));
   const done = filtered.filter(t => t.status === "done");
-  const options = activeCategories().map(c =>
+  const options = activeCategories().filter(inFocus).map(c =>
     `<option value="${c.id}" ${allFilter === c.id ? "selected" : ""}>${esc(c.name)}</option>`).join("");
   return `<div class="page-head">
       <h1>All Tasks</h1>
@@ -5048,6 +5173,8 @@ function renderSettings() {
       <span class="set-label">${esc(c.name)}
         ${c.schedule ? `<span class="set-sub">${icon("clock", 10)} ${scheduleSummary(c)}</span>` : ""}
       </span>
+      ${isAgentCategory(c) ? "" : `<button class="focus-pill ${catFocus(c)}" onclick="toggleCatFocus('${c.id}')"
+        aria-label="${esc(c.name)} is ${catFocus(c)} — switch">${catFocus(c) === "work" ? "Work" : "Personal"}</button>`}
       <button class="rt-del" style="color:${c.schedule ? "var(--primary)" : "var(--muted)"}"
         aria-label="Set active hours for ${esc(c.name)}" onclick="openSchedule('${c.id}')">${icon("clock", 14)}</button>
       <button class="rt-del" aria-label="Delete category ${esc(c.name)}" onclick="deleteCategory('${c.id}')">${icon("x", 13)}</button>
@@ -5176,6 +5303,14 @@ function renderSettings() {
         <span class="set-value">${icon("right", 13)}</span>
       </button>
       <input type="file" id="importFile" accept=".json" style="display:none" onchange="importData(this)">
+      <button class="set-row" onclick="document.getElementById('hevyFile').click()">
+        <span class="set-ico" style="background:color-mix(in srgb, #f97316 16%, var(--card));color:color-mix(in srgb, #f97316 60%, var(--fg))">${icon("dumbbell", 14)}</span>
+        <span class="set-label">Import from Hevy
+          <span class="set-sub">In Hevy: Profile → Settings → Export &amp; Import Data → Export workouts, then pick the .csv here</span>
+        </span>
+        <span class="set-value">${icon("right", 13)}</span>
+      </button>
+      <input type="file" id="hevyFile" accept=".csv,text/csv" style="display:none" onchange="importHevy(this)">
     </div>
 
     <div class="set-group">
@@ -5326,6 +5461,13 @@ function render() {
   }
   nav.style.display = "";
   const view = document.getElementById("view");
+  if (!focusMode) {
+    view.innerHTML = renderFocusPicker();
+    nav.style.display = "none";
+    fabEl.style.display = "none";
+    view.classList.remove("anim"); void view.offsetWidth; view.classList.add("anim");
+    return;
+  }
   if (petView) {
     view.innerHTML = renderPetPage();
     fabEl.style.display = "none";
@@ -5405,13 +5547,15 @@ function openForm(taskId) {
     const cur = catById(t.categoryId);
     if (cur) formCats.push(cur); // หมวดที่ปิดอยู่แต่ task นี้ยังสังกัด
   }
+  const focusDefault = !t && currentTab === "home" && !todayCat && focusMode && focusMode !== "both"
+    ? (activeCategories().find(c => !isAgentCategory(c) && inFocus(c))?.id || null) : null;
   const catOpts = `<option value="">No category</option>` + formCats.map(c => {
     const sel = t ? t.categoryId === c.id
-      : (currentTab === "home" && todayCat === c.id); // เปิดจากหน้า detail → default หมวดนั้น
+      : ((currentTab === "home" && todayCat === c.id) || focusDefault === c.id); // เปิดจากหน้า detail → default หมวดนั้น
     return `<option value="${c.id}" ${sel ? "selected" : ""}>${esc(c.name)}</option>`;
   }).join("");
   // หมวด/โปรเจกต์เริ่มต้น: งานเดิมใช้ของงาน, งานใหม่ที่เปิดจากหน้าหมวด/โปรเจกต์ใช้หน้านั้น
-  const initCat = t ? t.categoryId : (currentTab === "home" ? todayCat : null);
+  const initCat = t ? t.categoryId : (currentTab === "home" ? (todayCat || focusDefault) : null);
   const initProj = t ? t.projectId : (currentTab === "home" && initCat === todayCat ? todayProject : null);
   const projOpts = projectOptionsHtml(initCat, initProj);
   const remOpts = REMINDER_OPTIONS.map(([v, l]) =>
@@ -5672,6 +5816,132 @@ function importData(input) {
   };
   reader.readAsText(file);
   input.value = "";
+}
+
+/* ---------- Hevy (แอปบันทึกการเล่นเวท) -> Kodo ----------
+   ผู้ใช้ Hevy ฟรีไม่มี API จึงใช้ไฟล์ CSV ที่แอป export ให้ (1 แถว = 1 เซ็ต)
+   รวมเซ็ตเป็น workout -> งานสถานะ done ในหมวด Workout พร้อมสรุปท่า/เซ็ต; นำเข้าซ้ำไม่ซ้ำ (hevyId) */
+function parseCsv(text) {
+  const rows = []; let row = [], field = "", q = false;
+  text = text.replace(/^\uFEFF/, "");
+  for (let i = 0; i < text.length; i++) {
+    const ch = text[i];
+    if (q) {
+      if (ch === '"') { if (text[i + 1] === '"') { field += '"'; i++; } else q = false; }
+      else field += ch;
+    } else if (ch === '"') q = true;
+    else if (ch === ",") { row.push(field); field = ""; }
+    else if (ch === "\n" || ch === "\r") {
+      if (ch === "\r" && text[i + 1] === "\n") i++;
+      row.push(field); rows.push(row); row = []; field = "";
+    } else field += ch;
+  }
+  if (field !== "" || row.length) { row.push(field); rows.push(row); }
+  return rows.filter(r => r.some(x => x.trim() !== ""));
+}
+const HEVY_MONTHS = ["jan", "feb", "mar", "apr", "may", "jun", "jul", "aug", "sep", "oct", "nov", "dec"];
+/** เวลาในไฟล์ Hevy เช่น "10 Sep 2026, 18:05" (เวลาท้องถิ่น) — รองรับ ISO เผื่อรูปแบบเปลี่ยน */
+function parseHevyDate(v) {
+  const s = String(v || "").trim();
+  const m = /^(\d{1,2})\s+([A-Za-z]{3})[A-Za-z]*\.?\s+(\d{4}),?\s+(\d{1,2}):(\d{2})/.exec(s);
+  if (m) {
+    const mon = HEVY_MONTHS.indexOf(m[2].toLowerCase());
+    if (mon >= 0) return new Date(+m[3], mon, +m[1], +m[4], +m[5]);
+  }
+  if (/^\d{4}-\d{2}-\d{2}/.test(s)) { const d = new Date(s); if (!isNaN(d)) return d; }
+  return null;
+}
+function hevyNum(v) { const n = parseFloat(String(v || "").replace(",", ".")); return isFinite(n) ? n : null; }
+function hevySummary(sets, unit) {
+  const work = sets.filter(x => x.type !== "warmup");
+  const list = (work.length ? work : sets).map(x => {
+    if (x.weight != null && x.reps != null) return `${+x.weight.toFixed(2)}${unit}×${x.reps}`;
+    if (x.reps != null) return `${x.reps} reps`;
+    if (x.distance != null) return `${+x.distance.toFixed(2)} km${x.duration != null ? ` in ${Math.round(x.duration / 60)} min` : ""}`;
+    if (x.duration != null) return `${Math.round(x.duration / 60)} min`;
+    return "✓";
+  });
+  return `${work.length || sets.length} set${(work.length || sets.length) > 1 ? "s" : ""}: ${list.slice(0, 8).join(", ")}${list.length > 8 ? " …" : ""}`;
+}
+function importHevy(input) {
+  const file = input.files[0];
+  input.value = "";
+  if (!file) return;
+  if (file.size > 20 * 1024 * 1024) { alert("File too large for a Hevy export"); return; }
+  const reader = new FileReader();
+  reader.onload = () => {
+    const rows = parseCsv(String(reader.result || ""));
+    if (rows.length < 2) { alert("This file has no workouts"); return; }
+    const head = rows[0].map(h => h.trim().toLowerCase());
+    const col = (name) => head.indexOf(name);
+    const cTitle = col("title"), cStart = col("start_time"), cEnd = col("end_time"), cEx = col("exercise_title");
+    if (cTitle < 0 || cStart < 0 || cEx < 0) { alert("This doesn't look like a Hevy workout export (.csv)"); return; }
+    const cDesc = col("description"), cType = col("set_type"), cReps = col("reps"), cDist = col("distance_km"), cDur = col("duration_seconds");
+    const cKg = col("weight_kg"), cLb = col("weight_lbs");
+    const unit = cKg >= 0 ? "kg" : cLb >= 0 ? "lb" : "kg";
+    const cW = cKg >= 0 ? cKg : cLb;
+    // รวมแถว (เซ็ต) เป็น workout ตาม ชื่อ + เวลาเริ่ม
+    const workouts = new Map();
+    for (const r of rows.slice(1)) {
+      const title = (r[cTitle] || "").trim() || "Workout";
+      const startRaw = (r[cStart] || "").trim();
+      const start = parseHevyDate(startRaw);
+      if (!start) continue;
+      const key = "hevy:" + startRaw + "|" + title;
+      let w = workouts.get(key);
+      if (!w) {
+        w = { key, title, start, end: parseHevyDate(cEnd >= 0 ? r[cEnd] : "") || start, desc: cDesc >= 0 ? (r[cDesc] || "").trim() : "", exercises: new Map() };
+        workouts.set(key, w);
+      }
+      const ex = (r[cEx] || "").trim() || "Exercise";
+      if (!w.exercises.has(ex)) w.exercises.set(ex, []);
+      w.exercises.get(ex).push({
+        type: cType >= 0 ? (r[cType] || "").trim().toLowerCase() : "",
+        weight: cW >= 0 ? hevyNum(r[cW]) : null, reps: cReps >= 0 ? hevyNum(r[cReps]) : null,
+        distance: cDist >= 0 ? hevyNum(r[cDist]) : null, duration: cDur >= 0 ? hevyNum(r[cDur]) : null,
+      });
+    }
+    if (!workouts.size) { alert("Couldn't read any workouts from this file"); return; }
+    const known = new Set(state.tasks.filter(t => t.hevyId).map(t => t.hevyId));
+    const allFresh = [...workouts.values()].filter(w => !known.has(w.key));
+    const already = workouts.size - allFresh.length;
+    const HEVY_MAX = 3000;
+    const fresh = allFresh.slice(0, HEVY_MAX);
+    const later = allFresh.length - fresh.length;
+    if (!fresh.length) { showToast("✓ All " + workouts.size + " Hevy workouts are already in Kodo"); return; }
+    const parts = [already ? `${already} already imported` : "", later ? `${later} more next time — import the same file again` : ""].filter(Boolean);
+    if (!confirm(`Import ${fresh.length} new workout${fresh.length > 1 ? "s" : ""} from Hevy${parts.length ? " (" + parts.join("; ") + ")" : ""}?`)) return;
+    // หมวด Workout (มีอยู่แล้วใช้เลย ไม่มีก็สร้าง)
+    let cat = state.categories.find(c => /workout|gym|exercise|fitness|ออกกำลัง/i.test(c.name));
+    if (!cat) {
+      cat = { id: uid(), name: "Workout", color: "#f97316", icon: "dumbbell", schedule: null, enabled: true, focus: "personal" };
+      state.categories.push(cat);
+    }
+    const weekAgo = Date.now() - 7 * 86400000;
+    let xpGain = 0;
+    for (const w of fresh) {
+      const mins = Math.max(1, Math.round((w.end - w.start) / 60000));
+      const dur = mins >= 60 ? `${Math.floor(mins / 60)}h ${mins % 60}m` : `${mins}m`;
+      let volume = 0;
+      const lines = [...w.exercises.entries()].map(([name, sets]) => {
+        for (const x of sets) if (x.type !== "warmup" && x.weight != null && x.reps != null) volume += x.weight * x.reps;
+        return `• ${name} — ${hevySummary(sets, unit)}`;
+      });
+      const note = [`🏋️ From Hevy · ${fmtTime(w.start)}–${fmtTime(w.end)} (${dur})`, ...lines,
+        volume ? `Total volume: ${Math.round(volume).toLocaleString()} ${unit}` : "", w.desc].filter(Boolean).join("\n");
+      state.tasks.push({
+        id: uid(), hevyId: w.key, title: w.title.slice(0, 200), note: note.slice(0, 4000), categoryId: cat.id,
+        dueAt: w.start.toISOString(), endDate: null, reminderMin: null, recurrence: "none",
+        status: "done", doneAt: w.end.toISOString(), notifiedAt: null, createdAt: w.start.toISOString(),
+      });
+      if (w.start.getTime() >= weekAgo) xpGain += 5;   // XP เฉพาะ workout 7 วันล่าสุด (นำเข้าประวัติเก่าไม่ทำให้เลเวลพุ่ง)
+    }
+    if (xpGain) addXp(Math.min(xpGain, 50));
+    save();
+    render();
+    showToast(`🏋️ Imported ${fresh.length} workout${fresh.length > 1 ? "s" : ""} from Hevy${later ? ` — import again for the remaining ${later}` : ""}`);
+  };
+  reader.readAsText(file);
 }
 
 /* ---------- init ---------- */
