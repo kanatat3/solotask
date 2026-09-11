@@ -384,6 +384,17 @@
   .pp-pet { position: relative; width: 9.5rem; height: 9.5rem; }
   .pp-pet.small { width: 6.5rem; height: 6.5rem; }
   .pp-pet svg { width: 100%; height: 100%; overflow: visible; }
+  /* สัตว์เลี้ยง 3D: กล่องห่อเต็มพื้นที่เดิมของภาพวาด */
+  .pet3d { display: block; position: relative; width: 100%; height: 100%; }
+  .pet3d > svg { width: 100%; height: 100%; overflow: visible; }
+  .pet3d-img { display: block; width: 100%; height: 100%; object-fit: contain; animation: pet3dBob 3.4s ease-in-out infinite; }
+  .pet3d-canvas { display: block; width: 100% !important; height: 100% !important; touch-action: pan-y; cursor: grab; }
+  .pet3d-canvas:active { cursor: grabbing; }
+  .pp-pet[data-live]:has(.pet3d-canvas) { width: 11.5rem; height: 11.5rem; }
+  .pet3d-hint { position: absolute; left: 50%; bottom: -1.1rem; transform: translateX(-50%); white-space: nowrap;
+    font-size: .68rem; font-weight: 600; color: var(--muted); pointer-events: none; }
+  @keyframes pet3dBob { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-3%); } }
+  @media (prefers-reduced-motion: reduce) { .pet3d-img { animation: none; } }
   .pp-spark { position: absolute; color: var(--primary); opacity: .6; animation: sparkTw 2.4s ease-in-out infinite; }
   .pp-spark.s1 { top: 8%; left: -6%; font-size: 1rem; }
   .pp-spark.s2 { top: 30%; right: -10%; font-size: .7rem; animation-delay: .7s; }
@@ -2289,6 +2300,366 @@ function parrotletInner(stage, id) {
     </g>`;
 }
 
+/* ---------- สัตว์เลี้ยง 3D (three.js) ----------
+   นก Pacific parrotlet สีฟ้าเป็นโมเดล 3 มิติจริง (ร่าง 3-7) — ร่าง 1-2 ยังเป็นภาพวาด SVG
+   petSvg() ห่อภาพวาดไว้ใน <span class="pet3d" data-stage> ; เมื่อโหลด three.js ได้:
+   - กล่องใหญ่ในหน้าสัตว์เลี้ยง (.pp-pet ที่ไม่ใช่ .small) = วิวสด ลากหมุนได้ + หายใจ/กะพริบตา/กระพือปีก
+   - จุดเล็กอื่นๆ = ภาพนิ่งที่ render จากโมเดลเดียวกัน (cache ไว้ต่อร่าง/ขนาด)
+   โหลดไม่ได้ (ออฟไลน์/ไม่มี WebGL) ก็ยังเห็นภาพวาดเดิม */
+const THREE_SRC = "https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js";
+const pet3d = { status: "idle", loading: null, snapR: null, live: null, cache: new Map() };
+
+function loadThree() {
+  if (window.THREE) return Promise.resolve(window.THREE);
+  if (!pet3d.loading) {
+    pet3d.loading = new Promise((resolve, reject) => {
+      const s = document.createElement("script");
+      s.src = THREE_SRC; s.async = true;
+      s.onload = () => window.THREE ? resolve(window.THREE) : reject(new Error("no THREE"));
+      s.onerror = () => reject(new Error("three.js load failed"));
+      document.head.appendChild(s);
+    });
+  }
+  return pet3d.loading;
+}
+
+/* โมเดลนกตามร่าง — หน่วย: สูงราว 2.4 (เท้า y≈-1.05 ถึงหัว y≈1.3), หันหน้าไป +z */
+function buildParrotlet3D(T, stage) {
+  const lin = (hex) => new T.Color(hex).convertSRGBToLinear();
+  const PAL = {
+    baby:   { top: "#b6e2f6", low: "#7fbfe3", w0: "#b3d4f2", w1: "#8db3e8", w2: "#6d93d8", tail: "#86b6de" },
+    young:  { top: "#93d1ef", low: "#4f9fd2", w0: "#8cc4ec", w1: "#5a8cdc", w2: "#3a62c0", tail: "#3d86c0" },
+    adult:  { top: "#86cbee", low: "#3f8fca", w0: "#7fc1ea", w1: "#4a82d6", w2: "#2448a8", tail: "#2c7fb6" },
+    cobalt: { top: "#7cc4ec", low: "#337fc0", w0: "#63a8e6", w1: "#2f5fcc", w2: "#16338f", tail: "#1f64a8" },
+  };
+  const CFG = {
+    3: { pal: "baby", headK: 1.12, bodyK: 0.9, eye: 0.13, tail: 0, wing: 0.78, fuzz: true, s: 0.92 },
+    4: { pal: "young", headK: 1.05, bodyK: 0.96, eye: 0.115, tail: 0.7, wing: 0.9, s: 0.96 },
+    5: { pal: "adult", headK: 1, bodyK: 1, eye: 0.105, tail: 1, wing: 1, s: 1 },
+    6: { pal: "cobalt", headK: 1, bodyK: 1, eye: 0.105, tail: 1, wing: 1, s: 1 },
+    7: { pal: "adult", headK: 1, bodyK: 1, eye: 0.105, tail: 1, wing: 1, s: 1, halo: true },
+  }[stage];
+  const P = PAL[CFG.pal];
+  const root = new T.Group();
+  const bird = new T.Group(); root.add(bird);
+  const std = (o) => new T.MeshStandardMaterial(Object.assign({ roughness: 0.78, metalness: 0 }, o));
+
+  // ---- ตัว+หัว: lathe รูปลูกแพร์ ระบายสีต่อ vertex (ฟ้าด้านบน/หลัง, ครีมหน้าอก, หน้าฟ้าอ่อน) ----
+  const hk = CFG.headK, bk = CFG.bodyK;
+  const prof = [[0, -1.0], [0.42 * bk, -0.97], [0.7 * bk, -0.82], [0.85 * bk, -0.52], [0.86 * bk, -0.18], [0.77 * bk, 0.12],
+    [0.64 * hk, 0.36], [0.66 * hk, 0.6], [0.64 * hk, 0.86], [0.53 * hk, 1.08], [0.31 * hk, 1.24], [0, 1.3]]
+    .map(([r, y]) => new T.Vector2(r, y));
+  const spline = new T.SplineCurve(prof).getPoints(60);
+  const bodyGeo = new T.LatheGeometry(spline, 64);
+  bodyGeo.scale(1, 1, 0.9);
+  const pos = bodyGeo.attributes.position, cols = [];
+  const cTop = lin(P.top), cLow = lin(P.low), cCream = lin("#f7f3e6"), cFace = lin("#dcf2f9"), tmp = new T.Color();
+  const smooth = (a, b, x) => { const t = Math.min(1, Math.max(0, (x - a) / (b - a))); return t * t * (3 - 2 * t); };
+  for (let i = 0; i < pos.count; i++) {
+    const x = pos.getX(i), y = pos.getY(i), z = pos.getZ(i);
+    const r = Math.hypot(x, z) || 1e-6;
+    const front = z / r;                                   // 1 = หน้าตรง, -1 = หลัง
+    tmp.copy(cLow).lerp(cTop, smooth(-0.9, 1.1, y));       // ฟ้าไล่จากล่างเข้มขึ้นไปบนอ่อน
+    const belly = smooth(0.3, 0.85, front) * smooth(0.5, 0.12, y) * smooth(-1.02, -0.72, y);
+    tmp.lerp(cCream, belly * 0.95);
+    const face = smooth(0.45, 0.95, front) * smooth(0.36, 0.58, y) * smooth(0.98, 0.74, y);
+    tmp.lerp(cFace, face * 0.6);
+    cols.push(tmp.r, tmp.g, tmp.b);
+  }
+  bodyGeo.setAttribute("color", new T.Float32BufferAttribute(cols, 3));
+  bodyGeo.computeVertexNormals();
+  const body = new T.Mesh(bodyGeo, std({ vertexColors: true, roughness: 0.82 }));
+  bird.add(body);
+
+  // จุดบนผิวหัว (ใช้วางตา/ปาก): ศูนย์กลางหัวราว y 0.72 รัศมี ~0.66*hk (บีบ z 0.9)
+  const headC = new T.Vector3(0, 0.72, 0), headR = 0.655 * hk;
+  const onHead = (dx, dy, dz, k = 1) => {
+    const d = new T.Vector3(dx, dy, dz).normalize();
+    return new T.Vector3(headC.x + d.x * headR * k, headC.y + d.y * headR * k, headC.z + d.z * headR * 0.9 * k);
+  };
+
+  // ---- ปีกพับข้างตัว: ขนคลุมไหล่ฟ้าอ่อน -> โคบอลต์ -> ขนปลายปีกเข้ม (หมุนรอบหัวไหล่ได้) ----
+  const wingGeo = (() => {
+    const g = new T.SphereGeometry(1, 36, 28);
+    const p = g.attributes.position, c = [];
+    const w0 = lin(P.w0), w1 = lin(P.w1), w2 = lin(P.w2);
+    for (let i = 0; i < p.count; i++) {
+      const y = p.getY(i);                                 // -1 ล่าง .. 1 บน
+      const t = smooth(0.75, -0.95, y);
+      tmp.copy(w0).lerp(w1, smooth(0, 0.45, t)).lerp(w2, smooth(0.45, 1, t));
+      c.push(tmp.r, tmp.g, tmp.b);
+    }
+    g.setAttribute("color", new T.Float32BufferAttribute(c, 3));
+    return g;
+  })();
+  const makeWing = (side) => {
+    const pivot = new T.Group();
+    pivot.position.set(side * 0.66 * bk, 0.28, -0.02);
+    const wl = CFG.wing;
+    const cover = new T.Mesh(wingGeo, std({ vertexColors: true, roughness: 0.7 }));
+    cover.scale.set(0.15, 0.62 * wl, 0.36);
+    cover.position.set(side * 0.13, -0.5 * wl, -0.12);
+    cover.rotation.set(-0.42, 0, side * 0.1);
+    // ขนปลายปีก (primaries) ซ้อนด้านล่างหลัง
+    const prim = new T.Mesh(new T.SphereGeometry(1, 28, 20), std({ color: lin(P.w2), roughness: 0.6 }));
+    prim.scale.set(0.1, 0.5 * wl, 0.17);
+    prim.position.set(side * 0.1, -0.98 * wl, -0.42);
+    prim.rotation.set(-0.72, 0, side * 0.06);
+    pivot.add(cover, prim);
+    return pivot;
+  };
+  const wingL = makeWing(-1), wingR = makeWing(1);
+  bird.add(wingL, wingR);
+
+  // ---- หาง: ขนแบนสั้นชี้ลงด้านหลัง ----
+  let tail = null;
+  if (CFG.tail) {
+    tail = new T.Mesh(new T.SphereGeometry(1, 24, 16), std({ color: lin(P.tail), roughness: 0.6 }));
+    tail.scale.set(0.2, 0.46 * CFG.tail, 0.06);
+    tail.position.set(0, -1.02, -0.62);
+    tail.rotation.set(-0.75, 0, 0);
+    bird.add(tail);
+  }
+
+  // ---- ตา: ลูกตาน้ำตาลเข้มมันวาว + ขอบเปลือกตาจาง + จุดสะท้อนแสง ----
+  const eyes = [];
+  for (const side of [-1, 1]) {
+    const eg = new T.Group();
+    const p = onHead(side * 0.62, 0.14, 0.78, 0.97);
+    eg.position.copy(p);
+    eg.lookAt(p.clone().add(new T.Vector3(side * 0.62, 0.14, 0.78)));
+    const ball = new T.Mesh(new T.SphereGeometry(CFG.eye, 24, 18), new T.MeshStandardMaterial({ color: lin("#24160f"), roughness: 0.12, metalness: 0.1 }));
+    ball.scale.set(1, 1, 0.55);
+    const ring = new T.Mesh(new T.TorusGeometry(CFG.eye * 1.02, CFG.eye * 0.2, 10, 28), std({ color: lin("#e8f6fb"), roughness: 0.9 }));
+    const glint = new T.Mesh(new T.SphereGeometry(CFG.eye * 0.28, 12, 10), new T.MeshBasicMaterial({ color: 0xffffff }));
+    glint.position.set(-CFG.eye * 0.32, CFG.eye * 0.36, CFG.eye * 0.5);
+    eg.add(ball, ring, glint);
+    bird.add(eg);
+    eyes.push(eg);
+  }
+
+  // ---- ปากงุ้มชมพูอ่อน: โดมโคนปาก + ปลายแหลมโค้งลง ----
+  const beakMat = std({ color: lin("#f3c8c3"), roughness: 0.42 });
+  const beak = new T.Group();
+  const bp = onHead(0, -0.22, 1, 0.93);
+  beak.position.copy(bp);
+  const dome = new T.Mesh(new T.SphereGeometry(0.2 * hk, 28, 20), beakMat);
+  dome.scale.set(1.0, 0.95, 1.05);
+  const hookGeo = new T.ConeGeometry(0.155 * hk, 0.27 * hk, 28, 1);
+  hookGeo.translate(0, 0.135 * hk, 0);          // ฐานกรวยอยู่ที่จุดหมุน ปลายแหลมยื่นออกไป
+  const hook = new T.Mesh(hookGeo, beakMat);
+  hook.position.set(0, -0.05, 0.08);
+  hook.rotation.set(Math.PI - 0.22, 0, 0);           // ชี้ลงและเยื้องไปข้างหน้า (ปากงุ้ม)
+  hook.scale.set(1, 1, 0.85);
+  const lower = new T.Mesh(new T.SphereGeometry(0.08 * hk, 16, 12), std({ color: lin("#d99c98"), roughness: 0.5 }));
+  lower.position.set(0, -0.2, -0.02);
+  beak.add(dome, hook, lower);
+  bird.add(beak);
+
+  // ---- ขนฟูบนหัว (ร่างเด็ก) ----
+  if (CFG.fuzz) {
+    for (const [x, rz] of [[-0.08, 0.5], [0.02, -0.1], [0.1, -0.6]]) {
+      const tuft = new T.Mesh(new T.ConeGeometry(0.035, 0.2, 8), std({ color: lin(P.top) }));
+      tuft.position.set(x, 1.36, 0.02);
+      tuft.rotation.z = rz;
+      bird.add(tuft);
+    }
+  }
+
+  // ---- เท้าชมพู: 3 นิ้วหน้า 1 นิ้วหลัง ----
+  const toeMat = std({ color: lin("#eab4b4"), roughness: 0.55 });
+  for (const side of [-1, 1]) {
+    const foot = new T.Group();
+    foot.position.set(side * 0.3, -0.98, 0.18);
+    for (const a of [-0.45, 0, 0.45, Math.PI]) {
+      const toe = new T.Mesh(new T.CylinderGeometry(0.04, 0.05, 0.3, 10), toeMat);
+      toe.geometry.translate(0, 0.15, 0);
+      toe.rotation.set(Math.PI / 2 - 0.25, 0, 0);
+      const holder = new T.Group(); holder.rotation.y = a + side * 0.12; holder.add(toe);
+      foot.add(holder);
+    }
+    bird.add(foot);
+  }
+
+  // ---- เงาใต้เท้า ----
+  const shadowTex = (() => {
+    const c = document.createElement("canvas"); c.width = c.height = 128;
+    const g = c.getContext("2d"); const gr = g.createRadialGradient(64, 64, 4, 64, 64, 62);
+    gr.addColorStop(0, "rgba(40,50,90,.45)"); gr.addColorStop(1, "rgba(40,50,90,0)");
+    g.fillStyle = gr; g.fillRect(0, 0, 128, 128);
+    return new T.CanvasTexture(c);
+  })();
+  const shadow = new T.Mesh(new T.PlaneGeometry(2, 1.1), new T.MeshBasicMaterial({ map: shadowTex, transparent: true, depthWrite: false }));
+  shadow.rotation.x = -Math.PI / 2; shadow.position.y = -1.06;
+  root.add(shadow);
+
+  // ---- ร่างสุดท้าย: รัศมีฟ้าด้านหลัง + ประกายลอยรอบตัว ----
+  const sparkles = [];
+  if (CFG.halo) {
+    const c = document.createElement("canvas"); c.width = c.height = 256;
+    const g = c.getContext("2d"); const gr = g.createRadialGradient(128, 128, 10, 128, 128, 126);
+    gr.addColorStop(0, "rgba(191,231,255,.9)"); gr.addColorStop(.6, "rgba(219,234,254,.35)"); gr.addColorStop(1, "rgba(219,234,254,0)");
+    g.fillStyle = gr; g.fillRect(0, 0, 256, 256);
+    const halo = new T.Sprite(new T.SpriteMaterial({ map: new T.CanvasTexture(c), depthWrite: false, transparent: true }));
+    halo.scale.set(3.6, 3.6, 1); halo.position.set(0, 0.2, -1.2);
+    root.add(halo);
+    const sm = new T.MeshBasicMaterial({ color: lin("#fde68a") });
+    for (let i = 0; i < 5; i++) {
+      const sp = new T.Mesh(new T.OctahedronGeometry(0.07), sm);
+      sp.userData = { a: (i / 5) * Math.PI * 2 + 0.6, r: 1.35 + (i % 2) * 0.2, y: 0.2 + ((i * 37) % 10) / 10 };
+      sp.position.set(Math.cos(sp.userData.a) * sp.userData.r, sp.userData.y, Math.sin(sp.userData.a) * sp.userData.r);
+      root.add(sp); sparkles.push(sp);
+    }
+  }
+
+  bird.scale.setScalar(CFG.s);
+  return { root, bird, body, wingL, wingR, tail, eyes, sparkles };
+}
+
+function makePetRenderer(T, opts) {
+  const r = new T.WebGLRenderer(Object.assign({ antialias: true, alpha: true }, opts));
+  r.outputEncoding = T.sRGBEncoding;
+  r.setClearColor(0x000000, 0);
+  return r;
+}
+function petScene(T, model) {
+  const scene = new T.Scene();
+  scene.add(new T.HemisphereLight(0xffffff, 0x8e9fc9, 0.62));
+  const key = new T.DirectionalLight(0xffffff, 0.78); key.position.set(1.6, 2.2, 3); scene.add(key);
+  const rim = new T.DirectionalLight(0xdbeafe, 0.55); rim.position.set(-2, 1.4, -2.5); scene.add(rim);
+  scene.add(model.root);
+  const cam = new T.PerspectiveCamera(30, 1, 0.1, 50);
+  cam.position.set(0, 0.35, 6.4); cam.lookAt(0, 0.12, 0);
+  return { scene, cam };
+}
+
+/* ภาพนิ่ง (มุมสามส่วนสี่ ให้เห็นความเป็น 3D) — cache ต่อร่าง+ขนาด */
+function petSnapshot(T, stage, px) {
+  const key = stage + ":" + px;
+  if (pet3d.cache.has(key)) return pet3d.cache.get(key);
+  if (!pet3d.snapR) pet3d.snapR = makePetRenderer(T, { preserveDrawingBuffer: true });
+  const r = pet3d.snapR;
+  r.setPixelRatio(1); r.setSize(px, px, false);
+  const model = buildParrotlet3D(T, stage);
+  model.root.rotation.y = 0.42;
+  const { scene, cam } = petScene(T, model);
+  r.render(scene, cam);
+  const url = r.domElement.toDataURL("image/png");
+  pet3d.cache.set(key, url);
+  scene.traverse(o => { if (o.geometry) o.geometry.dispose(); if (o.material) (o.material.map && o.material.map.dispose(), o.material.dispose()); });
+  return url;
+}
+
+/* วิวสด: ใช้ renderer ตัวเดียวย้าย canvas ไปกล่องใหม่ทุกครั้งที่หน้า render ใหม่ */
+function mountLivePet(T, el, stage) {
+  let L = pet3d.live;
+  if (!L) {
+    const r = makePetRenderer(T);
+    const canvas = r.domElement;
+    canvas.className = "pet3d-canvas";
+    canvas.setAttribute("aria-label", "3D pet — drag or use arrow keys to rotate");
+    canvas.setAttribute("role", "img");
+    canvas.tabIndex = 0;
+    canvas.addEventListener("keydown", (e) => {
+      if (e.key !== "ArrowLeft" && e.key !== "ArrowRight") return;
+      e.preventDefault();
+      L.vel = e.key === "ArrowLeft" ? -0.06 : 0.06; L.idle = performance.now();
+    });
+    L = pet3d.live = { r, canvas, stage: 0, model: null, scene: null, cam: null, rotY: 0.35, vel: 0, drag: null, idle: 0, running: false };
+    canvas.addEventListener("pointerdown", (e) => { L.drag = { x: e.clientX, last: e.clientX }; L.vel = 0; canvas.setPointerCapture(e.pointerId); });
+    canvas.addEventListener("pointermove", (e) => {
+      if (!L.drag) return;
+      const dx = e.clientX - L.drag.last; L.drag.last = e.clientX;
+      L.rotY += dx * 0.012; L.vel = dx * 0.012;
+    });
+    const end = () => { L.drag = null; L.idle = performance.now(); };
+    canvas.addEventListener("pointerup", end); canvas.addEventListener("pointercancel", end);
+  }
+  if (L.stage !== stage) {
+    if (L.scene) L.scene.traverse(o => { if (o.geometry) o.geometry.dispose(); if (o.material) (o.material.map && o.material.map.dispose(), o.material.dispose()); });
+    L.model = buildParrotlet3D(T, stage);
+    Object.assign(L, petScene(T, L.model));
+    L.stage = stage;
+  }
+  el.innerHTML = "";
+  el.appendChild(L.canvas);
+  el.insertAdjacentHTML("beforeend", '<span class="pet3d-hint" aria-hidden="true">↔ drag to spin</span>');
+  const size = Math.max(64, Math.round(el.clientWidth || 150));
+  L.r.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+  L.r.setSize(size, size, false);
+  if (!L.running) { L.running = true; requestAnimationFrame(livePetFrame); }
+}
+
+function livePetFrame(now) {
+  const L = pet3d.live;
+  if (!L || !L.canvas.isConnected || document.hidden) { if (L) L.running = false; return; }
+  const m = L.model, t = now / 1000;
+  const calm = window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches;
+  if (!L.drag) {
+    L.rotY += L.vel; L.vel *= 0.92;                     // ปล่อยนิ้วแล้วหมุนต่อแบบมีแรงเฉื่อย
+    if (!calm && Math.abs(L.vel) < 0.002 && now - L.idle > 1500) {
+      const target = 0.35 + Math.sin(t * 0.5) * 0.35;   // ว่างๆ ก็หันซ้ายขวาช้าๆ
+      L.rotY += (target - L.rotY) * 0.02;
+    }
+  }
+  m.root.rotation.y = L.rotY;
+  if (!calm) {
+    m.body.scale.set(1 + Math.sin(t * 2) * 0.012, 1 + Math.sin(t * 2) * 0.018, 1);      // หายใจ
+    const flap = Math.max(0, Math.sin(t * 1.1) ** 24);                                   // กระพือปีกเป็นพักๆ
+    m.wingL.rotation.z = -flap * 0.5; m.wingR.rotation.z = flap * 0.5;
+    if (m.tail) m.tail.rotation.y = Math.sin(t * 1.7) * 0.15;
+    m.bird.position.y = Math.abs(Math.sin(t * 1.1)) ** 24 * 0.05;
+    m.bird.rotation.z = Math.sin(t * 0.8) * 0.03;
+    m.sparkles.forEach((s, i) => {
+      const a = s.userData.a + t * 0.5;
+      s.position.set(Math.cos(a) * s.userData.r, s.userData.y + Math.sin(t * 2 + i) * 0.1, Math.sin(a) * s.userData.r);
+      s.rotation.y = t * 2;
+    });
+  }
+  const blink = (t % 4.2) < 0.13 ? 0.12 : 1;                                             // กะพริบตา
+  m.eyes.forEach(e => { e.scale.y = blink; });
+  L.r.render(L.scene, L.cam);
+  requestAnimationFrame(livePetFrame);
+}
+
+/* สลับภาพวาดเป็น 3D ในทุกจุดที่ยังไม่ได้สลับ */
+function hydratePets() {
+  const els = document.querySelectorAll(".pet3d:not([data-h])");
+  if (!els.length || pet3d.status === "failed") return;
+  if (!window.THREE) {
+    if (pet3d.status !== "loading") {
+      pet3d.status = "loading";
+      loadThree().then(() => { pet3d.status = "ready"; hydratePets(); })
+        .catch(() => { pet3d.status = "failed"; });
+    }
+    return;
+  }
+  const T = window.THREE;
+  const dpr = Math.min(window.devicePixelRatio || 1, 2);
+  let liveUsed = false;
+  for (const el of els) {
+    el.setAttribute("data-h", "1");
+    const stage = Number(el.dataset.stage);
+    try {
+      const box = el.closest(".pp-pet[data-live]");
+      if (!liveUsed && box) {
+        mountLivePet(T, el, stage);
+        liveUsed = true;
+      } else {
+        const css = Math.max(24, el.clientWidth || el.parentElement?.clientWidth || 48);
+        const px = Math.min(512, Math.ceil((css * dpr) / 32) * 32);
+        const img = new Image();
+        img.className = "pet3d-img"; img.alt = ""; img.src = petSnapshot(T, stage, px);
+        el.innerHTML = ""; el.appendChild(img);
+      }
+    } catch (err) {
+      pet3d.status = "failed";   // ไม่มี WebGL ฯลฯ -> ปล่อยภาพวาดเดิมไว้
+      console.warn("3D pet unavailable:", err);
+      return;
+    }
+  }
+}
+
 let petSvgSeq = 0;
 function petSvg(level) {
   // ปัดเป็นจำนวนเต็มและกัน NaN/undefined (เช่น xp เพี้ยนจากไฟล์ import) — ไม่งั้นตกไป stage ที่ไม่มี config แล้ว throw
@@ -2377,7 +2748,9 @@ function petSvg(level) {
   } else {
     inner = parrotletInner(stage, id);   // ร่าง 3-7: นก Pacific parrotlet สีฟ้า
   }
-  return `<svg class="pet-svg" viewBox="0 0 100 100" role="img" aria-label="${PET_STAGES[stage - 1].name}">${inner}</svg>`;
+  const svg = `<svg class="pet-svg" viewBox="0 0 100 100" role="img" aria-label="${PET_STAGES[stage - 1].name}">${inner}</svg>`;
+  // ร่าง 3-7 มีโมเดล 3D — hydratePets() จะสลับเป็น 3D เมื่อโหลด three.js ได้ ไม่งั้นก็ใช้ภาพวาดนี้ต่อ
+  return stage >= 3 ? `<span class="pet3d" data-stage="${stage}" role="img" aria-label="${PET_STAGES[stage - 1].name}">${svg}</span>` : svg;
 }
 let justLeveled = false;
 let justCheckedIn = false;
@@ -2886,7 +3259,7 @@ function renderPetPage() {
     return `<div class="pet-page">
       <p class="pp-hint" style="margin-top:2rem">Focusing on
         <b>${cat ? esc(cat.name) : "your task"}</b> — ${esc(pet.name)} is with you</p>
-      <div class="pp-pet">${petSvg(level)}</div>
+      <div class="pp-pet" data-live>${petSvg(level)}</div>
       <div class="pp-clock" id="focusClock">${focusMin}:00</div>
       <div class="pp-bar"><span id="focusBar" style="width:0%"></span></div>
       <button class="btn btn-danger-outline" style="max-width:14rem" onclick="giveUpFocus()">Give up</button>
@@ -2896,7 +3269,7 @@ function renderPetPage() {
   if (petView === "done") {
     return `<div class="pet-page">
       <p class="pp-hint" style="margin-top:2rem">🎉 Session complete!</p>
-      <div class="pp-pet"><span class="pet-emoji bounce" style="width:100%;height:100%">${petSvg(level)}</span></div>
+      <div class="pp-pet" data-live><span class="pet-emoji bounce" style="width:100%;height:100%">${petSvg(level)}</span></div>
       <div class="pp-clock" style="font-size:1.6rem">+${focusEarnedXp} XP</div>
       <p class="pp-hint">${esc(pet.name)} is proud of you — ${petStats().focusToday} min focused today</p>
       <button class="btn btn-primary" style="max-width:14rem" onclick="petView='main';viewTransition=true;render()">Nice!</button>
@@ -2913,7 +3286,7 @@ function renderPetPage() {
     <div class="pet-page">
       <div class="pp-head"><h1>${esc(pet.name)}</h1><span class="pet-level">Lv ${levelInfo().level}</span></div>
       <div class="pp-bubble">${esc(line)}</div>
-      <div class="pp-pet">${petSvg(level)}
+      <div class="pp-pet" data-live>${petSvg(level)}
         <span class="pp-spark s1" aria-hidden="true">✦</span><span class="pp-spark s2" aria-hidden="true">✦</span><span class="pp-spark s3" aria-hidden="true">✦</span>
       </div>
       <div class="pp-stats">
@@ -4793,6 +5166,13 @@ fab.onclick = () => {
   openForm(null);
 };
 render();
+new MutationObserver(() => hydratePets()).observe(document.body, { childList: true, subtree: true });
+hydratePets();
+// กลับมาที่แท็บแล้ววิวสดหยุดอยู่ (ซ่อนแท็บ = หยุด loop ประหยัดแบต) -> เดินต่อ
+document.addEventListener("visibilitychange", () => {
+  const L = pet3d.live;
+  if (!document.hidden && L && L.canvas.isConnected && !L.running) { L.running = true; requestAnimationFrame(livePetFrame); }
+});
 checkReminders();
 setTimeout(autoCheckin, 1400); // เปิดแอพ (หลัง splash) = check-in วันนี้อัตโนมัติ
 
