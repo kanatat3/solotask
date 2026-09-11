@@ -1120,6 +1120,27 @@
   @keyframes overlayOut { from { background: rgba(0,0,0,.45); } to { background: rgba(0,0,0,0); } }
   @keyframes sheetDown { from { opacity: 1; transform: translateY(0); } to { opacity: 0; transform: translateY(18px); } }
 
+  /* Google Calendar events ในหน้า Calendar */
+  .gread-bar {
+    display: flex; align-items: center; gap: .5rem; margin: 0 0 .7rem; padding: .5rem .75rem;
+    border-radius: var(--r-sm); background: color-mix(in srgb, #4285f4 9%, var(--card)); font-size: .78rem; color: var(--fg);
+  }
+  .gread-bar span { flex: 1; min-width: 0; }
+  .gread-bar.err { background: color-mix(in srgb, var(--danger) 9%, var(--card)); }
+  .gsec { display: flex; align-items: center; gap: .4rem; color: #4285f4; }
+  .gev {
+    display: flex; align-items: center; gap: .6rem; padding: .7rem .85rem; margin-bottom: .45rem; cursor: pointer;
+    background: var(--card); border: 1px dashed color-mix(in srgb, #4285f4 40%, var(--border)); border-radius: var(--r-md);
+    font-size: .84rem; user-select: text;
+    transition: background-color .18s var(--ease-out), border-color .18s var(--ease-out);
+  }
+  .gev .cal-dot { width: .55rem; height: .55rem; }
+  .gev-title { flex: 1; min-width: 0; font-weight: 600; overflow-wrap: anywhere; }
+  .gev-time { flex-shrink: 0; font-size: .72rem; color: var(--muted); }
+  .gev:focus-visible { outline: 2px solid var(--primary); outline-offset: 1px; }
+  @media (hover: hover) and (pointer: fine) { .gev:hover { background-color: color-mix(in srgb, #4285f4 6%, var(--card)); border-color: #4285f4; } }
+  .cal-lbl.g, .gev-wk .wk-title { font-style: italic; }
+
   /* ตัวเลือกธีมในหน้า Settings */
   .set-row .theme-seg { margin: 0; flex-shrink: 0; }
   .set-row .theme-seg .cal-seg-btn { min-height: 2rem; padding: 0 .7rem; font-size: .74rem; }
@@ -1337,7 +1358,6 @@ function migrate(s) {
 function save() {
   localStorage.setItem(stateKey, JSON.stringify(state));
   scheduleCloudSave(); // sync ขึ้น cloud ด้วยถ้าเชื่อมอยู่ (debounced)
-  scheduleGcalSync();  // และดัน task ไป Google Calendar ถ้าเชื่อมไว้ (debounced, no-op ถ้าไม่มีอะไรเปลี่ยน)
 }
 function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 8); }
 
@@ -2022,7 +2042,11 @@ let gcalBusy = false;
 let gcalState = "idle"; // idle | syncing | error | reauth
 let gcalRetryAt = 0;    // หลัง error พัก 60 วิ ก่อนลองใหม่ (กัน toast รัว)
 
-function gcalConnected() { return !!(sb && sbUser && state.meta.gcal?.connected); }
+/* การ sync แบบเขียนลง Google ผ่าน server (Edge Function gcal-sync) ปิดถาวรตั้งแต่ V6.1:
+   ผู้ใช้เลือกแบบอ่านอย่างเดียว (Google -> Kodo ผ่าน gread*) และฟังก์ชันฝั่ง server ไม่เคยถูก deploy
+   gcalConnected() คืน false เสมอ -> ทุกทางที่เคยส่งข้อมูลไป Google (sync/อัปโหลด token) ไม่ทำงาน */
+const GCAL_SERVER_SYNC_DISABLED = true;
+function gcalConnected() { return false; }
 
 function gcalHash(t) {
   const cat = catById(t.categoryId);
@@ -2054,20 +2078,6 @@ async function gcalInvoke(body) {
   return data;
 }
 
-let gcalAvailable = null;   // null = ยังไม่รู้, true = มีฟังก์ชันฝั่ง server, false = ยังไม่ได้ตั้งค่า
-let gcalChecking = false;
-async function checkGcalAvailable() {
-  if (gcalAvailable !== null || gcalChecking || !cloudConfigured()) return;
-  gcalChecking = true;
-  try {
-    const r = await fetch(sbCfg.url.replace(/\/+$/, "") + "/functions/v1/gcal-sync",
-      { method: "POST", headers: { "Content-Type": "text/plain" }, body: "{}" });
-    gcalAvailable = r.status !== 404;
-  } catch { /* ออฟไลน์ -> เช็คใหม่ครั้งหน้าที่เปิด Settings */ }
-  gcalChecking = false;
-  if (gcalAvailable !== null && currentTab === "settings") render();
-}
-
 async function connectGoogleCalendar() {
   if (!sb) return;
   localStorage.setItem(GCAL_PENDING_KEY, "1");
@@ -2084,8 +2094,11 @@ async function connectGoogleCalendar() {
 
 /** หลัง redirect กลับมาจาก Google — Supabase แนบ provider_refresh_token มาใน session แค่ครั้งนี้ครั้งเดียว */
 async function captureGoogleToken(session) {
+  // ปิดถาวร (ดู gcalConnected): ล้างค่าค้างจากเวอร์ชันเก่าที่เคยกด Connect แบบ server ไว้ แล้วไม่ส่ง token ไปไหน
+  localStorage.removeItem(GCAL_PENDING_KEY);
+  if (GCAL_SERVER_SYNC_DISABLED) return;
   const rt = session?.provider_refresh_token;
-  if (!rt || !localStorage.getItem(GCAL_PENDING_KEY)) return;
+  if (!rt) return;
   localStorage.removeItem(GCAL_PENDING_KEY);
   try {
     await gcalInvoke({ op: "store_token", refresh_token: rt });
@@ -4578,6 +4591,209 @@ function renderTodayDetail() {
     ${done.length ? `<h2 class="section-title">Done</h2>` + done.map(t => taskHtml(t, true)).join("") : ""}`;
 }
 
+/* ---------- Google Calendar -> Kodo (อ่านอย่างเดียว ไม่มี server) ----------
+   ใช้ Google Identity Services (token model) ขอสิทธิ์ calendar.readonly จากเบราว์เซอร์โดยตรง แล้วดึง event มาโชว์ในหน้า Calendar
+   - ไม่เขียนอะไรกลับไปที่ Google และไม่เก็บ event ลง state/cloud (ดึงสดเมื่อเปิดหน้า Calendar)
+   - access token อายุ ~1 ชม. เก็บใน sessionStorage (ปิดแท็บ = หาย); หมดอายุแล้วกด Refresh ครั้งเดียว (ไม่ต้องอนุญาตซ้ำ)
+   - "เปิดใช้บนเครื่องนี้" เก็บใน localStorage (ค่าต่อเครื่อง ไม่ sync) */
+const GREAD_CLIENT_ID = "655578671934-vpqfkq6sqi3f6m6m9h5k27efddfp1vcj.apps.googleusercontent.com";
+const GREAD_SCOPE = "https://www.googleapis.com/auth/calendar.readonly";
+const GREAD_ON_KEY = "kodo-gcal-read";
+const GREAD_TOKEN_KEY = "kodo-gcal-token";
+const GREAD_TTL = 5 * 60 * 1000;          // ดึงช่วงเดิมซ้ำได้หลัง 5 นาที
+const GREAD_MAX_CALENDARS = 15;
+let greadSeq = 0;   // เลขประจำ event (ใช้ใน onclick แทน id จาก Google ที่อาจมีอักขระพิเศษ)
+const gread = { token: "", exp: 0, client: null, gis: null, cache: new Map(), busy: false, error: "", lastKey: "" };
+
+function greadOn() { try { return localStorage.getItem(GREAD_ON_KEY) === "1"; } catch { return false; } }
+function greadToken() {
+  if (gread.token && Date.now() < gread.exp) return gread.token;
+  try {
+    const t = JSON.parse(sessionStorage.getItem(GREAD_TOKEN_KEY) || "null");
+    if (t && typeof t.token === "string" && t.exp > Date.now()) { gread.token = t.token; gread.exp = t.exp; return t.token; }
+  } catch { /* ignore */ }
+  return "";
+}
+function loadGis() {
+  if (window.google?.accounts?.oauth2) return Promise.resolve();
+  if (!gread.gis) {
+    gread.gis = new Promise((resolve, reject) => {
+      const sc = document.createElement("script");
+      sc.src = "https://accounts.google.com/gsi/client"; sc.async = true;
+      sc.onload = () => window.google?.accounts?.oauth2 ? resolve() : reject(new Error("GIS unavailable"));
+      sc.onerror = () => { gread.gis = null; reject(new Error("GIS load failed")); };
+      document.head.appendChild(sc);
+    });
+  }
+  return gread.gis;
+}
+
+/** ขอ token — ต้องเรียกจากการกดปุ่มโดยตรง (หน้าต่าง Google เป็น popup เบราว์เซอร์จะบล็อกถ้าไม่ได้มาจากการกด) */
+function greadAuthorize(firstTime) {
+  if (!window.google?.accounts?.oauth2) {
+    showToast("⏳ Loading Google… tap again in a moment");
+    loadGis().catch(() => showToast("❌ Couldn't reach Google — check your connection"));
+    return;
+  }
+  if (!gread.client) {
+    gread.client = google.accounts.oauth2.initTokenClient({ client_id: GREAD_CLIENT_ID, scope: GREAD_SCOPE, callback: () => {} });
+  }
+  gread.client.callback = (resp) => {
+    if (resp.error || !resp.access_token) { gread.error = resp.error_description || resp.error || "denied"; render(); return; }
+    if (!google.accounts.oauth2.hasGrantedAllScopes(resp, GREAD_SCOPE)) {
+      gread.error = "Calendar access wasn't granted"; render(); return;
+    }
+    gread.token = resp.access_token;
+    gread.exp = Date.now() + (Number(resp.expires_in || 3600) - 60) * 1000;
+    try { sessionStorage.setItem(GREAD_TOKEN_KEY, JSON.stringify({ token: gread.token, exp: gread.exp })); } catch { /* ignore */ }
+    try { localStorage.setItem(GREAD_ON_KEY, "1"); } catch { /* ignore */ }
+    gread.error = ""; gread.cache.clear();
+    if (firstTime) showToast("📅 Google Calendar connected");
+    render();
+  };
+  gread.client.error_callback = (err) => {
+    // ผู้ใช้ปิดหน้าต่างเอง = ไม่ใช่ error ที่ต้องโวยวาย
+    if (err?.type !== "popup_closed") { gread.error = err?.type === "popup_failed_to_open" ? "Popup blocked — allow popups for this site" : "Couldn't connect to Google"; render(); }
+  };
+  gread.client.requestAccessToken({ prompt: firstTime ? "consent" : "" });
+}
+function greadConnect() { greadAuthorize(!greadOn()); }
+function greadDisconnect() {
+  const tok = greadToken();
+  if (tok && window.google?.accounts?.oauth2) google.accounts.oauth2.revoke(tok, () => {});
+  gread.token = ""; gread.exp = 0; gread.cache.clear(); gread.error = "";
+  try { sessionStorage.removeItem(GREAD_TOKEN_KEY); localStorage.removeItem(GREAD_ON_KEY); } catch { /* ignore */ }
+  showToast("Google Calendar disconnected");
+  render();
+}
+
+async function greadApi(path) {
+  const r = await fetch("https://www.googleapis.com/calendar/v3" + path, { headers: { Authorization: "Bearer " + greadToken() } });
+  if (r.status === 401) { gread.token = ""; gread.exp = 0; try { sessionStorage.removeItem(GREAD_TOKEN_KEY); } catch {} throw new Error("expired"); }
+  if (!r.ok) throw new Error("HTTP " + r.status);
+  return r.json();
+}
+const greadColor = (c) => typeof c === "string" && /^#[0-9a-f]{3,8}$/i.test(c) ? c : "#4285f4";
+
+/** ดึง event ของช่วง [start, end) — cache ต่อช่วง แล้ว render ใหม่เมื่อได้ข้อมูล */
+async function greadEnsure(start, end) {
+  if (!greadOn() || !greadToken() || gread.busy) return;
+  const key = dateKey(start) + "_" + dateKey(end);
+  const c = gread.cache.get(key);
+  if (c && Date.now() - c.at < GREAD_TTL) return;
+  gread.busy = true;
+  try {
+    const list = await greadApi("/users/me/calendarList?minAccessRole=reader&fields=items(id,summary,summaryOverride,backgroundColor,selected,hidden,primary)");
+    const cals = (list.items || []).filter(x => x.selected !== false && !x.hidden).slice(0, GREAD_MAX_CALENDARS);
+    const q = `timeMin=${encodeURIComponent(start.toISOString())}&timeMax=${encodeURIComponent(end.toISOString())}&singleEvents=true&orderBy=startTime&maxResults=250&fields=nextPageToken,items(id,summary,start,end,location,description,htmlLink,status,attendees(self,responseStatus))`;
+    // ตามหน้า (nextPageToken) — ช่วง 6 สัปดาห์ของปฏิทินที่มี event ซ้ำเยอะอาจเกิน 250; จำกัด 4 หน้า/ปฏิทิน
+    const fetchCal = async (cal) => {
+      const items = []; let token = "";
+      for (let page = 0; page < 4; page++) {
+        const r = await greadApi(`/calendars/${encodeURIComponent(cal.id)}/events?${q}${token ? "&pageToken=" + encodeURIComponent(token) : ""}`);
+        items.push(...(r.items || []));
+        if (!r.nextPageToken) break;
+        token = r.nextPageToken;
+      }
+      return { cal, items };
+    };
+    const results = await Promise.all(cals.map(cal => fetchCal(cal).catch(err => {
+      if (err.message === "expired") throw err;   // token หมด -> ให้ทั้งรอบจบแบบ paused
+      return { cal, items: [] };                   // ปฏิทินเดียวพัง ปฏิทินอื่นยังโชว์
+    })));
+    const events = [];
+    for (const { cal, items } of results) {
+      for (const e of items) {
+        if (e.status === "cancelled" || !e.start) continue;
+        // event ที่เราตอบปฏิเสธแล้วไม่ต้องโชว์
+        if (Array.isArray(e.attendees) && e.attendees.some(a => a && a.self && a.responseStatus === "declined")) continue;
+        const allDay = !!e.start.date && !e.start.dateTime;
+        const st = allDay ? new Date(e.start.date + "T00:00:00") : new Date(e.start.dateTime);
+        // วันเต็ม: end.date เป็นวันถัดจากวันสุดท้าย (exclusive)
+        const en = allDay ? new Date(new Date((e.end?.date || e.start.date) + "T00:00:00").getTime() - 1) : new Date(e.end?.dateTime || e.start.dateTime);
+        if (isNaN(st) || isNaN(en)) continue;
+        events.push({
+          n: ++greadSeq, uid: cal.id + "|" + e.id, title: String(e.summary || "(No title)"), start: st, end: en, allDay,
+          color: greadColor(cal.backgroundColor), calName: String(cal.summaryOverride || cal.summary || "Google Calendar"),
+          location: String(e.location || ""), description: String(e.description || ""),
+          link: typeof e.htmlLink === "string" && /^https:\/\/(www\.)?google\.com\/calendar\//.test(e.htmlLink) ? e.htmlLink : "",
+        });
+      }
+    }
+    events.sort((a, b) => (a.allDay === b.allDay ? a.start - b.start : a.allDay ? -1 : 1));
+    gread.cache.set(key, { at: Date.now(), events });
+    gread.lastKey = key; gread.error = "";
+  } catch (err) {
+    gread.error = err.message === "expired" ? "" : "Couldn't load Google events";
+  } finally {
+    gread.busy = false;
+  }
+  if (currentTab === "calendar") render();
+}
+/** event แยกตามวัน (event หลายวันอยู่ทุกวันที่ครอบคลุม) ของช่วงที่ cache ไว้ */
+function greadByDay(start, end) {
+  const c = gread.cache.get(dateKey(start) + "_" + dateKey(end));
+  const out = {};
+  if (!c) return out;
+  for (const ev of c.events) {
+    const d = startOfDay(ev.start); let n = 0;
+    while (d <= ev.end && n < 62) { (out[dateKey(d)] = out[dateKey(d)] || []).push(ev); d.setDate(d.getDate() + 1); n++; }
+  }
+  return out;
+}
+function greadTime(ev) {
+  if (ev.allDay) return "All day";
+  const same = dateKey(ev.start) === dateKey(ev.end);
+  return same ? `${fmtTime(ev.start)}–${fmtTime(ev.end)}` : `${fmtTime(ev.start)} →`;
+}
+function greadItemHtml(ev) {
+  return `<div class="gev" role="button" tabindex="0" onclick="if(!textSelected())openGEvent(${ev.n})"
+    onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();openGEvent(${ev.n})}">
+    <span class="cal-dot" style="background:${ev.color}"></span>
+    <span class="gev-title">${esc(ev.title)}</span>
+    <span class="gev-time">${greadTime(ev)}</span>
+  </div>`;
+}
+function openGEvent(n) {
+  let ev = null;
+  for (const c of gread.cache.values()) { ev = c.events.find(x => x.n === Number(n)); if (ev) break; }
+  if (!ev) return;
+  // คำอธิบายจาก Google อาจเป็น HTML -> เอาแต่ข้อความ
+  const desc = new DOMParser().parseFromString(ev.description.replace(/<br\s*\/?>|<\/(p|div|li)>/gi, "\n"), "text/html")
+    .body.textContent.replace(/\n{3,}/g, "\n\n").trim().slice(0, 2000);
+  const when = ev.allDay
+    ? (dateKey(ev.start) === dateKey(ev.end) ? fmtDate(ev.start) : `${fmtDate(ev.start)} – ${fmtDate(ev.end)}`) + " · All day"
+    : `${fmtDateTime(ev.start)} – ${dateKey(ev.start) === dateKey(ev.end) ? fmtTime(ev.end) : fmtDateTime(ev.end)}`;
+  document.getElementById("modal").innerHTML = `
+  <div class="overlay" onclick="if(event.target===this)closeForm()">
+    <div class="sheet" role="dialog" aria-label="Google Calendar event">
+      <div class="sheet-head">
+        <h2 style="overflow-wrap:anywhere">${esc(ev.title)}</h2>
+        <button class="x-btn" aria-label="Close" onclick="closeForm()">✕</button>
+      </div>
+      <div class="detail-chips"><span class="chip" style="background:color-mix(in srgb, ${ev.color} 16%, var(--card));color:color-mix(in srgb, ${ev.color} 55%, var(--fg))">${icon("calendar", 10)} ${esc(ev.calName)}</span></div>
+      <div class="detail-row"><span class="k">When</span><span>${when}</span></div>
+      ${ev.location ? `<div class="detail-row"><span class="k">Where</span><span style="overflow-wrap:anywhere">${esc(ev.location)}</span></div>` : ""}
+      ${desc ? `<div class="detail-note" style="margin-top:.6rem">${esc(desc)}</div>` : ""}
+      <p class="hint" style="margin:.7rem 0">From Google Calendar — view only. Edit it in Google Calendar.</p>
+      ${ev.link ? `<a class="btn btn-outline" href="${esc(ev.link)}" target="_blank" rel="noopener" style="text-decoration:none">${icon("calendar", 14)} Open in Google Calendar</a>` : ""}
+    </div>
+  </div>`;
+}
+/** แถบสถานะบนหน้า Calendar (เชื่อมแล้วแต่ token หมด / กำลังโหลด / error) */
+function greadBar() {
+  if (!greadOn()) return "";
+  if (!window.google?.accounts?.oauth2) loadGis().catch(() => {});
+  if (!greadToken()) {
+    return `<div class="gread-bar">${icon("calendar", 13)}<span>Google Calendar events are paused</span>
+      <button class="link-primary" onclick="greadAuthorize(false)">Refresh</button></div>`;
+  }
+  if (gread.error) return `<div class="gread-bar err">${icon("calendar", 13)}<span>${esc(gread.error)}</span>
+      <button class="link-primary" onclick="gread.cache.clear();gread.error='';render()">Retry</button></div>`;
+  if (gread.busy && !gread.cache.size) return `<div class="gread-bar">${icon("calendar", 13)}<span>Loading Google Calendar…</span></div>`;
+  return "";
+}
+
 function renderCalendar() {
   const y = calMonth.getFullYear(), m = calMonth.getMonth();
   const first = new Date(y, m, 1);
@@ -4601,6 +4817,15 @@ function renderCalendar() {
   }
 
   const selDate = new Date(calSelected + "T00:00:00");
+  // ช่วงที่ดึงจาก Google = ตารางเดือน 6 สัปดาห์ของเดือนที่กำลังดู (week/day ใช้เดือนของวันที่เลือก)
+  const gBase = calMode === "month" ? calMonth : new Date(selDate.getFullYear(), selDate.getMonth(), 1);
+  const gStart = new Date(gBase.getFullYear(), gBase.getMonth(), 1); gStart.setDate(1 - gStart.getDay());
+  const gEnd = new Date(gStart); gEnd.setDate(gEnd.getDate() + 42);
+  greadEnsure(gStart, gEnd);
+  const gByDay = greadOn() ? greadByDay(gStart, gEnd) : {};
+  const gList = (k) => gByDay[k] || [];
+  const gSection = (k) => gList(k).length
+    ? `<h2 class="section-title gsec">${icon("calendar", 14)} Google Calendar</h2>${gList(k).map(greadItemHtml).join("")}` : "";
   const seg = `<div class="cal-seg" role="tablist">
     ${["day", "week", "month"].map(mo =>
       `<button role="tab" aria-selected="${calMode === mo}" class="cal-seg-btn ${calMode === mo ? "sel" : ""}"
@@ -4616,20 +4841,22 @@ function renderCalendar() {
       const inMonth = d.getMonth() === m;
       const dayTasks = sortByDue(byDay[k] || []);
       // ชื่องานแบบย่อในช่อง (2 รายการแรก)
-      const labels = dayTasks.slice(0, 2).map(t => {
-        const cat = catById(t.categoryId);
-        const col = cat ? cat.color : "#94a3b8";
-        return `<span class="cal-lbl" style="background:color-mix(in srgb, ${col} 18%, var(--card));color:color-mix(in srgb, ${col} 58%, var(--fg))">${esc(t.title)}</span>`;
-      }).join("");
+      const items = [
+        ...dayTasks.map(t => { const cat = catById(t.categoryId); return { title: t.title, col: cat ? cat.color : "#94a3b8", g: false }; }),
+        ...gList(k).map(ev => ({ title: ev.title, col: ev.color, g: true })),
+      ];
+      const labels = items.slice(0, 2).map(it =>
+        `<span class="cal-lbl ${it.g ? "g" : ""}" style="background:color-mix(in srgb, ${it.col} 18%, var(--card));color:color-mix(in srgb, ${it.col} 58%, var(--fg))">${esc(it.title)}</span>`).join("");
       cells += `<button class="cal-day ${inMonth ? "" : "other"} ${isToday(d) ? "today" : ""} ${k === calSelected ? "sel" : ""}"
         onclick="calSelected='${k}';render()">
         <span class="cal-num">${d.getDate()}</span>
-        ${labels}${dayTasks.length > 2 ? `<span class="cal-more">+${dayTasks.length - 2}</span>` : ""}
+        ${labels}${items.length > 2 ? `<span class="cal-more">+${items.length - 2}</span>` : ""}
       </button>`;
       d.setDate(d.getDate() + 1);
     }
     const selTasks = sortByDue(byDay[calSelected] || []);
     return `<div class="page-head"><h1>Calendar</h1>${seg}</div>
+      ${greadBar()}
       <div class="cal-head">
         <button class="cal-nav" aria-label="Previous month" onclick="calShift(-1)">${icon("left")}</button>
         <span class="cal-title"><h2>${MONTHS[m]} ${y}</h2>${calTodayBtn()}</span>
@@ -4640,7 +4867,8 @@ function renderCalendar() {
         ${cells}
       </div>
       <h2 class="section-title">${fmtDate(selDate)}</h2>
-      ${selTasks.length ? selTasks.map(taskHtml).join("") : `<p class="empty-sm">No tasks on this day</p>`}`;
+      ${selTasks.length ? selTasks.map(taskHtml).join("") : gList(calSelected).length ? "" : `<p class="empty-sm">No tasks on this day</p>`}
+      ${gSection(calSelected)}`;
   }
 
   /* ----- Week ----- */
@@ -4659,22 +4887,34 @@ function renderCalendar() {
           <span class="wk-num">${d.getDate()}</span>
         </button>
         <div class="wk-list">
-          ${dayTasks.length ? dayTasks.map(t => {
-            const cat = catById(t.categoryId);
-            const col = cat ? cat.color : "#94a3b8";
-            const due = new Date(t.dueAt);
-            const label = isRangeTask(t) ? fmtSpan(t) : fmtTime(due);
-            return `<button class="wk-item ${t.status === "done" ? "done" : ""}" onclick="toggleDone('${t.id}')">
+          ${[
+            // งานกับ event จาก Google เรียงรวมกันตามเวลา (ทั้งวัน/ช่วงหลายวันขึ้นก่อน)
+            ...dayTasks.map(t => {
+              const cat = catById(t.categoryId);
+              const col = cat ? cat.color : "#94a3b8";
+              const due = new Date(t.dueAt);
+              const label = isRangeTask(t) ? fmtSpan(t) : fmtTime(due);
+              return { top: isRangeTask(t), at: due.getHours() * 60 + due.getMinutes(),
+                html: `<button class="wk-item ${t.status === "done" ? "done" : ""}" onclick="toggleDone('${t.id}')">
               <span class="cal-dot" style="background:${col}"></span>
               <span class="wk-title">${esc(t.title)}</span>
               <span class="wk-time">${label}</span>
-            </button>`;
-          }).join("") : `<span class="mini-empty">—</span>`}
+            </button>` };
+            }),
+            ...gList(k).map(ev => ({ top: ev.allDay, at: ev.allDay ? 0 : ev.start.getHours() * 60 + ev.start.getMinutes(),
+              html: `<button class="wk-item gev-wk" onclick="openGEvent(${ev.n})">
+              <span class="cal-dot" style="background:${ev.color}"></span>
+              <span class="wk-title">${esc(ev.title)}</span>
+              <span class="wk-time">${ev.allDay ? "All day" : fmtTime(ev.start)}</span>
+            </button>` })),
+          ].sort((a, b) => (b.top - a.top) || (a.at - b.at)).map(x => x.html).join("")}
+          ${!dayTasks.length && !gList(k).length ? `<span class="mini-empty">—</span>` : ""}
         </div>
       </div>`;
       d.setDate(d.getDate() + 1);
     }
     return `<div class="page-head"><h1>Calendar</h1>${seg}</div>
+      ${greadBar()}
       <div class="cal-head">
         <button class="cal-nav" aria-label="Previous week" onclick="calShiftDays(-7)">${icon("left")}</button>
         <span class="cal-title"><h2>${weekStart.getDate()} ${MONTHS_SHORT[weekStart.getMonth()]} – ${weekEnd.getDate()} ${MONTHS_SHORT[weekEnd.getMonth()]}</h2>${calTodayBtn()}</span>
@@ -4688,14 +4928,16 @@ function renderCalendar() {
   const openT = dayTasks.filter(t => t.status === "open");
   const doneT = dayTasks.filter(t => t.status === "done");
   return `<div class="page-head"><h1>Calendar</h1>${seg}</div>
+    ${greadBar()}
     <div class="cal-head">
       <button class="cal-nav" aria-label="Previous day" onclick="calShiftDays(-1)">${icon("left")}</button>
       <span class="cal-title"><h2>${fmtDate(selDate)} · ${selDate.getDate()} ${MONTHS_SHORT[selDate.getMonth()]}</h2>${calTodayBtn()}</span>
       <button class="cal-nav" aria-label="Next day" onclick="calShiftDays(1)">${icon("right")}</button>
     </div>
-    ${dayTasks.length === 0 ? `<p class="empty-sm">No tasks on this day</p>` : ""}
+    ${dayTasks.length === 0 && !gList(calSelected).length ? `<p class="empty-sm">No tasks on this day</p>` : ""}
     ${openT.map(t => taskHtml(t)).join("")}
-    ${doneT.length ? `<h2 class="section-title">Done</h2>` + doneT.map(t => taskHtml(t)).join("") : ""}`;
+    ${doneT.length ? `<h2 class="section-title">Done</h2>` + doneT.map(t => taskHtml(t)).join("") : ""}
+    ${gSection(calSelected)}`;
 }
 
 function calShift(n) {
@@ -4854,40 +5096,20 @@ function renderSettings() {
       </form>`}
     </div>
 
-    ${cloudConfigured() && sbUser ? (() => {
-      const on = gcalConnected();
-      const isGoogle = user?.provider === "google";
-      const last = state.meta.gcal?.lastSync;
-      const label = on
-        ? (gcalState === "syncing" ? "Connected — syncing…"
-          : gcalState === "error" ? "Connected — sync error, will retry"
-          : "Connected — tasks sync to a “Kodo” calendar")
-        : gcalState === "reauth" ? "Disconnected — please reconnect" : "Not connected";
-      const sub = on
-        ? (last ? "Last sync " + fmtDateTime(new Date(last)) : "Waiting for first sync…")
-        : (isGoogle ? "Auto-create events for your tasks — get reminders on your phone via Google Calendar"
-                    : "Sign in with Google to use this");
-      checkGcalAvailable();
-      const notReady = !on && gcalAvailable === false;
-      const actions = on
-        ? `<button class="link-primary" onclick="gcalSyncNow()">Sync now</button>
-           <button class="link-danger" onclick="disconnectGoogleCalendar()">Disconnect</button>`
-        : notReady ? ""
-        : isGoogle ? `<button class="link-primary" onclick="connectGoogleCalendar()" ${gcalAvailable === null ? "disabled" : ""}>${gcalState === "reauth" ? "Reconnect" : "Connect"}</button>` : "";
-      return `
     <h2 class="section-title">Google Calendar</h2>
     <div class="set-group">
       <div class="set-row static">
         <span class="set-ico" style="background:color-mix(in srgb, #4285f4 16%, var(--card));color:color-mix(in srgb, #4285f4 60%, var(--fg))">${icon("calendar", 14)}</span>
-        <span class="set-label">${notReady ? "Not available yet" : label}
-          <span class="set-sub">${notReady
-            ? "Auto-sync needs a one-time server setup (supabase/GOOGLE_CALENDAR_SETUP.md). Meanwhile use “Add to Google Calendar” when editing a task."
-            : sub}</span>
+        <span class="set-label">${greadOn() ? "Showing your Google events" : "Show Google Calendar events"}
+          <span class="set-sub">${greadOn()
+            ? "Your Google events appear in Kodo's Calendar (view only)" + (gread.error ? " · " + esc(gread.error) : "")
+            : "See your Google events in Kodo's Calendar — read-only, nothing is changed in Google"}</span>
         </span>
-        ${actions}
+        ${greadOn()
+          ? `<button class="link-danger" onclick="greadDisconnect()">Disconnect</button>`
+          : `<button class="link-primary" onclick="greadConnect()" ${window.google?.accounts?.oauth2 ? "" : "disabled"}>${window.google?.accounts?.oauth2 ? "Connect" : "Loading…"}</button>`}
       </div>
-    </div>`;
-    })() : ""}
+    </div>
 
     <h2 class="section-title">Data</h2>
     <div class="set-group">
@@ -5082,7 +5304,11 @@ function render() {
       <span class="ico">${icon(ico, 20)}</span><span class="lbl">${label}</span></button>`).join("");
   document.getElementById("fabBtn").style.display =
     currentTab === "settings" ? "none" : "";
-  if (currentTab === "settings") renderColorPick();
+  // โหลด Google Identity Services ล่วงหน้า — ปุ่ม Connect เปิดใช้เมื่อพร้อม (popup ต้องเปิดภายใต้การกดของผู้ใช้ทันที)
+  if (currentTab === "settings") {
+    renderColorPick();
+    if (!window.google?.accounts?.oauth2) loadGis().then(() => { if (currentTab === "settings") render(); }).catch(() => {});
+  }
 }
 
 function switchTab(id) {
