@@ -55,10 +55,10 @@
     from { opacity: 0; transform: translateY(8px); }
     to { opacity: 1; transform: translateY(0); }
   }
-  .just-done .task-status, .just-done .mini-dot { animation: checkPop .28s cubic-bezier(.22, 1.6, .36, 1); }
+  .just-done .task-status, .just-done .mini-dot { animation: checkPop .26s cubic-bezier(.22, 1, .36, 1); }
   @keyframes checkPop {
     0% { transform: scale(.6); }
-    60% { transform: scale(1.18); }
+    60% { transform: scale(1.12); }
     100% { transform: scale(1); }
   }
   .task.just-done { animation: cardSettle .25s cubic-bezier(.22, 1, .36, 1); }
@@ -1038,6 +1038,91 @@
     .fab { right: 2.5rem; bottom: 2.5rem; }
     .stat-row { max-width: 32rem; }
   }
+
+  /* ===== สถานะการโต้ตอบ (V6.0): ทุกอย่างที่กดได้มี hover / focus / กดค้าง =====
+     hover เฉพาะเครื่องที่มีเมาส์ (มือถือไม่มี hover ค้าง) · 150–200ms ease-out · reduce-motion ปิดทั้งหมดด้วยกฎด้านบน */
+  :root {
+    --ease-out: cubic-bezier(.22, 1, .36, 1);
+    --hover-tint: color-mix(in srgb, var(--primary) 9%, transparent);
+    --lift-shadow: 0 14px 30px -18px color-mix(in srgb, var(--primary) 60%, transparent);
+  }
+  .ov-more, .x-btn, .edit-btn, .rt-del, .cal-nav, .fp-step, .ic-toggle, .mini-task, .wk-item, .wk-date,
+  .set-row, .link-primary, .link-danger, .back-btn, .ps-more, .cal-today-btn, .btn, .btn-google,
+  .fp-pill, .day-pill, .setup-chip, .icon-opt, .color-opt, .petr-card, .petr-rec, .petr-status,
+  .species-opt, .ov-card.is-link, .cl-new, .ps-item, .cal-day, .cal-seg-btn, .switch {
+    transition: background-color .18s var(--ease-out), color .18s var(--ease-out), border-color .18s var(--ease-out),
+      box-shadow .2s var(--ease-out), transform .18s var(--ease-out), opacity .18s var(--ease-out);
+  }
+  .task {
+    transition: transform .12s var(--ease-out), opacity .15s, background-color .18s var(--ease-out),
+      border-color .18s var(--ease-out), box-shadow .2s var(--ease-out);
+  }
+  .task-status { transition: border-color .18s var(--ease-out), background-color .18s var(--ease-out); }
+  .ov-card.is-link { cursor: pointer; transition: transform .2s var(--ease-out), box-shadow .2s var(--ease-out), border-color .2s var(--ease-out); }
+  .ov-card.is-link .ov-more { transition: color .18s var(--ease-out), transform .2s var(--ease-out), background-color .18s var(--ease-out); }
+
+  @media (hover: hover) and (pointer: fine) {
+    /* การ์ดที่พาไปหน้าอื่น: ยกขึ้นเล็กน้อย + ขอบสี + ลูกศรขยับ */
+    .ov-card.is-link:hover { border-color: color-mix(in srgb, var(--primary) 32%, var(--edge)); box-shadow: var(--lift-shadow), var(--shadow); transform: translateY(-2px); }
+    .ov-card.is-link:hover .ov-more { color: var(--primary); transform: translateX(2px); }
+    .petr-card:hover, .petr-rec:hover, .petr-status:hover, .cl-new:hover {
+      border-color: color-mix(in srgb, var(--primary) 32%, var(--border)); box-shadow: var(--lift-shadow), var(--shadow);
+    }
+    .task:hover { border-color: color-mix(in srgb, var(--primary) 28%, var(--edge)); background-color: color-mix(in srgb, var(--primary) 3%, var(--card)); }
+    .task:not(.is-done):hover .task-status { border-color: var(--primary); background-color: var(--hover-tint); }
+    .species-opt:not(.sel):hover { border-color: color-mix(in srgb, var(--primary) 45%, var(--border)); }
+    /* ปุ่มไอคอน */
+    .ov-more:hover, .edit-btn:hover, .rt-del:hover, .ic-toggle:hover { background-color: var(--hover-tint); color: var(--primary); }
+    .x-btn:hover { background-color: color-mix(in srgb, var(--fg) 10%, var(--bg)); color: var(--fg); }
+    .cal-nav:hover, .fp-step:hover { border-color: color-mix(in srgb, var(--primary) 45%, var(--edge)); color: var(--primary); }
+    /* แถว/รายการ */
+    .mini-task:hover, .wk-item:hover, .ps-item:hover {
+      background-color: var(--hover-tint); box-shadow: 0 0 0 .3rem var(--hover-tint); border-radius: .35rem;
+    }
+    .wk-date:hover { color: var(--primary); }
+    .set-row:not(.static):hover { background-color: var(--hover-tint); }
+    .set-row.danger:hover { background-color: color-mix(in srgb, var(--danger) 9%, transparent); }
+    .cal-day:not(.sel):hover { background-color: var(--hover-tint); }
+    .cal-seg-btn:not(.sel):hover { color: var(--fg); background-color: var(--hover-tint); }
+    .nav-btn:not(.active):hover { background-color: var(--hover-tint); color: var(--fg); }
+    /* ลิงก์ข้อความ */
+    .link-primary:hover, .link-danger:hover, .back-btn:hover, .ps-more:hover {
+      text-decoration: underline; text-underline-offset: 3px; text-decoration-thickness: 1.5px;
+    }
+    /* ปุ่มหลัก/รอง */
+    .btn-primary:not(:disabled):hover { background-color: color-mix(in srgb, var(--primary) 86%, #000); box-shadow: 0 10px 22px -12px color-mix(in srgb, var(--primary) 75%, transparent); }
+    .btn-outline:hover, .btn-google:hover { border-color: color-mix(in srgb, var(--primary) 45%, var(--border)); background-color: var(--hover-tint); }
+    .btn-danger-outline:hover { background-color: color-mix(in srgb, var(--danger) 8%, transparent); border-color: var(--danger); }
+    .cal-today-btn:hover { background-color: color-mix(in srgb, var(--primary) 20%, var(--card)); }
+    .fab:hover { box-shadow: 0 14px 28px -12px color-mix(in srgb, var(--primary) 85%, transparent); transform: translateY(-1px); }
+    .hero-streak:hover, .hero-pet:hover { background-color: rgba(255, 255, 255, .3); }
+    /* ตัวเลือก */
+    .fp-pill:not(.sel):hover, .setup-chip:not(.sel):hover, .day-pill:not(.sel):hover, .icon-opt:not(.sel):hover {
+      border-color: color-mix(in srgb, var(--primary) 50%, var(--border)); color: var(--fg);
+    }
+    .color-opt:not(.sel):hover { transform: scale(1.18); }
+    .switch:hover { box-shadow: 0 0 0 4px var(--hover-tint); }
+  }
+
+  /* กดค้าง (ทุกเครื่องรวมมือถือ) */
+  .ov-card.is-link:active { transform: translateY(0) scale(.99); }
+  .ov-more:active, .edit-btn:active, .rt-del:active, .x-btn:active, .cal-nav:active, .fp-step:active,
+  .icon-opt:active, .fp-pill:active, .ic-toggle:active { transform: scale(.92); }
+  .btn-outline:active, .btn-danger-outline:active, .btn-google:active, .petr-rec:active, .species-opt:active { transform: scale(.985); }
+  .mini-task:active, .wk-item:active, .ps-item:active { background-color: var(--hover-tint); }
+  /* คีย์บอร์ด: Tab มาถึงปุ่มลูกศรในการ์ด -> ไฮไลต์ทั้งการ์ด */
+  .ov-card.is-link:has(.ov-more:focus-visible) { outline: 2px solid var(--primary); outline-offset: 2px; }
+  .ov-card.is-link .ov-more:focus-visible { outline: none; }
+
+  /* ปิด sheet: เลื่อนลง + จางออก (เร็วกว่าตอนเปิด) */
+  .overlay.closing { pointer-events: none; animation: overlayOut .16s ease-in both; }
+  .overlay.closing .sheet { animation: sheetDown .16s ease-in both; }
+  @keyframes overlayOut { from { background: rgba(0,0,0,.45); } to { background: rgba(0,0,0,0); } }
+  @keyframes sheetDown { from { opacity: 1; transform: translateY(0); } to { opacity: 0; transform: translateY(18px); } }
+
+  /* ตัวเลือกธีมในหน้า Settings */
+  .set-row .theme-seg { margin: 0; flex-shrink: 0; }
+  .set-row .theme-seg .cal-seg-btn { min-height: 2rem; padding: 0 .7rem; font-size: .74rem; }
 </style>
 </head>
 <body>
@@ -1109,9 +1194,17 @@ function greeting() {
 }
 
 /** ธีมตามเวลาจริง: กลางวันเหลือง (06:00-17:59) กลางคืนน้ำเงิน (18:00-05:59) */
+const THEME_KEY = "kodo-theme";   // ค่าต่อเครื่อง: "day" | "night" | ไม่มี = อัตโนมัติตามเวลา
+function themePref() {
+  try { const v = localStorage.getItem(THEME_KEY); return v === "day" || v === "night" ? v : "auto"; } catch { return "auto"; }
+}
 function applyTheme() {
-  const h = new Date().getHours();
-  document.documentElement.dataset.theme = (h >= 6 && h < 18) ? "day" : "night";
+  const p = themePref(), h = new Date().getHours();
+  document.documentElement.dataset.theme = p !== "auto" ? p : (h >= 6 && h < 18) ? "day" : "night";
+}
+function setThemePref(v) {
+  try { if (v === "auto") localStorage.removeItem(THEME_KEY); else localStorage.setItem(THEME_KEY, v); } catch { /* storage ปิดอยู่ */ }
+  applyTheme(); render();
 }
 const CAT_ICONS = ["briefcase", "user", "home", "dumbbell", "activity", "heart", "book", "cart", "tag"];
 const GOOGLE_G = '<svg width="17" height="17" viewBox="0 0 48 48" aria-hidden="true"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg>';
@@ -1961,6 +2054,20 @@ async function gcalInvoke(body) {
   return data;
 }
 
+let gcalAvailable = null;   // null = ยังไม่รู้, true = มีฟังก์ชันฝั่ง server, false = ยังไม่ได้ตั้งค่า
+let gcalChecking = false;
+async function checkGcalAvailable() {
+  if (gcalAvailable !== null || gcalChecking || !cloudConfigured()) return;
+  gcalChecking = true;
+  try {
+    const r = await fetch(sbCfg.url.replace(/\/+$/, "") + "/functions/v1/gcal-sync",
+      { method: "POST", headers: { "Content-Type": "text/plain" }, body: "{}" });
+    gcalAvailable = r.status !== 404;
+  } catch { /* ออฟไลน์ -> เช็คใหม่ครั้งหน้าที่เปิด Settings */ }
+  gcalChecking = false;
+  if (gcalAvailable !== null && currentTab === "settings") render();
+}
+
 async function connectGoogleCalendar() {
   if (!sb) return;
   localStorage.setItem(GCAL_PENDING_KEY, "1");
@@ -2091,10 +2198,27 @@ function toggleCategory(id) {
   save(); render();
 }
 function toggleNotifications() {
-  if (!("Notification" in window)) return;
-  if (Notification.permission !== "granted") { enableNotify(); return; }
+  if (!("Notification" in window)) {
+    const ios = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+    showToast(ios ? "📱 iPhone/iPad: Share → Add to Home Screen, then open Kodo from its icon to allow notifications"
+                  : "⚠️ This browser doesn't support notifications");
+    return;
+  }
+  if (Notification.permission === "denied") {
+    showToast("🔕 Notifications are blocked — allow them in the browser's site settings (padlock icon), then reload");
+    return;
+  }
+  if (Notification.permission !== "granted") {
+    Notification.requestPermission().then(p => {
+      if (p === "granted") { state.meta.notifOff = false; save(); showToast("🔔 Notifications on"); }
+      else if (p === "denied") showToast("🔕 Notifications blocked — change it in the browser's site settings");
+      render();
+    });
+    return;
+  }
   state.meta.notifOff = !state.meta.notifOff;
   save(); render();
+  showToast(state.meta.notifOff ? "🔕 Notifications off" : "🔔 Notifications on");
 }
 /** หมวดที่เปิดใช้อยู่ */
 function activeCategories() {
@@ -3981,7 +4105,7 @@ function renderHome() {
     const nowBadge = featured
       ? `<span class="now-badge" style="background:${g.color}">● Now</span>` : "";
     const schedText = featured && cat ? `<span class="ov-sub" style="margin-left:auto">${scheduleSummary(cat)}</span>` : "";
-    return `<div class="ov-card ${featured ? "featured" : ""}" ${featured ? `style="border-color:${g.color}"` : ""}>
+    return `<div class="ov-card is-link ${featured ? "featured" : ""}" ${featured ? `style="border-color:${g.color}"` : ""} onclick="if(!event.target.closest('button,a,input,select,textarea,label')&&!textSelected())goCat('${g.key}')">
       <div class="ov-head">
         <span class="cat-ring">${ringSvg(pct, g.color)}<span class="cat-ico" style="background:color-mix(in srgb, ${g.color} 16%, var(--card));color:color-mix(in srgb, ${g.color} 55%, var(--fg))">${icon(g.icon, 14)}</span></span>
         <span class="name">${esc(g.name)}
@@ -4016,7 +4140,7 @@ function renderHome() {
       aiOpen ? `${aiOpen} open` : "",
     ].filter(Boolean).join(" · ");
     const pct = aiTasks.length ? Math.round(aiTasks.filter(t => t.status === "done").length / aiTasks.length * 100) : 0;
-    aiCardHtml = `<div class="ov-card">
+    aiCardHtml = `<div class="ov-card is-link" onclick="if(!event.target.closest('button,a,input,select,textarea,label')&&!textSelected())goCat('${AI_HUB}')">
       <div class="ov-head">
         <span class="cat-ring">${ringSvg(pct, AI_HUB_COLOR)}<span class="cat-ico" style="background:color-mix(in srgb, ${AI_HUB_COLOR} 16%, var(--card));color:color-mix(in srgb, ${AI_HUB_COLOR} 55%, var(--fg))">${icon(AGENT_CAT_ICON, 14)}</span></span>
         <span class="name">AI Work
@@ -4348,7 +4472,7 @@ function renderAiHub() {
       `${r.total} task${r.total > 1 ? "s" : ""}`,
       r.last ? fmtDate(new Date(r.last)) : "",
     ].filter(Boolean).join(" · ");
-    return `<div class="ov-card">
+    return `<div class="ov-card is-link" onclick="if(!event.target.closest('button,a,input,select,textarea,label')&&!textSelected())goCat('${r.cat.id}')">
       <div class="ov-head">
         <span class="cat-ring">${ringSvg(pct, r.cat.color)}<span class="cat-ico" style="background:color-mix(in srgb, ${r.cat.color} 16%, var(--card));color:color-mix(in srgb, ${r.cat.color} 55%, var(--fg))">${icon(r.cat.icon || AGENT_CAT_ICON, 14)}</span></span>
         <span class="name">${esc(agentCatLabel(r.cat))}
@@ -4422,7 +4546,7 @@ function renderTodayDetail() {
     const doneN = pts.filter(t => t.status === "done").length;
     const pct = pts.length ? Math.round(doneN / pts.length * 100) : 0;
     const sub = pts.length ? `${pts.length - doneN} open · ${pts.length} task${pts.length > 1 ? "s" : ""}` : "No tasks yet";
-    return `<div class="ov-card">
+    return `<div class="ov-card is-link" onclick="if(!event.target.closest('button,a,input,select,textarea,label')&&!textSelected())openProject('${cat.id}', '${p.id}')">
       <div class="ov-head">
         <span class="cat-ring">${ringSvg(pct, p.color)}<span class="cat-ico" style="background:color-mix(in srgb, ${p.color} 16%, var(--card));color:color-mix(in srgb, ${p.color} 55%, var(--fg))">${icon("folder", 14)}</span></span>
         <span class="name">${esc(p.name)}
@@ -4665,9 +4789,12 @@ function renderSettings() {
       <div class="set-row static">
         <span class="set-ico" style="background:color-mix(in srgb, #8b5cf6 16%, var(--card));color:color-mix(in srgb, #8b5cf6 55%, var(--fg))">${icon("sun", 14)}</span>
         <span class="set-label">Theme
-          <span class="set-sub">Follows the time of day automatically</span>
+          <span class="set-sub">${themePref() === "auto" ? "Auto — Day 6:00–18:00, Night after" : "Always " + (themePref() === "day" ? "Day" : "Night")}</span>
         </span>
-        <span class="set-value">${document.documentElement.dataset.theme === "night" ? "Night" : "Day"}</span>
+        <div class="cal-seg theme-seg" role="radiogroup" aria-label="Theme">
+          ${[["auto", "Auto"], ["day", "Day"], ["night", "Night"]].map(([v, l]) =>
+            `<button class="cal-seg-btn ${themePref() === v ? "sel" : ""}" role="radio" aria-checked="${themePref() === v}" onclick="setThemePref('${v}')">${l}</button>`).join("")}
+        </div>
       </div>
     </div>
 
@@ -4692,6 +4819,7 @@ function renderSettings() {
         <button class="link-primary" type="submit">Add</button>
       </form>
       <div class="set-row static" style="flex-wrap:wrap;gap:.5rem">
+        <span class="set-sub" style="flex-basis:100%;margin:0">Icon &amp; color for the new category</span>
         <span id="iconPick" style="display:flex;gap:.3rem;flex-wrap:wrap"></span>
         <span id="colorPick" style="display:flex;gap:.35rem;margin-left:auto"></span>
       </div>
@@ -4739,17 +4867,22 @@ function renderSettings() {
         ? (last ? "Last sync " + fmtDateTime(new Date(last)) : "Waiting for first sync…")
         : (isGoogle ? "Auto-create events for your tasks — get reminders on your phone via Google Calendar"
                     : "Sign in with Google to use this");
+      checkGcalAvailable();
+      const notReady = !on && gcalAvailable === false;
       const actions = on
         ? `<button class="link-primary" onclick="gcalSyncNow()">Sync now</button>
            <button class="link-danger" onclick="disconnectGoogleCalendar()">Disconnect</button>`
-        : isGoogle ? `<button class="link-primary" onclick="connectGoogleCalendar()">${gcalState === "reauth" ? "Reconnect" : "Connect"}</button>` : "";
+        : notReady ? ""
+        : isGoogle ? `<button class="link-primary" onclick="connectGoogleCalendar()" ${gcalAvailable === null ? "disabled" : ""}>${gcalState === "reauth" ? "Reconnect" : "Connect"}</button>` : "";
       return `
     <h2 class="section-title">Google Calendar</h2>
     <div class="set-group">
       <div class="set-row static">
         <span class="set-ico" style="background:color-mix(in srgb, #4285f4 16%, var(--card));color:color-mix(in srgb, #4285f4 60%, var(--fg))">${icon("calendar", 14)}</span>
-        <span class="set-label">${label}
-          <span class="set-sub">${sub}</span>
+        <span class="set-label">${notReady ? "Not available yet" : label}
+          <span class="set-sub">${notReady
+            ? "Auto-sync needs a one-time server setup (supabase/GOOGLE_CALENDAR_SETUP.md). Meanwhile use “Add to Google Calendar” when editing a task."
+            : sub}</span>
         </span>
         ${actions}
       </div>
@@ -4781,7 +4914,9 @@ function renderSettings() {
         <span class="set-label">Sign out</span>
       </button>
     </div>
-    <p class="hint" style="text-align:center">Data stays on this device — use Export / Import to move it</p>`;
+    <p class="hint" style="text-align:center">${cloudConfigured() && sbUser
+      ? "Your data syncs to your account — Export gives you an extra backup file"
+      : "Data stays on this device — use Export / Import to move it"}</p>`;
 }
 
 const COLORS = ["#6366f1", "#f59e0b", "#10b981", "#ef4444", "#8b5cf6", "#06b6d4", "#ec4899"];
@@ -5098,7 +5233,16 @@ function toggleFormRange() {
   }
 }
 
-function closeForm() { document.getElementById("modal").innerHTML = ""; }
+function closeForm() {
+  const modal = document.getElementById("modal");
+  const ov = modal.querySelector(".overlay:not(.closing)");
+  if (!ov || (window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches)) { modal.innerHTML = ""; return; }
+  // เล่นท่าปิดแล้วค่อยลบ — ถ้าระหว่างนั้นมี sheet ใหม่มาแทน (innerHTML ถูกเขียนทับ) ตัวเก่าหลุดจาก DOM ไปเอง ไม่ต้องลบซ้ำ
+  ov.classList.add("closing");
+  if (ov.contains(document.activeElement)) document.activeElement.blur();   // ไม่ให้โฟกัสค้างอยู่ใน sheet ที่กำลังปิด
+  ov.inert = true;
+  setTimeout(() => { if (ov.isConnected) ov.remove(); }, 170);
+}
 
 function submitForm(e, taskId) {
   e.preventDefault();
@@ -5213,12 +5357,22 @@ if ("serviceWorker" in navigator) {
 
 /* ---------- export / import ---------- */
 function exportData() {
-  const blob = new Blob([JSON.stringify(state, null, 2)], { type: "application/json" });
-  const a = document.createElement("a");
+  const json = JSON.stringify(state, null, 2);
+  const blob = new Blob([json], { type: "application/json" });
   const d = new Date();
   const p = n => String(n).padStart(2, "0");
+  const name = `kodo-backup-${d.getFullYear()}${p(d.getMonth()+1)}${p(d.getDate())}.json`;
+  const ios = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+  if (ios && typeof File === "function" && navigator.canShare) {
+    const file = new File([json], name, { type: "application/json" });
+    if (navigator.canShare({ files: [file] })) {
+      navigator.share({ files: [file], title: "Kodo backup" }).catch(() => {});
+      return;
+    }
+  }
+  const a = document.createElement("a");
   a.href = URL.createObjectURL(blob);
-  a.download = `kodo-backup-${d.getFullYear()}${p(d.getMonth()+1)}${p(d.getDate())}.json`;
+  a.download = name;
   a.click();
   URL.revokeObjectURL(a.href);
 }
@@ -5249,7 +5403,7 @@ function importData(input) {
 /* ---------- init ---------- */
 // Esc ปิด modal + focus trap ภายใน sheet
 document.addEventListener("keydown", (e) => {
-  const overlay = document.querySelector(".overlay");
+  const overlay = document.querySelector(".overlay:not(.closing)");   // sheet ที่กำลังปิดไม่นับ
   if (!overlay) return;
   if (e.key === "Escape") { closeForm(); return; }
   if (e.key === "Tab") {
