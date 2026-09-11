@@ -1271,6 +1271,10 @@ function switchAccount(u) {
   for (const k of Object.keys(state)) delete state[k];
   Object.assign(state, migrate(data || defaultState()));
   localStorage.setItem(stateKey, JSON.stringify(state));
+  try { greadReset(); } catch { /* โมดูล Google Calendar ยังไม่พร้อม (ช่วงเริ่มแอป) — ไม่มีอะไรให้ล้าง */ }   // event/token เป็นของบัญชีเดิม
+  // หน้าต่างที่เปิดค้าง (เช่น รายละเอียด event/งาน) เป็นข้อมูลของบัญชีเดิม -> ปิดทันที ไม่รอ animation
+  const modal = document.getElementById("modal");
+  if (modal) modal.innerHTML = "";
 }
 
 let currentTab = "home";
@@ -2016,6 +2020,12 @@ function commitLogin() {
 }
 function showAuth(view) { authView = view; viewTransition = true; render(); }
 async function doSignOut() {
+  try {
+    const tok = greadToken();
+    if (tok && window.google?.accounts?.oauth2) google.accounts.oauth2.revoke(tok, () => {});
+    sessionStorage.removeItem(greadTokenKey());
+  } catch { /* ignore */ }
+  greadReset();
   if (sb && sbUser) {
     await sb.auth.signOut();
     sbUser = null;
@@ -4598,18 +4608,30 @@ function renderTodayDetail() {
    - "เปิดใช้บนเครื่องนี้" เก็บใน localStorage (ค่าต่อเครื่อง ไม่ sync) */
 const GREAD_CLIENT_ID = "655578671934-vpqfkq6sqi3f6m6m9h5k27efddfp1vcj.apps.googleusercontent.com";
 const GREAD_SCOPE = "https://www.googleapis.com/auth/calendar.readonly";
-const GREAD_ON_KEY = "kodo-gcal-read";
-const GREAD_TOKEN_KEY = "kodo-gcal-token";
+// ผูกกับบัญชี Kodo (stateKey) ไม่ใช่ทั้งเครื่อง — ใช้เบราว์เซอร์ร่วมกันแล้วคนถัดไปจะไม่เห็นปฏิทินของคนก่อน
+const greadOnKey = () => "kodo-gcal-read:" + stateKey;
+const greadTokenKey = () => "kodo-gcal-token:" + stateKey;
+// ค่าจาก V6.1 ที่เคยผูกทั้งเครื่อง -> ลบทิ้ง (ต้องกด Connect ใหม่ในบัญชีตัวเอง)
+try { localStorage.removeItem("kodo-gcal-read"); sessionStorage.removeItem("kodo-gcal-token"); } catch { /* ignore */ }
 const GREAD_TTL = 5 * 60 * 1000;          // ดึงช่วงเดิมซ้ำได้หลัง 5 นาที
 const GREAD_MAX_CALENDARS = 15;
 let greadSeq = 0;   // เลขประจำ event (ใช้ใน onclick แทน id จาก Google ที่อาจมีอักขระพิเศษ)
-const gread = { token: "", exp: 0, client: null, gis: null, cache: new Map(), busy: false, error: "", lastKey: "" };
+const gread = { gen: 0, acct: "", token: "", exp: 0, client: null, gis: null, cache: new Map(), busy: false, error: "", lastKey: "" };
 
-function greadOn() { try { return localStorage.getItem(GREAD_ON_KEY) === "1"; } catch { return false; } }
+function greadOn() { try { return localStorage.getItem(greadOnKey()) === "1"; } catch { return false; } }
+/** ล้างทุกอย่างของ Google Calendar ที่อยู่ในหน่วยความจำ (เปลี่ยนบัญชี / sign out) */
+function greadReset() {
+  gread.token = ""; gread.exp = 0; gread.cache.clear(); gread.error = ""; gread.acct = stateKey;
+  gread.busy = false;
+  gread.gen++;   // งานที่ค้างอยู่ (fetch/popup) ของบัญชีเดิมจะเห็นว่า gen เปลี่ยนแล้วทิ้งผลลัพธ์
+}
+/** งานนี้ยังเป็นของบัญชี/รอบปัจจุบันไหม (ใช้หลัง await ทุกครั้ง) */
+const greadStill = (gen, acct) => gen === gread.gen && acct === stateKey;
 function greadToken() {
+  if (gread.acct !== stateKey) greadReset();
   if (gread.token && Date.now() < gread.exp) return gread.token;
   try {
-    const t = JSON.parse(sessionStorage.getItem(GREAD_TOKEN_KEY) || "null");
+    const t = JSON.parse(sessionStorage.getItem(greadTokenKey()) || "null");
     if (t && typeof t.token === "string" && t.exp > Date.now()) { gread.token = t.token; gread.exp = t.exp; return t.token; }
   } catch { /* ignore */ }
   return "";
@@ -4638,38 +4660,51 @@ function greadAuthorize(firstTime) {
   if (!gread.client) {
     gread.client = google.accounts.oauth2.initTokenClient({ client_id: GREAD_CLIENT_ID, scope: GREAD_SCOPE, callback: () => {} });
   }
+  // ผูกผลลัพธ์กับบัญชีที่กด Connect — ถ้าระหว่างรอ popup มีการเปลี่ยนบัญชี/sign out ให้ทิ้ง (และเพิกถอน) token นั้น
+  const gen = gread.gen, acct = stateKey;
   gread.client.callback = (resp) => {
+    if (!greadStill(gen, acct)) {
+      if (resp && resp.access_token) google.accounts.oauth2.revoke(resp.access_token, () => {});
+      return;
+    }
     if (resp.error || !resp.access_token) { gread.error = resp.error_description || resp.error || "denied"; render(); return; }
     if (!google.accounts.oauth2.hasGrantedAllScopes(resp, GREAD_SCOPE)) {
       gread.error = "Calendar access wasn't granted"; render(); return;
     }
+    gread.acct = acct;
     gread.token = resp.access_token;
     gread.exp = Date.now() + (Number(resp.expires_in || 3600) - 60) * 1000;
-    try { sessionStorage.setItem(GREAD_TOKEN_KEY, JSON.stringify({ token: gread.token, exp: gread.exp })); } catch { /* ignore */ }
-    try { localStorage.setItem(GREAD_ON_KEY, "1"); } catch { /* ignore */ }
+    try { sessionStorage.setItem(greadTokenKey(), JSON.stringify({ token: gread.token, exp: gread.exp })); } catch { /* ignore */ }
+    try { localStorage.setItem(greadOnKey(), "1"); } catch { /* ignore */ }
     gread.error = ""; gread.cache.clear();
     if (firstTime) showToast("📅 Google Calendar connected");
     render();
   };
   gread.client.error_callback = (err) => {
+    if (!greadStill(gen, acct)) return;
     // ผู้ใช้ปิดหน้าต่างเอง = ไม่ใช่ error ที่ต้องโวยวาย
     if (err?.type !== "popup_closed") { gread.error = err?.type === "popup_failed_to_open" ? "Popup blocked — allow popups for this site" : "Couldn't connect to Google"; render(); }
   };
-  gread.client.requestAccessToken({ prompt: firstTime ? "consent" : "" });
+  gread.client.requestAccessToken({ prompt: firstTime ? "select_account consent" : "" });
 }
 function greadConnect() { greadAuthorize(!greadOn()); }
 function greadDisconnect() {
   const tok = greadToken();
   if (tok && window.google?.accounts?.oauth2) google.accounts.oauth2.revoke(tok, () => {});
-  gread.token = ""; gread.exp = 0; gread.cache.clear(); gread.error = "";
-  try { sessionStorage.removeItem(GREAD_TOKEN_KEY); localStorage.removeItem(GREAD_ON_KEY); } catch { /* ignore */ }
+  greadReset();   // ทิ้งงานที่ค้างอยู่ด้วย ไม่ให้ fetch ที่ยังไม่เสร็จเอา event กลับมาใส่หลังตัดการเชื่อม
+  try { sessionStorage.removeItem(greadTokenKey()); localStorage.removeItem(greadOnKey()); } catch { /* ignore */ }
   showToast("Google Calendar disconnected");
   render();
 }
 
-async function greadApi(path) {
-  const r = await fetch("https://www.googleapis.com/calendar/v3" + path, { headers: { Authorization: "Bearer " + greadToken() } });
-  if (r.status === 401) { gread.token = ""; gread.exp = 0; try { sessionStorage.removeItem(GREAD_TOKEN_KEY); } catch {} throw new Error("expired"); }
+/** เรียก Calendar API ด้วย token ที่ระบุ (ของรอบที่เริ่มงาน ไม่ใช่ token ปัจจุบัน — กันใช้ token บัญชีใหม่กับงานของบัญชีเดิม) */
+async function greadApi(path, tok) {
+  const r = await fetch("https://www.googleapis.com/calendar/v3" + path, { headers: { Authorization: "Bearer " + tok } });
+  if (r.status === 401) {
+    // ล้างเฉพาะถ้า token ที่หมดอายุยังเป็นตัวปัจจุบันอยู่
+    if (gread.token === tok) { gread.token = ""; gread.exp = 0; try { sessionStorage.removeItem(greadTokenKey()); } catch {} }
+    throw new Error("expired");
+  }
   if (!r.ok) throw new Error("HTTP " + r.status);
   return r.json();
 }
@@ -4681,16 +4716,19 @@ async function greadEnsure(start, end) {
   const key = dateKey(start) + "_" + dateKey(end);
   const c = gread.cache.get(key);
   if (c && Date.now() - c.at < GREAD_TTL) return;
+  const gen = gread.gen, acct = stateKey, tok = greadToken();
   gread.busy = true;
   try {
-    const list = await greadApi("/users/me/calendarList?minAccessRole=reader&fields=items(id,summary,summaryOverride,backgroundColor,selected,hidden,primary)");
+    const list = await greadApi("/users/me/calendarList?minAccessRole=reader&fields=items(id,summary,summaryOverride,backgroundColor,selected,hidden,primary)", tok);
+    if (!greadStill(gen, acct)) return;
     const cals = (list.items || []).filter(x => x.selected !== false && !x.hidden).slice(0, GREAD_MAX_CALENDARS);
     const q = `timeMin=${encodeURIComponent(start.toISOString())}&timeMax=${encodeURIComponent(end.toISOString())}&singleEvents=true&orderBy=startTime&maxResults=250&fields=nextPageToken,items(id,summary,start,end,location,description,htmlLink,status,attendees(self,responseStatus))`;
     // ตามหน้า (nextPageToken) — ช่วง 6 สัปดาห์ของปฏิทินที่มี event ซ้ำเยอะอาจเกิน 250; จำกัด 4 หน้า/ปฏิทิน
     const fetchCal = async (cal) => {
       const items = []; let token = "";
       for (let page = 0; page < 4; page++) {
-        const r = await greadApi(`/calendars/${encodeURIComponent(cal.id)}/events?${q}${token ? "&pageToken=" + encodeURIComponent(token) : ""}`);
+        if (!greadStill(gen, acct)) break;
+        const r = await greadApi(`/calendars/${encodeURIComponent(cal.id)}/events?${q}${token ? "&pageToken=" + encodeURIComponent(token) : ""}`, tok);
         items.push(...(r.items || []));
         if (!r.nextPageToken) break;
         token = r.nextPageToken;
@@ -4701,6 +4739,7 @@ async function greadEnsure(start, end) {
       if (err.message === "expired") throw err;   // token หมด -> ให้ทั้งรอบจบแบบ paused
       return { cal, items: [] };                   // ปฏิทินเดียวพัง ปฏิทินอื่นยังโชว์
     })));
+    if (!greadStill(gen, acct)) return;   // เปลี่ยนบัญชีระหว่างโหลด -> ทิ้งผลของบัญชีเดิม
     const events = [];
     for (const { cal, items } of results) {
       for (const e of items) {
@@ -4724,11 +4763,11 @@ async function greadEnsure(start, end) {
     gread.cache.set(key, { at: Date.now(), events });
     gread.lastKey = key; gread.error = "";
   } catch (err) {
-    gread.error = err.message === "expired" ? "" : "Couldn't load Google events";
+    if (greadStill(gen, acct)) gread.error = err.message === "expired" ? "" : "Couldn't load Google events";
   } finally {
-    gread.busy = false;
+    if (greadStill(gen, acct)) gread.busy = false;   // รอบใหม่ reset busy ของตัวเองแล้ว
   }
-  if (currentTab === "calendar") render();
+  if (greadStill(gen, acct) && currentTab === "calendar") render();
 }
 /** event แยกตามวัน (event หลายวันอยู่ทุกวันที่ครอบคลุม) ของช่วงที่ cache ไว้ */
 function greadByDay(start, end) {
