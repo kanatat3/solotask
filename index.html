@@ -386,6 +386,16 @@
   .pp-pet svg { width: 100%; height: 100%; overflow: visible; }
   /* สัตว์เลี้ยง 3D: กล่องห่อเต็มพื้นที่เดิมของภาพวาด */
   .pet3d { display: block; position: relative; width: 100%; height: 100%; }
+  .species-grid { display: grid; grid-template-columns: 1fr 1fr; gap: .6rem; margin-bottom: .5rem; }
+  .species-opt {
+    display: flex; flex-direction: column; align-items: center; gap: .15rem; padding: .6rem .5rem .7rem;
+    border-radius: var(--r-md); border: 2px solid var(--border); background: var(--card); color: var(--fg);
+    font: inherit; cursor: pointer; text-align: center;
+  }
+  .species-opt.sel { border-color: var(--primary); background: var(--primary-soft); }
+  .species-pic { width: 5.5rem; height: 5.5rem; display: block; }
+  .species-opt b { font-size: .88rem; }
+  .species-note { font-size: .72rem; color: var(--muted); }
   .pet3d > svg { width: 100%; height: 100%; overflow: visible; }
   .pet3d-img { display: block; width: 100%; height: 100%; object-fit: contain; animation: pet3dBob 3.4s ease-in-out infinite; }
   .pet3d-canvas { display: block; width: 100% !important; height: 100% !important; touch-action: pan-y; cursor: grab; }
@@ -1198,6 +1208,10 @@ function migrate(s) {
         && typeof p.color === "string" && /^#[0-9a-f]{3,8}$/i.test(p.color)) : [];
     }
   });
+  if (s.game) {
+    if (s.game.petName != null) s.game.petName = typeof s.game.petName === "string" ? (s.game.petName.trim().slice(0, 24) || null) : null;
+    if (s.game.petSpecies != null && !["parrotlet", "cockatiel"].includes(s.game.petSpecies)) s.game.petSpecies = null;
+  }
   (s.tasks || []).forEach(t => { if (t.projectId != null && (typeof t.projectId !== "string" || !/^[a-z0-9]{1,40}$/i.test(t.projectId))) t.projectId = null; });
   if (!Array.isArray(s.routines)) s.routines = [];
   if (!s.routineLog || typeof s.routineLog !== "object") s.routineLog = {};
@@ -2128,15 +2142,22 @@ function clearSchedule() {
 
 /* ---------- gamification: check-in + pet + level ---------- */
 const XP_PER_LEVEL = 100;
-const PET_STAGES = [
-  { name: "Egg" },
-  { name: "Hatchling" },
-  { name: "Baby Parrotlet" },
-  { name: "Young Parrotlet" },
-  { name: "Parrotlet" },
-  { name: "Cobalt Parrotlet" },
-  { name: "Sky Parrotlet" },
-];
+const PET_STAGE_COUNT = 7;   // Lv 1..7 (ลูกนกตัวเล็ก -> ร่างโตเต็มที่)
+const PET_SPECIES = {
+  parrotlet: { label: "Parrotlet", note: "นกแก้วจิ๋วสีฟ้า ปีกน้ำเงิน",
+    stages: ["Chick", "Fledgling", "Baby Parrotlet", "Young Parrotlet", "Parrotlet", "Cobalt Parrotlet", "Sky Parrotlet"] },
+  cockatiel: { label: "Cockatiel", note: "หน้าเหลือง แก้มส้ม มีหงอน",
+    stages: ["Chick", "Fledgling", "Baby Tiel", "Young Tiel", "Cockatiel", "Pearl Tiel", "Golden Tiel"] },
+};
+function petSpecies() { return state.game && state.game.petSpecies === "cockatiel" ? "cockatiel" : "parrotlet"; }
+function stageName(stage, species) {
+  return PET_SPECIES[species || petSpecies()].stages[Math.max(1, Math.min(stage, PET_STAGE_COUNT)) - 1];
+}
+/** ชื่อที่ผู้ใช้ตั้งเอง (ตัดช่องว่าง/ยาวไม่เกิน 24 ตัว) หรือ "" */
+function petCustomName() {
+  const n = state.game && typeof state.game.petName === "string" ? state.game.petName.trim() : "";
+  return n.slice(0, 24);
+}
 
 /** ไฟ streak — เปลวทรงหยดน้ำโค้งเรียบ ไล่สีเหลือง→ส้ม→แดง + ไส้ในสว่าง (lit=false = เทาซีด) */
 function flameSvg(size, lit, flick) {
@@ -2168,7 +2189,8 @@ function flameSvg(size, lit, flick) {
 /** สัตว์เลี้ยงแบบ SVG — ค็อกคาเทล 7 ช่วงวัย วาดใหม่ (flat vector + ตาแบบ plush) — อนิเมชันอยู่ใน CSS ผ่าน class p-* */
 /* นก Pacific parrotlet สีฟ้า (มุมหน้าตรง) — ร่าง 3..7 ของสัตว์เลี้ยง
    คืนค่า "inner" ของ <svg viewBox="0 0 100 100"> ; id(k) ต้องสร้าง id ไม่ซ้ำต่ออินสแตนซ์ */
-function parrotletInner(stage, id) {
+function parrotletInner(stage, id, species) {
+  const tiel = species === "cockatiel";
   const f = (v) => String(Math.round(v * 100) / 100);
   const SW = 'stroke-linecap="round" stroke-linejoin="round"';
 
@@ -2186,7 +2208,10 @@ function parrotletInner(stage, id) {
     6: { hx: 50, hy: 33, hr: 18.6, by: 63, brx: 28.5, bry: 25, eyeY: 31.5, eyeDx: 10.2, eyeR: 3.4, beak: 1.15, beakY: 35, pal: "cobalt", tail: 4, wingLen: 1 },
     7: { hx: 50, hy: 33, hr: 18.6, by: 63, brx: 28.5, bry: 25, eyeY: 31.5, eyeDx: 10.2, eyeR: 3.4, beak: 1.15, beakY: 35, pal: "adult", tail: 4, wingLen: 1, halo: true },
   }[stage];
-  const C = PAL[S.pal];
+  const TIEL = stage === 6
+    ? { b0: "#fbf7ea", b1: "#ece3c8", b2: "#d2c49e", edge: "#b5a57a", w0: "#f3ecd4", w1: "#dccf9f", w2: "#bca970", wLine: "#8f7d4a", tail: "#bca970" }
+    : { b0: "#dfe2e8", b1: "#b9bfca", b2: "#8e96a4", edge: "#737b8a", w0: "#c4c9d2", w1: "#9aa1ad", w2: "#6b7280", wLine: "#4b5563", tail: "#6b7280" };
+  const C = tiel ? TIEL : PAL[S.pal];
   const { hx, hy, hr, by, brx, bry } = S;
 
   // โครงหัว+ตัวเป็นก้อนเดียวแบบลูกแพร์ (parrotlet ไม่มีคอให้เห็น)
@@ -2290,6 +2315,8 @@ function parrotletInner(stage, id) {
         <path class="p-belly" d="${bellyD}" fill="url(#${id("bl")})"/>
         ${chest}
         <ellipse cx="${f(hx)}" cy="${f(S.beakY + 2)}" rx="${f(hr * 0.72)}" ry="${f(hr * 0.5)}" fill="url(#${id("fc")})"/>
+        ${tiel ? `<ellipse cx="${f(hx)}" cy="${f(hy - hr * 0.05)}" rx="${f(hr * 0.86)}" ry="${f(hr * 0.8)}" fill="#fde047" opacity=".92"/>
+          <circle cx="${f(hx - hr * 0.62)}" cy="${f(hy + hr * 0.3)}" r="${f(hr * 0.2)}" fill="#f59e0b"/><circle cx="${f(hx + hr * 0.62)}" cy="${f(hy + hr * 0.3)}" r="${f(hr * 0.2)}" fill="#f59e0b"/>` : ""}
         <ellipse cx="${f(hx - hr * 0.42)}" cy="${f(hy - hr * 0.55)}" rx="${f(hr * 0.42)}" ry="${f(hr * 0.22)}" fill="#fff" opacity=".35" transform="rotate(-22 ${f(hx - hr * 0.42)} ${f(hy - hr * 0.55)})"/>
       </g>
       ${fuzz}
@@ -2301,9 +2328,9 @@ function parrotletInner(stage, id) {
 }
 
 /* ---------- สัตว์เลี้ยง 3D (three.js) ----------
-   นก Pacific parrotlet สีฟ้าเป็นโมเดล 3 มิติจริง (ร่าง 3-7) — ร่าง 1-2 ยังเป็นภาพวาด SVG
-   petSvg() ห่อภาพวาดไว้ใน <span class="pet3d" data-stage> ; เมื่อโหลด three.js ได้:
-   - กล่องใหญ่ในหน้าสัตว์เลี้ยง (.pp-pet ที่ไม่ใช่ .small) = วิวสด ลากหมุนได้ + หายใจ/กะพริบตา/กระพือปีก
+   นกเป็นโมเดล 3 มิติจริงทุกร่าง (ลูกนกตัวเล็กใน Lv 1-2 แล้วโตขึ้น) — เลือกได้ 2 สายพันธุ์: parrotlet / cockatiel
+   petSvg() ห่อภาพวาดสำรองไว้ใน <span class="pet3d" data-stage data-species> ; เมื่อโหลด three.js ได้:
+   - กล่อง .pp-pet[data-live] ในหน้าสัตว์เลี้ยง = วิวสด ลาก/กดลูกศรหมุนได้ + หายใจ/กะพริบตา/กระพือปีก
    - จุดเล็กอื่นๆ = ภาพนิ่งที่ render จากโมเดลเดียวกัน (cache ไว้ต่อร่าง/ขนาด)
    โหลดไม่ได้ (ออฟไลน์/ไม่มี WebGL) ก็ยังเห็นภาพวาดเดิม */
 const THREE_SRC = "https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js";
@@ -2315,6 +2342,7 @@ function loadThree() {
     pet3d.loading = new Promise((resolve, reject) => {
       const s = document.createElement("script");
       s.src = THREE_SRC; s.async = true;
+      s.crossOrigin = "anonymous";   // ได้ response แบบ CORS -> service worker เก็บ cache ไว้ใช้ออฟไลน์ได้
       s.onload = () => window.THREE ? resolve(window.THREE) : reject(new Error("no THREE"));
       s.onerror = () => reject(new Error("three.js load failed"));
       document.head.appendChild(s);
@@ -2324,22 +2352,33 @@ function loadThree() {
 }
 
 /* โมเดลนกตามร่าง — หน่วย: สูงราว 2.4 (เท้า y≈-1.05 ถึงหัว y≈1.3), หันหน้าไป +z */
-function buildParrotlet3D(T, stage) {
+function buildParrotlet3D(T, stage, species) {
+  const tiel = species === "cockatiel";
   const lin = (hex) => new T.Color(hex).convertSRGBToLinear();
   const PAL = {
     baby:   { top: "#b6e2f6", low: "#7fbfe3", w0: "#b3d4f2", w1: "#8db3e8", w2: "#6d93d8", tail: "#86b6de" },
     young:  { top: "#93d1ef", low: "#4f9fd2", w0: "#8cc4ec", w1: "#5a8cdc", w2: "#3a62c0", tail: "#3d86c0" },
     adult:  { top: "#86cbee", low: "#3f8fca", w0: "#7fc1ea", w1: "#4a82d6", w2: "#2448a8", tail: "#2c7fb6" },
     cobalt: { top: "#7cc4ec", low: "#337fc0", w0: "#63a8e6", w1: "#2f5fcc", w2: "#16338f", tail: "#1f64a8" },
+    chick:  { top: "#cdeaf8", low: "#a6d3ec", w0: "#c2e0f4", w1: "#a3c9ee", w2: "#8bb3e4", tail: "#a6d3ec" },
+    // cockatiel: ตัวเทา หน้าเหลือง แก้มส้ม (ร่าง 6 เป็นสีขาวครีมแบบ pearl/lutino)
+    tiel:      { top: "#b4bac5", low: "#7c8494", w0: "#c3c8d1", w1: "#8f96a3", w2: "#5d6472", tail: "#646b78", belly: "#cdd1d8", face: "#fde047" },
+    tielPearl: { top: "#f4efdf", low: "#d9cfb2", w0: "#f3ecd4", w1: "#dccf9f", w2: "#b9a66e", tail: "#c2b07a", belly: "#fbf7ea", face: "#fde68a" },
+    tielChick: { top: "#fbf0c2", low: "#efd98b", w0: "#f7e7ab", w1: "#ecd488", w2: "#dcbf66", tail: "#efd98b", belly: "#fff9e3", face: "#fff2b0" },
   };
   const CFG = {
+    1: { pal: "chick", headK: 1.26, bodyK: 0.84, eye: 0.15, tail: 0, wing: 0.55, fuzz: true, s: 0.6 },
+    2: { pal: "chick", headK: 1.18, bodyK: 0.87, eye: 0.14, tail: 0, wing: 0.66, fuzz: true, s: 0.74 },
     3: { pal: "baby", headK: 1.12, bodyK: 0.9, eye: 0.13, tail: 0, wing: 0.78, fuzz: true, s: 0.92 },
     4: { pal: "young", headK: 1.05, bodyK: 0.96, eye: 0.115, tail: 0.7, wing: 0.9, s: 0.96 },
     5: { pal: "adult", headK: 1, bodyK: 1, eye: 0.105, tail: 1, wing: 1, s: 1 },
     6: { pal: "cobalt", headK: 1, bodyK: 1, eye: 0.105, tail: 1, wing: 1, s: 1 },
     7: { pal: "adult", headK: 1, bodyK: 1, eye: 0.105, tail: 1, wing: 1, s: 1, halo: true },
   }[stage];
-  const P = PAL[CFG.pal];
+  const palKey = !tiel ? CFG.pal
+    : stage <= 2 ? "tielChick" : stage === 6 ? "tielPearl" : "tiel";
+  const P = PAL[palKey];
+  const bellyHex = P.belly || "#f7f3e6", faceHex = P.face || "#dcf2f9";
   const root = new T.Group();
   const bird = new T.Group(); root.add(bird);
   const std = (o) => new T.MeshStandardMaterial(Object.assign({ roughness: 0.78, metalness: 0 }, o));
@@ -2353,7 +2392,7 @@ function buildParrotlet3D(T, stage) {
   const bodyGeo = new T.LatheGeometry(spline, 64);
   bodyGeo.scale(1, 1, 0.9);
   const pos = bodyGeo.attributes.position, cols = [];
-  const cTop = lin(P.top), cLow = lin(P.low), cCream = lin("#f7f3e6"), cFace = lin("#dcf2f9"), tmp = new T.Color();
+  const cTop = lin(P.top), cLow = lin(P.low), cCream = lin(bellyHex), cFace = lin(faceHex), tmp = new T.Color();
   const smooth = (a, b, x) => { const t = Math.min(1, Math.max(0, (x - a) / (b - a))); return t * t * (3 - 2 * t); };
   for (let i = 0; i < pos.count; i++) {
     const x = pos.getX(i), y = pos.getY(i), z = pos.getZ(i);
@@ -2362,8 +2401,10 @@ function buildParrotlet3D(T, stage) {
     tmp.copy(cLow).lerp(cTop, smooth(-0.9, 1.1, y));       // ฟ้าไล่จากล่างเข้มขึ้นไปบนอ่อน
     const belly = smooth(0.3, 0.85, front) * smooth(0.5, 0.12, y) * smooth(-1.02, -0.72, y);
     tmp.lerp(cCream, belly * 0.95);
-    const face = smooth(0.45, 0.95, front) * smooth(0.36, 0.58, y) * smooth(0.98, 0.74, y);
-    tmp.lerp(cFace, face * 0.6);
+    const face = tiel
+      ? smooth(-0.15, 0.55, front) * smooth(0.3, 0.52, y)
+      : smooth(0.45, 0.95, front) * smooth(0.36, 0.58, y) * smooth(0.98, 0.74, y);
+    tmp.lerp(cFace, face * (tiel ? 0.95 : 0.6));
     cols.push(tmp.r, tmp.g, tmp.b);
   }
   bodyGeo.setAttribute("color", new T.Float32BufferAttribute(cols, 3));
@@ -2406,6 +2447,13 @@ function buildParrotlet3D(T, stage) {
     prim.position.set(side * 0.1, -0.98 * wl, -0.42);
     prim.rotation.set(-0.72, 0, side * 0.06);
     pivot.add(cover, prim);
+    if (tiel && stage >= 3) {
+      const bar = new T.Mesh(new T.SphereGeometry(1, 20, 14), std({ color: lin("#e9ebee"), roughness: 0.85 }));
+      bar.scale.set(0.06, 0.36 * wl, 0.15);
+      bar.position.set(side * 0.22, -0.4 * wl, -0.01);
+      bar.rotation.set(-0.42, 0, side * 0.1);
+      pivot.add(bar);
+    }
     return pivot;
   };
   const wingL = makeWing(-1), wingR = makeWing(1);
@@ -2415,8 +2463,8 @@ function buildParrotlet3D(T, stage) {
   let tail = null;
   if (CFG.tail) {
     tail = new T.Mesh(new T.SphereGeometry(1, 24, 16), std({ color: lin(P.tail), roughness: 0.6 }));
-    tail.scale.set(0.2, 0.46 * CFG.tail, 0.06);
-    tail.position.set(0, -1.02, -0.62);
+    tail.scale.set(tiel ? 0.16 : 0.2, (tiel ? 0.82 : 0.46) * CFG.tail, 0.06);
+    tail.position.set(0, tiel ? -1.18 : -1.02, tiel ? -0.78 : -0.62);
     tail.rotation.set(-0.75, 0, 0);
     bird.add(tail);
   }
@@ -2439,7 +2487,7 @@ function buildParrotlet3D(T, stage) {
   }
 
   // ---- ปากงุ้มชมพูอ่อน: โดมโคนปาก + ปลายแหลมโค้งลง ----
-  const beakMat = std({ color: lin("#f3c8c3"), roughness: 0.42 });
+  const beakMat = std({ color: lin(tiel && stage >= 3 ? "#9ca3af" : "#f3c8c3"), roughness: 0.42 });
   const beak = new T.Group();
   const bp = onHead(0, -0.22, 1, 0.93);
   beak.position.copy(bp);
@@ -2451,23 +2499,53 @@ function buildParrotlet3D(T, stage) {
   hook.position.set(0, -0.05, 0.08);
   hook.rotation.set(Math.PI - 0.22, 0, 0);           // ชี้ลงและเยื้องไปข้างหน้า (ปากงุ้ม)
   hook.scale.set(1, 1, 0.85);
-  const lower = new T.Mesh(new T.SphereGeometry(0.08 * hk, 16, 12), std({ color: lin("#d99c98"), roughness: 0.5 }));
+  const lower = new T.Mesh(new T.SphereGeometry(0.08 * hk, 16, 12), std({ color: lin(tiel && stage >= 3 ? "#7b828e" : "#d99c98"), roughness: 0.5 }));
   lower.position.set(0, -0.2, -0.02);
   beak.add(dome, hook, lower);
   bird.add(beak);
+
+  // ---- cockatiel: หงอนเหลืองปลายเทา + แก้มส้ม ----
+  if (tiel) {
+    const cheekMat = std({ color: lin(stage <= 2 ? "#fbc58a" : "#f59e0b"), roughness: 0.7 });
+    for (const side of [-1, 1]) {
+      const p = onHead(side * 0.86, -0.2, 0.5, 0.99);
+      const ck = new T.Mesh(new T.SphereGeometry(0.15 * hk, 20, 14), cheekMat);
+      ck.position.copy(p);
+      ck.lookAt(p.clone().add(new T.Vector3(side * 0.86, -0.2, 0.5)));
+      ck.scale.set(1, 1, 0.3);
+      bird.add(ck);
+    }
+    if (stage >= 3) {
+      const crestLen = stage === 3 ? 0.4 : stage === 4 ? 0.55 : 0.72;
+      const cGeo = new T.ConeGeometry(0.06, crestLen, 12, 6);
+      cGeo.translate(0, crestLen / 2, 0);
+      const cp = cGeo.attributes.position, cc = [];
+      const cBase = lin(P.face), cTip = lin(stage === 6 ? "#e8dcb4" : "#8f96a3");
+      for (let i = 0; i < cp.count; i++) { tmp.copy(cBase).lerp(cTip, smooth(0.35, 1, cp.getY(i) / crestLen)); cc.push(tmp.r, tmp.g, tmp.b); }
+      cGeo.setAttribute("color", new T.Float32BufferAttribute(cc, 3));
+      const crestMat = std({ vertexColors: true, roughness: 0.7 });
+      [[-0.07, 0.2, -0.35], [0.0, 0.26, -0.2], [0.07, 0.22, -0.3], [0.0, 0.12, -0.55]].forEach(([x, z, tilt], i) => {
+        const fth = new T.Mesh(cGeo, crestMat);
+        fth.position.set(x, 1.2 * hk, z * hk);
+        fth.rotation.set(tilt, 0, x * 1.4);
+        fth.scale.setScalar(1 - i * 0.08);
+        bird.add(fth);
+      });
+    }
+  }
 
   // ---- ขนฟูบนหัว (ร่างเด็ก) ----
   if (CFG.fuzz) {
     for (const [x, rz] of [[-0.08, 0.5], [0.02, -0.1], [0.1, -0.6]]) {
       const tuft = new T.Mesh(new T.ConeGeometry(0.035, 0.2, 8), std({ color: lin(P.top) }));
-      tuft.position.set(x, 1.36, 0.02);
+      tuft.position.set(x, 1.24 * hk + 0.06, 0.02);
       tuft.rotation.z = rz;
       bird.add(tuft);
     }
   }
 
   // ---- เท้าชมพู: 3 นิ้วหน้า 1 นิ้วหลัง ----
-  const toeMat = std({ color: lin("#eab4b4"), roughness: 0.55 });
+  const toeMat = std({ color: lin(tiel && stage >= 3 ? "#9aa0aa" : "#eab4b4"), roughness: 0.55 });
   for (const side of [-1, 1]) {
     const foot = new T.Group();
     foot.position.set(side * 0.3, -0.98, 0.18);
@@ -2490,7 +2568,8 @@ function buildParrotlet3D(T, stage) {
     return new T.CanvasTexture(c);
   })();
   const shadow = new T.Mesh(new T.PlaneGeometry(2, 1.1), new T.MeshBasicMaterial({ map: shadowTex, transparent: true, depthWrite: false }));
-  shadow.rotation.x = -Math.PI / 2; shadow.position.y = -1.06;
+  shadow.rotation.x = -Math.PI / 2; shadow.position.y = -1.06 * CFG.s;
+  shadow.scale.setScalar(0.35 + CFG.s * 0.65);
   root.add(shadow);
 
   // ---- ร่างสุดท้าย: รัศมีฟ้าด้านหลัง + ประกายลอยรอบตัว ----
@@ -2498,7 +2577,8 @@ function buildParrotlet3D(T, stage) {
   if (CFG.halo) {
     const c = document.createElement("canvas"); c.width = c.height = 256;
     const g = c.getContext("2d"); const gr = g.createRadialGradient(128, 128, 10, 128, 128, 126);
-    gr.addColorStop(0, "rgba(191,231,255,.9)"); gr.addColorStop(.6, "rgba(219,234,254,.35)"); gr.addColorStop(1, "rgba(219,234,254,0)");
+    if (tiel) { gr.addColorStop(0, "rgba(253,230,138,.85)"); gr.addColorStop(.6, "rgba(254,243,199,.35)"); gr.addColorStop(1, "rgba(254,243,199,0)"); }
+    else { gr.addColorStop(0, "rgba(191,231,255,.9)"); gr.addColorStop(.6, "rgba(219,234,254,.35)"); gr.addColorStop(1, "rgba(219,234,254,0)"); }
     g.fillStyle = gr; g.fillRect(0, 0, 256, 256);
     const halo = new T.Sprite(new T.SpriteMaterial({ map: new T.CanvasTexture(c), depthWrite: false, transparent: true }));
     halo.scale.set(3.6, 3.6, 1); halo.position.set(0, 0.2, -1.2);
@@ -2534,13 +2614,13 @@ function petScene(T, model) {
 }
 
 /* ภาพนิ่ง (มุมสามส่วนสี่ ให้เห็นความเป็น 3D) — cache ต่อร่าง+ขนาด */
-function petSnapshot(T, stage, px) {
-  const key = stage + ":" + px;
+function petSnapshot(T, stage, px, species) {
+  const key = species + ":" + stage + ":" + px;
   if (pet3d.cache.has(key)) return pet3d.cache.get(key);
   if (!pet3d.snapR) pet3d.snapR = makePetRenderer(T, { preserveDrawingBuffer: true });
   const r = pet3d.snapR;
   r.setPixelRatio(1); r.setSize(px, px, false);
-  const model = buildParrotlet3D(T, stage);
+  const model = buildParrotlet3D(T, stage, species);
   model.root.rotation.y = 0.42;
   const { scene, cam } = petScene(T, model);
   r.render(scene, cam);
@@ -2551,7 +2631,7 @@ function petSnapshot(T, stage, px) {
 }
 
 /* วิวสด: ใช้ renderer ตัวเดียวย้าย canvas ไปกล่องใหม่ทุกครั้งที่หน้า render ใหม่ */
-function mountLivePet(T, el, stage) {
+function mountLivePet(T, el, stage, species) {
   let L = pet3d.live;
   if (!L) {
     const r = makePetRenderer(T);
@@ -2565,7 +2645,7 @@ function mountLivePet(T, el, stage) {
       e.preventDefault();
       L.vel = e.key === "ArrowLeft" ? -0.06 : 0.06; L.idle = performance.now();
     });
-    L = pet3d.live = { r, canvas, stage: 0, model: null, scene: null, cam: null, rotY: 0.35, vel: 0, drag: null, idle: 0, running: false };
+    L = pet3d.live = { r, canvas, key: "", model: null, scene: null, cam: null, rotY: 0.35, vel: 0, drag: null, idle: 0, running: false };
     canvas.addEventListener("pointerdown", (e) => { L.drag = { x: e.clientX, last: e.clientX }; L.vel = 0; canvas.setPointerCapture(e.pointerId); });
     canvas.addEventListener("pointermove", (e) => {
       if (!L.drag) return;
@@ -2575,11 +2655,11 @@ function mountLivePet(T, el, stage) {
     const end = () => { L.drag = null; L.idle = performance.now(); };
     canvas.addEventListener("pointerup", end); canvas.addEventListener("pointercancel", end);
   }
-  if (L.stage !== stage) {
+  if (L.key !== species + ":" + stage) {
     if (L.scene) L.scene.traverse(o => { if (o.geometry) o.geometry.dispose(); if (o.material) (o.material.map && o.material.map.dispose(), o.material.dispose()); });
-    L.model = buildParrotlet3D(T, stage);
+    L.model = buildParrotlet3D(T, stage, species);
     Object.assign(L, petScene(T, L.model));
-    L.stage = stage;
+    L.key = species + ":" + stage;
   }
   el.innerHTML = "";
   el.appendChild(L.canvas);
@@ -2640,16 +2720,17 @@ function hydratePets() {
   for (const el of els) {
     el.setAttribute("data-h", "1");
     const stage = Number(el.dataset.stage);
+    const species = el.dataset.species === "cockatiel" ? "cockatiel" : "parrotlet";
     try {
       const box = el.closest(".pp-pet[data-live]");
       if (!liveUsed && box) {
-        mountLivePet(T, el, stage);
+        mountLivePet(T, el, stage, species);
         liveUsed = true;
       } else {
         const css = Math.max(24, el.clientWidth || el.parentElement?.clientWidth || 48);
         const px = Math.min(512, Math.ceil((css * dpr) / 32) * 32);
         const img = new Image();
-        img.className = "pet3d-img"; img.alt = ""; img.src = petSnapshot(T, stage, px);
+        img.className = "pet3d-img"; img.alt = ""; img.src = petSnapshot(T, stage, px, species);
         el.innerHTML = ""; el.appendChild(img);
       }
     } catch (err) {
@@ -2661,96 +2742,18 @@ function hydratePets() {
 }
 
 let petSvgSeq = 0;
-function petSvg(level) {
-  // ปัดเป็นจำนวนเต็มและกัน NaN/undefined (เช่น xp เพี้ยนจากไฟล์ import) — ไม่งั้นตกไป stage ที่ไม่มี config แล้ว throw
+function petSvg(level, speciesOverride) {
+  // ปัดเป็นจำนวนเต็มและกัน NaN/undefined (เช่น xp เพี้ยนจากไฟล์ import)
   const n = Math.round(Number(level));
-  const stage = Number.isFinite(n) ? Math.max(1, Math.min(n, PET_STAGES.length)) : 1;
-  // id ต้องไม่ซ้ำข้ามอินสแตนซ์ (หน้าเดียวกันวาดสัตว์เลี้ยงได้หลายตัว) — id ซ้ำผิดสเปกและ url(#) อาจชี้ผิดตัว
+  const stage = Number.isFinite(n) ? Math.max(1, Math.min(n, PET_STAGE_COUNT)) : 1;
+  const species = speciesOverride === "cockatiel" || speciesOverride === "parrotlet" ? speciesOverride : petSpecies();
+  // id ต้องไม่ซ้ำข้ามอินสแตนซ์ (หน้าเดียวกันวาดสัตว์เลี้ยงได้หลายตัว)
   const uid = ++petSvgSeq;
   const id = (k) => `pet${stage}-${k}-${uid}`;
-  const f = (v) => String(Math.round(v * 100) / 100);
-  const EYE = "#2a1d14";
-  const SW = 'stroke-linecap="round" stroke-linejoin="round"';
-
-  /* tapered sickle leaf from base B to tip T; w = thickness, bend = curvature */
-  const leafD = (bx, by, tx, ty, w, bend) => {
-    const mx = (bx + tx) / 2, my = (by + ty) / 2, dx = tx - bx, dy = ty - by;
-    const len = Math.hypot(dx, dy) || 1, nx = -dy / len, ny = dx / len;
-    const cx = mx + nx * bend, cy = my + ny * bend;
-    return `M${f(bx)} ${f(by)} Q${f(cx + nx * w)} ${f(cy + ny * w)} ${f(tx)} ${f(ty)} Q${f(cx - nx * w * 0.35)} ${f(cy - ny * w * 0.35)} ${f(bx)} ${f(by)}z`;
-  };
-  const feather = (bx, by, tx, ty, w, bend, base, shade) =>
-    `<path d="${leafD(bx, by, tx, ty, w + 0.4, bend + 1.3)}" fill="${shade}"/>` +
-    `<path d="${leafD(bx, by, tx, ty, w, bend)}" fill="${base}"/>`;
-
-  /* plush-kawaii glossy eye: big iris, warm lower glint, large upper-left highlight, small lower-right dot */
-  const eye = (cx, cy, r) =>
-    `<g class="p-eye"><ellipse cx="${f(cx)}" cy="${f(cy)}" rx="${f(r)}" ry="${f(r * 1.08)}" fill="${EYE}"/>` +
-    `<ellipse cx="${f(cx)}" cy="${f(cy + r * 0.32)}" rx="${f(r * 0.6)}" ry="${f(r * 0.48)}" fill="#54392a"/>` +
-    `<circle cx="${f(cx - r * 0.33)}" cy="${f(cy - r * 0.36)}" r="${f(r * 0.38)}" fill="#fff"/>` +
-    `<circle cx="${f(cx + r * 0.4)}" cy="${f(cy + r * 0.38)}" r="${f(r * 0.17)}" fill="#fff" opacity=".9"/></g>`;
-  const eyes = (y, dx, r) => eye(50 - dx, y, r) + eye(50 + dx, y, r);
-
-  const cheeks = (y, dx, r, col, op) =>
-    `<circle cx="${f(50 - dx)}" cy="${f(y)}" r="${f(r)}" fill="${col}" opacity="${op}"/><circle cx="${f(50 + dx)}" cy="${f(y)}" r="${f(r)}" fill="${col}" opacity="${op}"/>`;
-
-  /* small friendly hooked beak: soft domed top, orange hook, darker lower band */
-  const beak = (y, s, base, shade) => {
-    const P = (x, yy) => `${f(50 + x * s)} ${f(y + yy * s)}`;
-    return `<path d="M${P(-4.2, 0)} C${P(-4.4, -2.2)} ${P(4.4, -2.2)} ${P(4.2, 0)} C${P(4.2, 4.2)} ${P(1.8, 7)} ${P(0, 8.6)} C${P(-1.8, 7)} ${P(-4.2, 4.2)} ${P(-4.2, 0)}z" fill="${base}"/>` +
-      `<path d="M${P(-3, 3)} C${P(-1.4, 5.4)} ${P(1.4, 5.4)} ${P(3, 3)} C${P(2.4, 6.2)} ${P(0.8, 7.8)} ${P(0, 8.6)} C${P(-0.8, 7.8)} ${P(-2.4, 6.2)} ${P(-3, 3)}z" fill="${shade}"/>` +
-      `<ellipse cx="${f(50 - 1.5 * s)}" cy="${f(y - 0.4 * s)}" rx="${f(1.1 * s)}" ry="${f(0.7 * s)}" fill="#fff" opacity=".5"/>`;
-  };
-
-  /* cel-shaded head circle */
-  const shadedHead = (cx, cy, r, base, shade, hi, edge) =>
-    `<circle cx="${cx}" cy="${cy}" r="${r}" fill="${shade}"${edge ? ` stroke="${edge}" stroke-width="1.4"` : ""}/>` +
-    `<g clip-path="url(#${id("hc")})"><circle cx="${f(cx - 1.6)}" cy="${f(cy - 1.8)}" r="${f(r - 0.6)}" fill="${base}"/>` +
-    `<ellipse cx="${f(cx - 6)}" cy="${f(cy - 8)}" rx="${f(r * 0.32)}" ry="${f(r * 0.2)}" fill="${hi}" opacity=".7"/></g>`;
-  const EGG = "#fbecc8", EGG_SH = "#e2cf9f", EGG_O = "#d3bd90", EGG_HI = "#fff8e6";
-
-  let inner = "";
-  if (stage === 1) {
-    /* Egg: sleeping, rocking, z z */
-    const eggD = "M50 26 C66 26 76 45 76 63 C76 80 64 91 50 91 C36 91 24 80 24 63 C24 45 34 26 50 26z";
-    inner = `<defs><clipPath id="${id("ec")}"><path d="${eggD}"/></clipPath></defs>
-    <g class="p-wobble">
-      <path d="${eggD}" fill="${EGG_SH}"/>
-      <g clip-path="url(#${id("ec")})"><ellipse cx="47" cy="57" rx="26" ry="32" fill="${EGG}"/><ellipse cx="40" cy="42" rx="7" ry="10" fill="${EGG_HI}" transform="rotate(-18 40 42)"/></g>
-      <path d="${eggD}" fill="none" stroke="${EGG_O}" stroke-width="1.6"/>
-      <circle cx="34" cy="50" r="2.6" fill="#f0dcaa"/><circle cx="64" cy="44" r="2.1" fill="#f0dcaa"/><circle cx="60" cy="81" r="2.3" fill="#f0dcaa"/>
-      <path d="M36.5 60.5 q5.5 5 11 0 M52.5 60.5 q5.5 5 11 0" stroke="${EYE}" stroke-width="2.6" fill="none" ${SW}/>
-      ${cheeks(67, 15, 3.6, "#fda4af", ".6")}
-      <text x="68" y="31" font-size="8" font-weight="700" fill="#a5b4fc">z</text><text x="74.5" y="24" font-size="6" font-weight="700" fill="#c7d2fe">z</text>
-    </g>`;
-  } else if (stage === 2) {
-    /* Hatchling: downy chick in a scalloped shell, shell cap on the head */
-    const shellFront = "M26 62 a6.2 4.5 0 0 1 12 0 a6.2 4.5 0 0 1 12 0 a6.2 4.5 0 0 1 12 0 a6.2 4.5 0 0 1 12 0 L74 70 C74 85 62 91 50 91 C38 91 26 85 26 70z";
-    const face = "#cdeaf7", fShade = "#9dcde8", fHi = "#eef9fd";
-    /* shell cap: dome hugging the head's upper-right, soft scalloped rim (local coords, tilted to follow the head curve) */
-    const cap = `M-11 0 C-11 -13.5 11 -13.5 11 0 a3.6 3.6 0 0 1 -5.5 1.2 a3.6 3.6 0 0 1 -5.5 -0.8 a3.6 3.6 0 0 1 -5.5 1 a3.6 3.6 0 0 1 -5.5 -1.4z`;
-    inner = `<defs><clipPath id="${id("hc")}"><circle cx="50" cy="44" r="16"/></clipPath><clipPath id="${id("sc")}"><path d="${shellFront}"/></clipPath></defs>
-    <path d="M27 59 L73 59 L74 70 C74 85 62 91 50 91 C38 91 26 85 26 70z" fill="#cfb88a"/>
-    <g class="p-body">
-      <ellipse class="p-belly" cx="50" cy="66" rx="12" ry="10" fill="${fHi}"/>
-      ${feather(42.5, 32, 36.5, 23.5, 1.7, 1.6, face, fShade)}${feather(46, 30, 43.5, 20.5, 1.8, 1, face, fShade)}
-      ${shadedHead(50, 44, 16, face, fShade, fHi)}
-      <g class="p-wing p-wing-l"><path d="M38 57 C33 57 29 61 28 66 C30 68 34 67 37 64z" fill="${fShade}"/><path d="M38 57 C34 57.5 30.5 60.5 30 65 C32 66 35 65 37 62.5z" fill="${face}"/></g>
-      <g class="p-wing p-wing-r"><g transform="matrix(-1 0 0 1 100 0)"><path d="M38 57 C33 57 29 61 28 66 C30 68 34 67 37 64z" fill="${fShade}"/><path d="M38 57 C34 57.5 30.5 60.5 30 65 C32 66 35 65 37 62.5z" fill="${face}"/></g></g>
-      <g transform="translate(57 31.5) rotate(14)"><path d="${cap}" fill="${EGG}" stroke="${EGG_O}" stroke-width="1.4" stroke-linejoin="round"/><path d="M-7.2 -3 C-7.2 -6 -5.5 -8.5 -3 -9.5" fill="none" stroke="${EGG_HI}" stroke-width="1.6" ${SW} opacity=".9"/><path d="M4.5 -9.5 q2.4 2.4 0.6 6" fill="none" stroke="${EGG_O}" stroke-width="1.2" ${SW}/></g>
-      <g clip-path="url(#${id("hc")})">${cheeks(51, 12.5, 2.2, "#f6c9c9", ".8")}</g>
-      ${eyes(43.5, 6.5, 4.5)}
-      ${beak(48.5, 0.62, "#f2c4c0", "#d99a96")}
-    </g>
-    <path d="${shellFront}" fill="${EGG_SH}"/>
-    <g clip-path="url(#${id("sc")})"><path d="M22 52 L47 52 L48 62 C46 72 42 84 46 96 L22 96z" fill="${EGG}"/><path d="M47 52 L74 52 L74 96 L46 96 C42 84 46 72 48 62z" fill="#f4e2b6"/><ellipse cx="35" cy="73" rx="4" ry="6" fill="${EGG_HI}" opacity=".8"/></g>
-    <path d="${shellFront}" fill="none" stroke="${EGG_O}" stroke-width="1.6" stroke-linejoin="round"/>`;
-  } else {
-    inner = parrotletInner(stage, id);   // ร่าง 3-7: นก Pacific parrotlet สีฟ้า
-  }
-  const svg = `<svg class="pet-svg" viewBox="0 0 100 100" role="img" aria-label="${PET_STAGES[stage - 1].name}">${inner}</svg>`;
-  // ร่าง 3-7 มีโมเดล 3D — hydratePets() จะสลับเป็น 3D เมื่อโหลด three.js ได้ ไม่งั้นก็ใช้ภาพวาดนี้ต่อ
-  return stage >= 3 ? `<span class="pet3d" data-stage="${stage}" role="img" aria-label="${PET_STAGES[stage - 1].name}">${svg}</span>` : svg;
+  // ภาพวาดสำรองระหว่างโหลด/ไม่มี WebGL — hydratePets() จะสลับเป็นโมเดล 3D
+  const small = stage < 3 ? ` style="transform:scale(${stage === 1 ? 0.66 : 0.8});transform-origin:50% 88%"` : "";
+  const svg = `<svg class="pet-svg" viewBox="0 0 100 100" aria-hidden="true"${small}>${parrotletInner(Math.max(3, stage), id, species)}</svg>`;
+  return `<span class="pet3d" data-stage="${stage}" data-species="${species}" role="img" aria-label="${esc(stageName(stage, species))}">${svg}</span>`;
 }
 let justLeveled = false;
 let justCheckedIn = false;
@@ -2761,7 +2764,9 @@ function levelInfo() {
   return { level, prog: xp % XP_PER_LEVEL, need: XP_PER_LEVEL };
 }
 function petForLevel(level) {
-  return PET_STAGES[Math.min(level - 1, PET_STAGES.length - 1)];
+  const stage = Math.max(1, Math.min(level, PET_STAGE_COUNT));
+  const custom = petCustomName();
+  return { name: custom || stageName(stage), stageName: stageName(stage), custom: !!custom };
 }
 function addXp(n) {
   const before = levelInfo().level;
@@ -2926,6 +2931,52 @@ function weightChartSvg(p) {
 }
 
 /* ---- pet profile form ---- */
+let petPickSpecies = null;
+function openPetSettings() {
+  const sp = petSpecies(), lvl = levelInfo().level;
+  petPickSpecies = sp;
+  const opts = Object.entries(PET_SPECIES).map(([key, v]) => `
+    <button type="button" class="species-opt ${key === sp ? "sel" : ""}" data-species="${key}" aria-pressed="${key === sp}" onclick="pickPetSpecies('${key}')">
+      <span class="species-pic">${petSvg(lvl, key)}</span>
+      <b>${v.label}</b><span class="species-note">${v.note}</span>
+    </button>`).join("");
+  document.getElementById("modal").innerHTML = `
+  <div class="overlay" onclick="if(event.target===this)closeForm()">
+    <div class="sheet" role="dialog" aria-label="Your pet">
+      <div class="sheet-head">
+        <h2>Your pet</h2>
+        <button class="x-btn" aria-label="Close" onclick="closeForm()">✕</button>
+      </div>
+      <form onsubmit="savePetSettings(event)">
+        <label class="fld">Name
+          <input id="petNameInput" maxlength="24" value="${esc(petCustomName())}" placeholder="${esc(stageName(lvl, sp))}">
+        </label>
+        <div class="fld" style="margin-bottom:.4rem">Bird</div>
+        <div class="species-grid">${opts}</div>
+        <p class="hint" style="margin:.1rem 0 .75rem">เปลี่ยนสายพันธุ์ได้ตลอด — Lv และ XP เท่าเดิม</p>
+        <button type="submit" class="btn btn-primary">Save</button>
+      </form>
+    </div>
+  </div>`;
+  setTimeout(() => document.getElementById("petNameInput")?.focus(), 50);
+}
+function pickPetSpecies(key) {
+  if (!PET_SPECIES[key]) return;
+  petPickSpecies = key;
+  document.querySelectorAll(".species-opt").forEach(b => {
+    const on = b.dataset.species === key;
+    b.classList.toggle("sel", on); b.setAttribute("aria-pressed", String(on));
+  });
+}
+function savePetSettings(e) {
+  e.preventDefault();
+  const name = document.getElementById("petNameInput").value.trim().slice(0, 24);
+  state.game.petName = name || null;
+  if (petPickSpecies && PET_SPECIES[petPickSpecies]) state.game.petSpecies = petPickSpecies;
+  petPickSpecies = null;
+  save(); closeForm(); render();
+}
+
 function openPetForm(petId) {
   const p = petId ? petById(petId) : null;
   const spOpts = SPECIES.map(s =>
@@ -3280,11 +3331,13 @@ function renderPetPage() {
   // main
   const line = PET_LINES[new Date().getDate() % PET_LINES.length];
   const { prog, need } = levelInfo();
-  const nextStage = PET_STAGES[Math.min(level, PET_STAGES.length - 1)];
+  const nextStageName = stageName(Math.min(level + 1, PET_STAGE_COUNT));
   const streak = currentStreak();
   return `<button class="back-btn" onclick="closePet()">${icon("left", 15)} Home</button>
     <div class="pet-page">
-      <div class="pp-head"><h1>${esc(pet.name)}</h1><span class="pet-level">Lv ${levelInfo().level}</span></div>
+      <div class="pp-head"><h1>${esc(pet.name)}</h1><span class="pet-level">Lv ${levelInfo().level}</span>
+        <button class="edit-btn" aria-label="Rename or change pet" onclick="openPetSettings()">${icon("edit", 15)}</button></div>
+      ${pet.custom ? `<p class="pp-hint" style="margin:-.5rem 0 0">${esc(pet.stageName)}</p>` : ""}
       <div class="pp-bubble">${esc(line)}</div>
       <div class="pp-pet" data-live>${petSvg(level)}
         <span class="pp-spark s1" aria-hidden="true">✦</span><span class="pp-spark s2" aria-hidden="true">✦</span><span class="pp-spark s3" aria-hidden="true">✦</span>
@@ -3306,7 +3359,7 @@ function renderPetPage() {
           <span class="pet-xp-num" style="margin-left:auto">${prog}/${need} XP</span>
         </div>
         <span class="ov-bar"><span style="width:${Math.round(prog / need * 100)}%;background:var(--primary)"></span></span>
-        ${level < PET_STAGES.length ? `<div class="pet-next">Next: ${nextStage.name}</div>` : ""}
+        ${level < PET_STAGE_COUNT ? `<div class="pet-next">Next: ${nextStageName}</div>` : ""}
         ${petWeekHtml()}
       </div>
       <button class="btn btn-primary pp-start" onclick="startFocusSetup()">Start focus session</button>
@@ -3815,8 +3868,8 @@ function heroActionsHtml() {
   const pet = petForLevel(level);
   const streak = currentStreak();
   return `<div class="hero-actions">
-    <button class="hero-streak" onclick="openPet()" aria-label="${streak} day streak — open ${pet.name}">${flameSvg(16, streak > 0, streak > 0)} ${streak}</button>
-    <button class="hero-pet ${justCheckedIn || justLeveled ? "bounce" : ""}" onclick="openPet()" aria-label="Open ${pet.name} · Lv ${level}">${petSvg(level)}</button>
+    <button class="hero-streak" onclick="openPet()" aria-label="${streak} day streak — open ${esc(pet.name)}">${flameSvg(16, streak > 0, streak > 0)} ${streak}</button>
+    <button class="hero-pet ${justCheckedIn || justLeveled ? "bounce" : ""}" onclick="openPet()" aria-label="Open ${esc(pet.name)} · Lv ${level}">${petSvg(level)}</button>
   </div>`;
 }
 
