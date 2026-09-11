@@ -1416,6 +1416,7 @@ function migrate(s) {
 }
 function save() {
   localStorage.setItem(stateKey, JSON.stringify(state));
+  scheduleNativeNotifications();
   scheduleCloudSave(); // sync ขึ้น cloud ด้วยถ้าเชื่อมอยู่ (debounced)
 }
 function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 8); }
@@ -1471,6 +1472,106 @@ function nextDueDate(due, recurrence) {
 }
 
 const RECURRENCE_LABELS = { none: "No repeat", daily: "Daily", weekly: "Weekly", monthly: "Monthly" };
+/* ---------- แอป iOS (Capacitor) ----------
+   ไฟล์เดียวกันนี้รันได้ทั้งบนเว็บและในแอป iOS — ในแอป build script ใส่ native.js (ปลั๊กอิน App/Browser/LocalNotifications)
+   ไว้ก่อน แล้ว window.KodoNative จะมีค่า; บนเว็บ IS_NATIVE เป็น false และโค้ดส่วนนี้ไม่ทำอะไร */
+const IS_NATIVE = !!(window.KodoNative && window.Capacitor && typeof window.Capacitor.isNativePlatform === "function" && window.Capacitor.isNativePlatform());
+const NATIVE_AUTH_REDIRECT = "kodo://auth-callback";
+const NATIVE_AUTH_PENDING_KEY = "kodo-native-auth-pending";   // เวลาเริ่ม login — รับลิงก์กลับเฉพาะตอนเราเป็นคนเปิดเอง
+let nativeNotifPerm = "prompt";                                // granted | denied | prompt (สถานะสิทธิ์แจ้งเตือนของ iOS)
+
+/** Google login ในแอป: เปิดหน้า Google ใน Safari (Google ไม่อนุญาตให้ login ใน webview) แล้วรับ session ผ่านลิงก์ kodo:// */
+async function nativeGoogleLogin() {
+  const { data, error } = await sb.auth.signInWithOAuth({
+    provider: "google",
+    options: { redirectTo: NATIVE_AUTH_REDIRECT, skipBrowserRedirect: true },
+  });
+  if (error || !data?.url) { showToast("❌ Google sign-in failed: " + (error?.message || "no URL")); return; }
+  localStorage.setItem(NATIVE_AUTH_PENDING_KEY, String(Date.now()));
+  await window.KodoNative.Browser.open({ url: data.url, presentationStyle: "popover" });
+}
+function isNativeAuthUrl(url) {
+  const u = String(url);
+  return u === NATIVE_AUTH_REDIRECT || u.startsWith(NATIVE_AUTH_REDIRECT + "?") || u.startsWith(NATIVE_AUTH_REDIRECT + "#");
+}
+async function handleNativeAuthUrl(url) {
+  if (!isNativeAuthUrl(url)) return;
+  try { await window.KodoNative.Browser.close(); } catch { /* ปิดไปแล้ว */ }
+  // กันลิงก์ kodo:// ที่คนอื่นส่งมาพา login เข้าบัญชีของเขา: รับเฉพาะภายใน 10 นาทีหลังเรากด Google เอง
+  const started = Number(localStorage.getItem(NATIVE_AUTH_PENDING_KEY) || 0);
+  localStorage.removeItem(NATIVE_AUTH_PENDING_KEY);
+  if (!started || Date.now() - started > 10 * 60 * 1000) { showToast("⚠️ Ignored an unexpected sign-in link"); return; }
+  if (!sb) await initCloudDone;
+  if (!sb) { showToast("⚠️ Cloud unreachable — try again"); return; }
+  const u = new URL(url.replace(NATIVE_AUTH_REDIRECT, "https://x.invalid/cb"));
+  const params = new URLSearchParams(u.hash.replace(/^#/, ""));
+  const err = u.searchParams.get("error_description") || params.get("error_description");
+  if (err) { showToast("❌ " + err); return; }
+  // รับเฉพาะ PKCE (?code=) — ไม่รับ token ที่แนบมากับลิงก์ตรงๆ (ใครก็สร้างลิงก์แบบนั้นได้)
+  const code = u.searchParams.get("code");
+  if (!code) { showToast("❌ Sign-in didn't return a code — try again"); return; }
+  const result = await sb.auth.exchangeCodeForSession(code);
+  if (result.error) { showToast("❌ " + result.error.message); return; }
+  if (result.data?.session && (!sbUser || sbUser.id !== result.data.session.user.id)) await onCloudSignedIn(result.data.session);
+}
+
+/** ตั้งเวลาแจ้งเตือนกับ iOS (ดังแม้ปิดแอป): งานที่ตั้ง reminder, checklist ที่ตั้งเวลา, สรุปงานพรุ่งนี้ 18:00
+    เรียกใหม่ทุกครั้งที่ข้อมูลเปลี่ยน (หน่วงไว้) — ล้างของเดิมแล้วตั้งชุดใหม่ (iOS จำได้สูงสุด 64 รายการ) */
+let nativeNotifTimer = null;
+function scheduleNativeNotifications() {
+  if (!IS_NATIVE) return;
+  clearTimeout(nativeNotifTimer);
+  nativeNotifTimer = setTimeout(runNativeNotifications, 1200);
+}
+async function runNativeNotifications(askPermission) {
+  if (!IS_NATIVE || !user) return;
+  const LN = window.KodoNative.LocalNotifications;
+  try {
+    let perm = (await LN.checkPermissions()).display;
+    const list = [];      // ลำดับความสำคัญ: checklist ที่ตั้งเวลา -> สรุปพรุ่งนี้ -> งาน (ใกล้สุดก่อน) จนครบ 64
+    const taskList = [];
+    let nextId = 1;
+    if (!state.meta.notifOff) {
+      const now = Date.now(), horizon = now + 60 * 86400000;
+      for (const t of state.tasks) {
+        if (t.status !== "open" || !t.dueAt || t.reminderMin == null) continue;
+        const at = new Date(t.dueAt).getTime() - t.reminderMin * 60000;
+        if (at > now + 5000 && at < horizon) {
+          taskList.push({ title: "⏰ " + t.title, body: "Due " + fmtDateTime(new Date(t.dueAt)), schedule: { at: new Date(at), allowWhileIdle: true } });
+        }
+      }
+      taskList.sort((a, b) => a.schedule.at - b.schedule.at);
+      for (const cl of state.checklists || []) {
+        if (!cl.reminder || !Array.isArray(cl.reminder.days) || !/^\d{2}:\d{2}$/.test(cl.reminder.time || "")) continue;
+        const [hh, mm] = cl.reminder.time.split(":").map(Number);
+        for (const d of cl.reminder.days.slice(0, 7)) {
+          list.push({ title: "✅ " + cl.title, body: "Time to run through your checklist",
+            schedule: { on: { weekday: d + 1, hour: hh, minute: mm }, repeats: true, allowWhileIdle: true } });   // iOS: 1 = Sunday
+        }
+      }
+      // สรุปงานพรุ่งนี้ 18:00 (ถ้ายังไม่เลย 18:00 วันนี้)
+      const dg = new Date(); dg.setHours(18, 0, 0, 0);
+      if (dg.getTime() > now) {
+        const tmStart = startOfDay(new Date()); tmStart.setDate(tmStart.getDate() + 1);
+        const tmEnd = new Date(tmStart); tmEnd.setDate(tmEnd.getDate() + 1);
+        const tomorrow = state.tasks.filter(t => t.status === "open" && t.dueAt && new Date(t.dueAt) >= tmStart && new Date(t.dueAt) < tmEnd);
+        if (tomorrow.length) list.push({ title: `📋 Tomorrow: ${tomorrow.length} task${tomorrow.length > 1 ? "s" : ""}`,
+          body: tomorrow.slice(0, 3).map(t => t.title).join(", ") + (tomorrow.length > 3 ? ` +${tomorrow.length - 3} more` : ""), schedule: { at: dg, allowWhileIdle: true } });
+      }
+    }
+    list.splice(64);
+    list.push(...taskList.slice(0, 64 - list.length));
+    list.forEach(n => { n.id = nextId++; });
+    if (list.length && perm !== "granted" && (askPermission || perm === "prompt")) perm = (await LN.requestPermissions()).display;
+    nativeNotifPerm = perm;
+    const pending = await LN.getPending();
+    if (pending.notifications.length) await LN.cancel({ notifications: pending.notifications.map(n => ({ id: n.id })) });
+    if (perm === "granted" && list.length) await LN.schedule({ notifications: list });
+  } catch (e) {
+    console.warn("native notifications:", e);
+  }
+}
+
 const REMINDER_OPTIONS = [
   ["", "No reminder"], ["0", "At due time"], ["15", "15 min before"],
   ["30", "30 min before"], ["60", "1 hour before"], ["1440", "1 day before"],
@@ -1500,6 +1601,8 @@ let syncState = "synced"; // synced | pending | error
 
 function cloudConfigured() { return !!(sbCfg && !sbCfg.off && sbCfg.url && sbCfg.key); }
 
+let initCloudResolve;
+const initCloudDone = new Promise(r => { initCloudResolve = r; });
 async function initCloud() {
   if (!cloudConfigured()) return;
   cloudStatus = "connecting";
@@ -1513,7 +1616,7 @@ async function initCloud() {
         document.head.appendChild(s);
       });
     }
-    sb = window.supabase.createClient(sbCfg.url, sbCfg.key);
+    sb = window.supabase.createClient(sbCfg.url, sbCfg.key, IS_NATIVE ? { auth: { flowType: "pkce" } } : undefined);
     cloudStatus = "ready";
     const { data } = await sb.auth.getSession();
     sbToken = data.session?.access_token || null;
@@ -1532,6 +1635,7 @@ async function initCloud() {
     cloudStatus = "error";
     showToast("⚠️ Cloud unavailable — working offline");
   }
+  initCloudResolve();
   render();
 }
 
@@ -1578,6 +1682,7 @@ async function pullCloud() {
   } finally {
     cloudPulling = false;
   }
+  scheduleNativeNotifications();   // แอป iOS: ข้อมูลอาจเปลี่ยนจากเครื่องอื่น -> ตั้งแจ้งเตือนใหม่
   migrateAgentCategories();   // ย้ายงาน AI ที่ import ไว้ด้วยเวอร์ชันเก่าเข้าหมวดตามโปรเจกต์ (ทำครั้งเดียว)
   mergeProjectAliases();      // หมวด "AI · Solo Task" / "AI · Task_Studio" -> "AI · Kodo"
   absorbOverviewTasks();      // แถวภาพรวมที่แอปเวอร์ชันเก่าเผลอ import เป็น task -> ดูดกลับเป็นภาพรวม
@@ -1966,6 +2071,7 @@ async function doLogin(provider) {
   // ---- โหมด cloud: บัญชีจริงผ่าน Supabase ----
   if (cloudConfigured() && sb) {
     if (provider === "google") {
+      if (IS_NATIVE) return nativeGoogleLogin();
       if (location.protocol === "file:") {
         showToast("⚠️ Google sign-in needs the app hosted on a URL (not file://) — use email for now");
         return;
@@ -2277,6 +2383,16 @@ function toggleCategory(id) {
   save(); render();
 }
 function toggleNotifications() {
+  if (IS_NATIVE) {
+    if (nativeNotifPerm === "denied") { showToast("🔕 Notifications are off for Kodo — turn them on in iPhone Settings › Kodo › Notifications"); return; }
+    state.meta.notifOff = nativeNotifPerm === "granted" ? !state.meta.notifOff : false;
+    save();
+    runNativeNotifications(true).then(() => {
+      showToast(state.meta.notifOff ? "🔕 Reminders off" : nativeNotifPerm === "granted" ? "🔔 Reminders on — they ring even when Kodo is closed" : "🔕 Permission not granted");
+      render();
+    });
+    return;
+  }
   if (!("Notification" in window)) {
     const ios = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
     showToast(ios ? "📱 iPhone/iPad: Share → Add to Home Screen, then open Kodo from its icon to allow notifications"
@@ -4821,7 +4937,10 @@ function greadAuthorize(firstTime) {
   };
   gread.client.requestAccessToken({ prompt: firstTime ? "select_account consent" : "" });
 }
-function greadConnect() { greadAuthorize(!greadOn()); }
+function greadConnect() {
+  if (IS_NATIVE) { showToast("📅 Connect Google Calendar from the web version (kodotodolist.netlify.app) for now"); return; }
+  greadAuthorize(!greadOn());
+}
 function greadDisconnect() {
   const tok = greadToken();
   if (tok && window.google?.accounts?.oauth2) google.accounts.oauth2.revoke(tok, () => {});
@@ -5156,7 +5275,7 @@ function renderAll() {
 
 function renderSettings() {
   const initial = (user?.name || "?").charAt(0).toUpperCase();
-  const notifOn = ("Notification" in window) && Notification.permission === "granted";
+  const notifOn = IS_NATIVE ? nativeNotifPerm === "granted" : ("Notification" in window) && Notification.permission === "granted";
 
   const routineRows = state.routines.map(r => `
     <div class="set-row static">
@@ -5198,7 +5317,7 @@ function renderSettings() {
       <div class="set-row static">
         <span class="set-ico" style="background:color-mix(in srgb, #f59e0b 16%, var(--card));color:color-mix(in srgb, #f59e0b 55%, var(--fg))">${icon("bell", 14)}</span>
         <span class="set-label">Notifications
-          <span class="set-sub">Task reminders + tomorrow digest, while this page is open</span>
+          <span class="set-sub">${IS_NATIVE ? "Task reminders, checklists + tomorrow digest — even when Kodo is closed" : "Task reminders + tomorrow digest, while this page is open"}</span>
         </span>
         <button class="switch" role="switch" aria-checked="${notifOn && !state.meta.notifOff}"
           aria-label="Toggle notifications" onclick="toggleNotifications()"></button>
@@ -5711,10 +5830,13 @@ function enableNotify() {
   Notification.requestPermission().then(() => render());
 }
 function checkReminders() {
-  if (!("Notification" in window) || Notification.permission !== "granted" || state.meta.notifOff) return;
+  const webNotify = ("Notification" in window) && window.Notification.permission === "granted" && !state.meta.notifOff;
+  if (!webNotify && !IS_NATIVE) return;
+  // ในแอป iOS แจ้งเตือนถูกตั้งกับระบบไว้แล้ว (runNativeNotifications) -> ที่นี่ทำแค่สถานะ (notifiedAt / รีเซ็ต checklist)
+  const Notification = webNotify ? window.Notification : function () {};
   const now = Date.now();
   let fired = false;
-  for (const t of state.tasks) {
+  for (const t of (IS_NATIVE ? [] : state.tasks)) {
     if (t.status !== "open" || !t.dueAt || t.reminderMin == null || t.notifiedAt) continue;
     const remindAt = new Date(t.dueAt).getTime() - t.reminderMin * 60000;
     if (remindAt <= now) {
@@ -5744,7 +5866,7 @@ function checkReminders() {
   }
   // สรุปงานพรุ่งนี้ทุกเย็น (หลัง 18:00 วันละครั้ง) — เตรียมตัวล่วงหน้า
   const todayKey = dateKey(new Date());
-  if (new Date().getHours() >= 18 && state.meta.lastDigest !== todayKey) {
+  if (!IS_NATIVE && new Date().getHours() >= 18 && state.meta.lastDigest !== todayKey) {
     const tmStart = startOfDay(new Date()); tmStart.setDate(tmStart.getDate() + 1);
     const tmEnd = new Date(tmStart); tmEnd.setDate(tmEnd.getDate() + 1);
     const tomorrow = state.tasks
@@ -5764,10 +5886,15 @@ function checkReminders() {
   if (fired) save();
 }
 setInterval(checkReminders, 30000);
+if (IS_NATIVE) {
+  window.KodoNative.App.addListener("appUrlOpen", ({ url }) => { handleNativeAuthUrl(url); });
+  window.KodoNative.App.addListener("appStateChange", ({ isActive }) => { if (isActive) scheduleNativeNotifications(); });
+  scheduleNativeNotifications();
+}
 setInterval(applyTheme, 60000);
 
 /* ---------- PWA install (installed home-screen app = notifications work on iOS, more reliable on Android) ---------- */
-if ("serviceWorker" in navigator) {
+if ("serviceWorker" in navigator && !IS_NATIVE) {
   window.addEventListener("load", () => {
     navigator.serviceWorker.register("sw.js").catch(() => {});
   });
@@ -5775,6 +5902,10 @@ if ("serviceWorker" in navigator) {
 
 /* ---------- export / import ---------- */
 function exportData() {
+  if (IS_NATIVE && !(navigator.canShare && typeof File === "function")) {
+    showToast("💾 Export from the web version — your data is synced there (and backed up daily on your PC)");
+    return;
+  }
   const json = JSON.stringify(state, null, 2);
   const blob = new Blob([json], { type: "application/json" });
   const d = new Date();
