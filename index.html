@@ -885,7 +885,12 @@
   .icon-opt.sel { border-color: var(--primary); color: var(--primary); background: var(--primary-soft); }
   .link-primary { background: none; border: none; color: var(--primary); font-weight: 600; font-size: .875rem; cursor: pointer; font-family: inherit; }
   .hint { font-size: .75rem; color: var(--muted); margin-top: .5rem; }
-  .filter-sel { width: auto; margin: 0; padding: .4rem .5rem; font-size: .8rem; }
+  .filter-sel { width: auto; max-width: 55%; min-width: 0; text-overflow: ellipsis; margin: 0; padding: .4rem .5rem; font-size: .8rem; }
+  /* ข้อความยาวที่ไม่มีช่องว่าง (ชื่อโปรเจกต์ AI / ชื่อสัตว์เลี้ยง / ชื่อหมวด) ต้องตัดบรรทัด ไม่ดันหน้าให้กว้างเกินจอมือถือ */
+  h1, h2, h3 { overflow-wrap: anywhere; }
+  .page-head { gap: .5rem; }
+  .page-head > *, .cat-head > *, .petr-head > * { min-width: 0; }
+  .head-actions, .edit-btn { flex-shrink: 0; }
 
   /* calendar */
   .cal-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: .75rem; }
@@ -1324,7 +1329,7 @@ function switchAccount(u) {
   }
   for (const k of Object.keys(state)) delete state[k];
   Object.assign(state, migrate(data || defaultState()));
-  localStorage.setItem(stateKey, JSON.stringify(state));
+  persistLocal();
   try { greadReset(); } catch { /* โมดูล Google Calendar ยังไม่พร้อม (ช่วงเริ่มแอป) — ไม่มีอะไรให้ล้าง */ }   // event/token เป็นของบัญชีเดิม
   // หน้าต่างที่เปิดค้าง (เช่น รายละเอียด event/งาน) เป็นข้อมูลของบัญชีเดิม -> ปิดทันที ไม่รอ animation
   const modal = document.getElementById("modal");
@@ -1364,13 +1369,96 @@ function load() {
       raw = localStorage.getItem(KEY);
       if (raw && _storedUser) localStorage.setItem(KEY + ":claimed", "1");
     }
-    if (raw) return JSON.parse(raw);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) return parsed;
+    }
   } catch (e) { /* corrupted data — start fresh */ }
   return defaultState();
 }
 // migration จากเวอร์ชันก่อน
+// migrate() รันตั้งแต่บรรทัดแรกของสคริปต์ (ก่อน const อื่นๆ ถูกประกาศ) จึงใช้ค่าคงที่ภายในฟังก์ชันเท่านั้น
 function migrate(s) {
+  const SAFE_ID = /^[A-Za-z0-9_-]{1,64}$/;          // id ถูกใส่ใน onclick="..." -> ต้องไม่มีอักขระพิเศษ
+  const SAFE_COLOR = /^#[0-9a-f]{3,8}$/i;            // สีถูกใส่ใน style="..." -> ต้องเป็น hex เท่านั้น
+  if (!s || typeof s !== "object" || Array.isArray(s)) s = defaultState();
+  s.categories = (Array.isArray(s.categories) ? s.categories : []).filter(c =>
+    c && typeof c === "object" && typeof c.id === "string" && SAFE_ID.test(c.id) && typeof c.name === "string" && c.name.trim());
+  s.tasks = (Array.isArray(s.tasks) ? s.tasks : []).filter(t =>
+    t && typeof t === "object" && typeof t.id === "string" && SAFE_ID.test(t.id));
+  // ข้อมูลมาได้จาก localStorage / cloud / ไฟล์ backup ที่ import — ค่าที่ถูกใส่ลง HTML ตรงๆ (id ใน onclick, วันที่/เวลาใน value="...",
+  // ตัวเลข) ต้องอยู่ในรูปแบบที่แอปสร้างเองเท่านั้น ไม่งั้นไฟล์ที่ถูกแต่งมารัน script ในหน้าเราได้ (ขโมย session)
+  const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
+  const HHMM_RE = /^([01]\d|2[0-3]):[0-5]\d$/;
+  const isObj = (v) => !!v && typeof v === "object" && !Array.isArray(v);
+  const text = (v) => typeof v === "string" ? v : v == null ? "" : String(v);
+  const iso = (v) => typeof v === "string" && !isNaN(new Date(v)) ? v : null;
+  const safeId = (v) => typeof v === "string" && SAFE_ID.test(v);
+  const dayList = (v) => Array.isArray(v) ? [...new Set(v.filter(d => Number.isInteger(d) && d >= 0 && d <= 6))] : [];
+  const posNum = (v) => typeof v === "number" && Number.isFinite(v) && v >= 0 ? v : null;
+  const now0 = new Date();
+  const TODAY = now0.getFullYear() + "-" + String(now0.getMonth() + 1).padStart(2, "0") + "-" + String(now0.getDate()).padStart(2, "0");
+  s.tasks.forEach(t => {
+    if (typeof t.title !== "string") t.title = t.title == null ? "Untitled" : String(t.title);
+    if (t.status !== "open" && t.status !== "done") t.status = "open";
+    if (!["none", "daily", "weekly", "monthly"].includes(t.recurrence)) t.recurrence = "none";
+    t.note = text(t.note);
+    if (t.categoryId != null && !safeId(t.categoryId)) t.categoryId = null;
+    t.dueAt = iso(t.dueAt);
+    if (t.doneAt !== undefined) t.doneAt = iso(t.doneAt);
+    if (t.createdAt !== undefined) t.createdAt = iso(t.createdAt);
+    if (t.notifiedAt !== undefined) t.notifiedAt = iso(t.notifiedAt);
+    if (t.endDate != null && !(typeof t.endDate === "string" && DATE_RE.test(t.endDate))) t.endDate = null;
+    if (t.reminderMin !== undefined) t.reminderMin = typeof t.reminderMin === "number" && Number.isFinite(t.reminderMin) ? t.reminderMin : null;
+    if (t.recurDay != null && !(Number.isInteger(t.recurDay) && t.recurDay >= 1 && t.recurDay <= 31)) t.recurDay = null;
+    if (t.nextId != null && !safeId(t.nextId)) t.nextId = null;
+    if (t.agentLogId != null && typeof t.agentLogId !== "string") delete t.agentLogId;
+    if (t.hevyId != null && typeof t.hevyId !== "string") delete t.hevyId;
+  });
   s.categories.forEach(c => {
+    if (typeof c.icon !== "string" || !/^[a-z0-9-]{1,30}$/.test(c.icon)) c.icon = "";
+    if (c.note !== undefined) c.note = text(c.note);
+    if (c.noteAt !== undefined) c.noteAt = iso(c.noteAt);
+    if (c.overview !== undefined) c.overview = Array.isArray(c.overview) ? c.overview.filter(x => typeof x === "string") : [];
+    if (c.overviewAt !== undefined) c.overviewAt = iso(c.overviewAt);
+    if (c.schedule != null) {
+      const sc = c.schedule, days = isObj(sc) ? dayList(sc.days) : [];
+      c.schedule = days.length && HHMM_RE.test(sc.start) && HHMM_RE.test(sc.end) && sc.start !== sc.end ? { days, start: sc.start, end: sc.end } : null;
+    }
+  });
+  s.routines = (Array.isArray(s.routines) ? s.routines : []).filter(r => isObj(r) && safeId(r.id));
+  s.routines.forEach(r => { r.title = text(r.title); if (r.categoryId != null && !safeId(r.categoryId)) r.categoryId = null; });
+  if (!isObj(s.routineLog)) s.routineLog = {};
+  for (const k of Object.keys(s.routineLog)) if (!DATE_RE.test(k) || !isObj(s.routineLog[k])) delete s.routineLog[k];
+  s.checklists = (Array.isArray(s.checklists) ? s.checklists : []).filter(cl => isObj(cl) && safeId(cl.id));
+  s.checklists.forEach(cl => {
+    cl.title = text(cl.title);
+    cl.items = (Array.isArray(cl.items) ? cl.items : []).filter(i => isObj(i) && safeId(i.id));
+    cl.items.forEach(i => { i.text = text(i.text); i.checked = i.checked === true; });
+    const rm = cl.reminder, days = isObj(rm) ? dayList(rm.days) : [];
+    cl.reminder = days.length && HHMM_RE.test(rm.time) ? { days, time: rm.time } : null;
+    if (cl.lastNotified != null && !(typeof cl.lastNotified === "string" && DATE_RE.test(cl.lastNotified))) delete cl.lastNotified;
+  });
+  s.journal = (Array.isArray(s.journal) ? s.journal : []).filter(j => isObj(j) && safeId(j.id) && typeof j.date === "string" && DATE_RE.test(j.date));
+  s.journal.forEach(j => { j.text = text(j.text); if (j.createdAt !== undefined) j.createdAt = iso(j.createdAt); });
+  s.pets = (Array.isArray(s.pets) ? s.pets : []).filter(p => isObj(p) && safeId(p.id));
+  s.pets.forEach(p => {
+    p.name = text(p.name).trim() || "Pet";
+    if (!["cockatiel", "budgie", "lovebird", "conure", "parrot", "bird", "dog", "cat", "other"].includes(p.species)) p.species = "other";
+    if (!["unknown", "male", "female"].includes(p.sex)) p.sex = "unknown";
+    if (p.hatchDate != null && !(typeof p.hatchDate === "string" && DATE_RE.test(p.hatchDate))) p.hatchDate = null;
+    p.notes = text(p.notes);
+    p.records = (Array.isArray(p.records) ? p.records : []).filter(r => isObj(r) && safeId(r.id));
+    p.records.forEach(r => {
+      if (!["checkup", "blood", "treatment", "med", "weight", "note"].includes(r.type)) r.type = "note";
+      if (!(typeof r.date === "string" && DATE_RE.test(r.date))) r.date = TODAY;
+      r.title = text(r.title); r.details = text(r.details);
+      r.grams = posNum(r.grams) || null;
+      r.values = (Array.isArray(r.values) ? r.values : []).filter(isObj).map(x => ({ k: text(x.k), v: text(x.v) }));
+    });
+  });
+  s.categories.forEach(c => {
+    if (!SAFE_COLOR.test(String(c.color || ""))) c.color = "#94a3b8";
     if (c.name === "Exercise") { c.name = "Workout"; c.icon = "dumbbell"; }
     if (!c.icon) c.icon = guessIcon(c.name);
     if (c.schedule === undefined) c.schedule = null; // {days:[0-6], start:"HH:MM", end:"HH:MM"}
@@ -1395,11 +1483,12 @@ function migrate(s) {
   // checklists: [{id, title, items:[{id, text, checked}], reminder: {days:[0-6], time:"HH:MM"}|null}]
   if (!Array.isArray(s.checklists)) s.checklists = [];
   // gamification: check-in รายวัน + XP + level ของสัตว์เลี้ยง
-  if (!s.game || typeof s.game !== "object") s.game = { checkins: {}, best: 0, xp: 0 };
-  if (!s.game.checkins) s.game.checkins = {};
-  if (typeof s.game.xp !== "number") s.game.xp = 0;
-  if (typeof s.game.best !== "number") s.game.best = 0;
-  if (!s.game.focus || typeof s.game.focus !== "object") s.game.focus = {}; // dateKey -> นาทีที่โฟกัสสำเร็จ
+  if (!isObj(s.game)) s.game = { checkins: {}, best: 0, xp: 0 };
+  if (!isObj(s.game.checkins)) s.game.checkins = {};
+  s.game.xp = posNum(s.game.xp) ?? 0;
+  s.game.best = posNum(s.game.best) ?? 0;
+  if (!isObj(s.game.focus)) s.game.focus = {}; // dateKey -> นาทีที่โฟกัสสำเร็จ
+  for (const k of Object.keys(s.game.focus)) if (posNum(s.game.focus[k]) === null) delete s.game.focus[k];
   // pet journal: [{id, date: dateKey, text, createdAt}]
   if (!Array.isArray(s.journal)) s.journal = [];
   // สัตว์เลี้ยงจริงที่บ้าน: [{id, name, species, sex, hatchDate, notes, records: [...]}]
@@ -1414,8 +1503,27 @@ function migrate(s) {
   }
   return s;
 }
+let storageWarned = false;
+/** บันทึก state ลงเครื่อง — พื้นที่เต็ม/ถูกบล็อกจะไม่ทำให้แอปพัง แต่แจ้งผู้ใช้ (ครั้งเดียวจนกว่าจะบันทึกได้อีก) */
+function persistLocal() {
+  try {
+    localStorage.setItem(stateKey, JSON.stringify(state));
+    storageWarned = false;
+    return true;
+  } catch (e) {
+    if (!storageWarned) {
+      storageWarned = true;
+      let synced = false;
+      try { synced = cloudConfigured() && !!sbUser; } catch { synced = false; }
+      showToast(synced
+        ? "⚠️ Device storage is full — changes still sync to your account, but free up browser storage"
+        : "⚠️ Device storage is full — this change may be lost. Export a backup and free up space");
+    }
+    return false;
+  }
+}
 function save() {
-  localStorage.setItem(stateKey, JSON.stringify(state));
+  persistLocal();
   scheduleNativeNotifications();
   scheduleCloudSave(); // sync ขึ้น cloud ด้วยถ้าเชื่อมอยู่ (debounced)
 }
@@ -1456,13 +1564,14 @@ function toInputValue(d) {
 }
 
 /* ---------- recurrence ---------- */
-function nextDueDate(due, recurrence) {
+/** รอบถัดไปของงานทำซ้ำ — anchorDay = วันที่ตั้งต้นของงานรายเดือน (กันวันที่ 31 เลื่อนเป็น 28 ถาวรหลังผ่านกุมภา) */
+function nextDueDate(due, recurrence, anchorDay) {
   if (recurrence === "none") return null;
   const next = new Date(due.getTime());
   if (recurrence === "daily") next.setDate(next.getDate() + 1);
   else if (recurrence === "weekly") next.setDate(next.getDate() + 7);
   else if (recurrence === "monthly") {
-    const day = next.getDate();
+    const day = anchorDay || next.getDate();
     next.setDate(1);
     next.setMonth(next.getMonth() + 1);
     const dim = new Date(next.getFullYear(), next.getMonth() + 1, 0).getDate();
@@ -1472,6 +1581,8 @@ function nextDueDate(due, recurrence) {
 }
 
 const RECURRENCE_LABELS = { none: "No repeat", daily: "Daily", weekly: "Weekly", monthly: "Monthly" };
+const CAT_NAME_MAX = 40;
+const TITLE_MAX = 500;   // ชื่องานยาวผิดปกติ (วางข้อความทั้งก้อนผิดช่อง) ทำให้ข้อมูล sync บวมโดยไม่จำเป็น
 /* ---------- แอป iOS (Capacitor) ----------
    ไฟล์เดียวกันนี้รันได้ทั้งบนเว็บและในแอป iOS — ในแอป build script ใส่ native.js (ปลั๊กอิน App/Browser/LocalNotifications)
    ไว้ก่อน แล้ว window.KodoNative จะมีค่า; บนเว็บ IS_NATIVE เป็น false และโค้ดส่วนนี้ไม่ทำอะไร */
@@ -1524,8 +1635,14 @@ function scheduleNativeNotifications() {
   nativeNotifTimer = setTimeout(runNativeNotifications, 1200);
 }
 async function runNativeNotifications(askPermission) {
-  if (!IS_NATIVE || !user) return;
+  if (!IS_NATIVE) return;
   const LN = window.KodoNative.LocalNotifications;
+  if (!user) {
+    // ออกจากระบบแล้ว -> ล้างแจ้งเตือนของบัญชีเดิม (ไม่งั้นชื่องานของคนก่อนยังเด้งบนเครื่อง)
+    try { const pending = await LN.getPending(); if (pending.notifications.length) await LN.cancel({ notifications: pending.notifications.map(n => ({ id: n.id })) }); }
+    catch (e) { console.warn("native notifications:", e); }
+    return;
+  }
   try {
     let perm = (await LN.checkPermissions()).display;
     const list = [];      // ลำดับความสำคัญ: checklist ที่ตั้งเวลา -> สรุปพรุ่งนี้ -> งาน (ใกล้สุดก่อน) จนครบ 64
@@ -1598,6 +1715,9 @@ let cloudSaveTimer = null;
 let cloudPulling = false; // กัน save ระหว่างกำลังดึงข้อมูลลงมา
 let cloudDirty = false;   // มีการแก้ไขที่ยังไม่ได้ขึ้น cloud
 let syncState = "synced"; // synced | pending | error
+let cloudDirtyFor = null; // uid ของบัญชีที่มีการแก้ไขค้าง — กันส่งข้อมูลค้างของบัญชีหนึ่งไปทับอีกบัญชี
+let signingOut = false;
+let cloudEditSeq = 0;     // เพิ่มทุกครั้งที่มีการแก้ไข — ใช้ตัดสินว่าอัปโหลดที่สำเร็จ "ครอบคลุม" การแก้ไขล่าสุดแล้วหรือยัง
 
 function cloudConfigured() { return !!(sbCfg && !sbCfg.off && sbCfg.url && sbCfg.key); }
 
@@ -1629,7 +1749,13 @@ async function initCloud() {
           captureGoogleToken(session); // กลับมาจากหน้า Connect Google Calendar → เก็บ refresh token
         })();
       }
-      if (event === "SIGNED_OUT") { sbUser = null; sbToken = null; }
+      if (event === "SIGNED_OUT") {
+        sbUser = null; sbToken = null;
+        if (!signingOut && user) {
+          showToast("🔒 You were signed out — sign in again to keep syncing");
+          doSignOut();
+        }
+      }
     });
   } catch (e) {
     cloudStatus = "error";
@@ -1640,6 +1766,7 @@ async function initCloud() {
 }
 
 async function onCloudSignedIn(session) {
+  if (cloudDirty && cloudDirtyFor !== session.user.id) { cloudDirty = false; syncState = "synced"; }
   sbUser = session.user;
   user = {
     uid: sbUser.id,
@@ -1667,20 +1794,21 @@ async function pullCloud() {
   try {
     const { data, error } = await sb.from("app_state").select("data").eq("user_id", sbUser.id).maybeSingle();
     if (error) { syncState = "error"; showToast("⚠️ Sync error: " + error.message); return; }
+    if (cloudDirty) return;   // ผู้ใช้แก้ไขระหว่างรอ -> เก็บของในเครื่องไว้ แล้วอัปโหลดใน finally ด้านล่าง
     if (data && data.data && typeof data.data === "object") {
       const remote = migrate(data.data);
       for (const k of ["categories", "tasks", "routines", "routineLog", "checklists", "game", "meta", "journal", "pets"]) {
         if (remote[k] !== undefined) state[k] = remote[k];
       }
-      localStorage.setItem(stateKey, JSON.stringify(state));
+      persistLocal();
       syncState = "synced";
     } else {
-      // cloud ยังว่าง → ดันข้อมูลเครื่องนี้ขึ้นไป
+      // cloud ยังว่าง → ดันข้อมูลเครื่องนี้ขึ้นไป (ส่งจริงใน finally เพราะตอนนี้ยัง pulling อยู่)
       cloudDirty = true;
-      scheduleCloudSave();
     }
   } finally {
     cloudPulling = false;
+    if (cloudDirty) scheduleCloudSave();
   }
   scheduleNativeNotifications();   // แอป iOS: ข้อมูลอาจเปลี่ยนจากเครื่องอื่น -> ตั้งแจ้งเตือนใหม่
   migrateAgentCategories();   // ย้ายงาน AI ที่ import ไว้ด้วยเวอร์ชันเก่าเข้าหมวดตามโปรเจกต์ (ทำครั้งเดียว)
@@ -1979,12 +2107,17 @@ async function importAgentLog() {
 }
 
 function scheduleCloudSave() {
-  if (!sb || !sbUser || cloudPulling) return;
+  if (!sb || !sbUser) return;
   cloudDirty = true;
+  cloudDirtyFor = sbUser.id;
+  cloudEditSeq++;
   syncState = "pending";
+  if (cloudPulling) return;   // pullCloud จะเรียกซ้ำเองเมื่อดึงเสร็จ
   clearTimeout(cloudSaveTimer);
   cloudSaveTimer = setTimeout(async () => {
     cloudSaveTimer = null;
+    if (!sbUser) return;   // ออกจากระบบไประหว่างรอ (doSignOut ส่งข้อมูลค้างเองแล้ว)
+    const seq = cloudEditSeq;
     const { error } = await sb.from("app_state").upsert({
       user_id: sbUser.id,
       data: state,
@@ -1994,8 +2127,8 @@ function scheduleCloudSave() {
       syncState = "error";
       showToast("⚠️ Sync failed — data kept on this device, will retry");
       // ลองใหม่อัตโนมัติใน 10 วิ
-      setTimeout(() => { if (cloudDirty) scheduleCloudSave(); }, 10000);
-    } else {
+      setTimeout(() => { if (cloudDirty && !cloudSaveTimer) scheduleCloudSave(); }, 10000);
+    } else if (seq === cloudEditSeq) {
       cloudDirty = false;
       syncState = "synced";
     }
@@ -2007,20 +2140,24 @@ function flushCloudSave() {
   if (!cloudDirty || !sbUser || !sbToken || !cloudConfigured()) return;
   clearTimeout(cloudSaveTimer);
   cloudSaveTimer = null;
+  const seq = cloudEditSeq;
+  const body = JSON.stringify([{ user_id: sbUser.id, data: state, updated_at: new Date().toISOString() }]);
+  const retry = () => { if (cloudDirty && !cloudSaveTimer && !document.hidden) scheduleCloudSave(); };
   try {
     fetch(sbCfg.url + "/rest/v1/app_state?on_conflict=user_id", {
       method: "POST",
-      keepalive: true,
+      keepalive: body.length < 60000,   // browser จำกัด body ของ keepalive ไว้ ~64KB — ใหญ่กว่านั้นส่งแบบปกติ (ทันขณะแท็บแค่ถูกซ่อน)
       headers: {
         apikey: sbCfg.key,
         Authorization: "Bearer " + sbToken,
         "Content-Type": "application/json",
         Prefer: "resolution=merge-duplicates",
       },
-      body: JSON.stringify([{ user_id: sbUser.id, data: state, updated_at: new Date().toISOString() }]),
-    });
-    cloudDirty = false;
-    syncState = "synced";
+      body,
+    }).then(res => {
+      if (res.ok && seq === cloudEditSeq) { cloudDirty = false; syncState = "synced"; }
+      else if (!res.ok) { syncState = "error"; retry(); }
+    }, () => { syncState = "error"; retry(); });
   } catch { /* เก็บ dirty ไว้ รอบหน้า retry */ }
 }
 document.addEventListener("visibilitychange", () => { if (document.hidden) flushCloudSave(); });
@@ -2181,19 +2318,36 @@ function commitLogin() {
 }
 function showAuth(view) { authView = view; viewTransition = true; render(); }
 async function doSignOut() {
+  if (sb && sbUser) {
+    if (cloudDirty) {
+      clearTimeout(cloudSaveTimer);
+      cloudSaveTimer = null;
+      let error = null;
+      try {
+        ({ error } = await sb.from("app_state").upsert({ user_id: sbUser.id, data: state, updated_at: new Date().toISOString() }));
+      } catch (e) { error = e; }
+      if (error && !confirm("Some changes haven't synced to your account yet (offline?).\nIf you sign out now they may be lost. Sign out anyway?")) {
+        scheduleCloudSave();
+        return;
+      }
+      cloudDirty = false;
+      syncState = "synced";
+    }
+    signingOut = true;
+    try { await sb.auth.signOut(); } catch { /* ออฟไลน์: session ในเครื่องถูกล้างอยู่แล้ว */ }
+    finally { signingOut = false; }
+    sbUser = null;
+  }
   try {
     const tok = greadToken();
     if (tok && window.google?.accounts?.oauth2) google.accounts.oauth2.revoke(tok, () => {});
     sessionStorage.removeItem(greadTokenKey());
   } catch { /* ignore */ }
   greadReset();
-  if (sb && sbUser) {
-    await sb.auth.signOut();
-    sbUser = null;
-  }
   localStorage.removeItem(USER_KEY);
   user = null;
   switchAccount(null); // กลับไป state ว่างของ anonymous — ไม่เห็นข้อมูลบัญชีเดิม
+  scheduleNativeNotifications();   // แอป iOS: ล้างแจ้งเตือนของบัญชีที่เพิ่งออก
   focusMode = null;
   currentTab = "home";
   todayCat = null;
@@ -2453,6 +2607,7 @@ function saveSchedule() {
   const days = [...document.querySelectorAll("#schDays .day-pill.sel")].map(b => Number(b.dataset.day));
   const start = document.getElementById("schStart").value;
   const end = document.getElementById("schEnd").value;
+  if (days.length && start && start === end) { showToast("❌ Start and end time can't be the same"); return; }
   c.schedule = (days.length && start && end) ? { days, start, end } : null;
   save(); closeForm(); render();
 }
@@ -3346,7 +3501,9 @@ function savePet(e, petId) {
     notes: document.getElementById("pfNotes").value.trim(),
   };
   if (!data.name) return;
-  if (petId) Object.assign(petById(petId), data);
+  const existing = petId ? petById(petId) : null;
+  if (petId && !existing) showToast("This pet was deleted on another device — saved as a new pet");
+  if (existing) Object.assign(existing, data);
   else {
     const p = { id: uid(), ...data, records: [] };
     state.pets.push(p);
@@ -3365,6 +3522,7 @@ function deletePet(id) {
 /* ---- record form ---- */
 function openRecordForm(petId, recId, preset) {
   const p = petById(petId);
+  if (!p) { petsView = null; render(); return; }   // ถูกลบจากอีกเครื่องแล้ว
   const r = recId ? p.records.find(x => x.id === recId) : null;
   recFormType = r?.type || preset || "checkup";
   document.getElementById("modal").innerHTML = `
@@ -3899,8 +4057,18 @@ function toggleDone(id) {
   const nowDone = t.status === "open";
   t.status = nowDone ? "done" : "open";
   t.doneAt = nowDone ? new Date().toISOString() : null;
+  // ยกเลิกการติ๊ก -> เอารอบถัดไปที่เพิ่งสร้างออก (ถ้ายังไม่ได้ทำ) ไม่งั้นกดสลับไปมาจะงอกงานซ้ำ
+  if (!nowDone && t.nextId) {
+    const spawned = state.tasks.find(x => x.id === t.nextId);
+    if (spawned && spawned.status === "open") state.tasks = state.tasks.filter(x => x !== spawned);
+    t.nextId = null;
+  }
   if (nowDone && t.recurrence !== "none" && t.dueAt) {
-    const next = nextDueDate(new Date(t.dueAt), t.recurrence);
+    const recurDay = t.recurDay || new Date(t.dueAt).getDate();
+    let next = nextDueDate(new Date(t.dueAt), t.recurrence, recurDay);
+    // ทำงานที่เลยกำหนดมานาน -> ข้ามรอบที่ผ่านไปแล้ว ไปรอบแรกที่ยังไม่ถึง (ไม่งั้นรอบใหม่เกิดมาก็เลยกำหนดทันที)
+    const today = startOfDay(new Date());
+    for (let i = 0; next && next < today && i < 5000; i++) next = nextDueDate(next, t.recurrence, recurDay);
     if (next) {
       // งานแบบช่วงวัน (range) ที่ทำซ้ำ — เลื่อน endDate ตามไปด้วยเท่าจำนวนวันเดิม เพื่อคงความยาวช่วงเท่าเดิม
       let nextEndDate = null;
@@ -3909,11 +4077,13 @@ function toggleDone(id) {
         const nextEnd = new Date(next); nextEnd.setDate(nextEnd.getDate() + spanDays);
         nextEndDate = dateKey(nextEnd);
       }
+      const nextId = uid();
       state.tasks.push({
-        ...t, id: uid(), dueAt: next.toISOString(), endDate: nextEndDate,
-        status: "open", doneAt: null, notifiedAt: null,
+        ...t, id: nextId, dueAt: next.toISOString(), endDate: nextEndDate,
+        status: "open", doneAt: null, notifiedAt: null, nextId: null, recurDay,
         createdAt: new Date().toISOString(),
       });
+      t.nextId = nextId;
     }
   }
   addXp(nowDone ? 5 : -5);
@@ -3977,7 +4147,7 @@ function saveProject(e, catId, pid) {
   if (!cat || !name) return;
   if (!Array.isArray(cat.projects)) cat.projects = [];
   if (cat.projects.some(x => x.id !== pid && x.name.toLowerCase() === name.toLowerCase())) {
-    showToast("❌ มีโปรเจกต์ชื่อนี้ในหมวดนี้แล้ว");
+    showToast("❌ A project with this name already exists in this category");
     return;
   }
   if (pid) {
@@ -4277,7 +4447,8 @@ function renderHome() {
 
   // สรุปรวมด้านบน
   const allOpen = state.tasks.filter(t => t.status === "open" && taskInFocus(t));
-  const overdueCount = allOpen.filter(t => t.dueAt && new Date(t.dueAt) < startOfDay(new Date())).length;
+  // เลยกำหนด = วันสุดท้ายของงานผ่านไปแล้ว (งานหลายวันที่ยังไม่ถึงวันจบไม่นับ — ตรงกับป้ายบนการ์ดงาน)
+  const overdueCount = allOpen.filter(t => { const s = taskSpan(t); return s && s.end < startOfDay(new Date()); }).length;
   const dueTodayCount = allOpen.filter(t => t.dueAt && isToday(new Date(t.dueAt))).length;
   const doneTodayCount = state.tasks.filter(t => t.status === "done" && t.doneAt && isToday(new Date(t.doneAt)) && taskInFocus(t)).length;
 
@@ -4771,7 +4942,7 @@ function renderTodayDetail() {
   if (todayCat === AI_HUB && !catById(AI_HUB)) return renderAiHub();
   const isNone = todayCat === "none";
   const cat = isNone ? null : catById(todayCat);
-  if (!isNone && !cat) { todayCat = null; return renderToday(); }
+  if (!isNone && !cat) { todayCat = null; todayProject = null; return renderHome(); }   // หมวดถูกลบ (เช่น sync จากอีกเครื่อง) -> กลับหน้าแรก
   const name = isNone ? "No category" : cat.name;
   const color = isNone ? "var(--muted)" : cat.color;
 
@@ -5028,8 +5199,9 @@ function greadByDay(start, end) {
   const out = {};
   if (!c) return out;
   for (const ev of c.events) {
-    const d = startOfDay(ev.start); let n = 0;
-    while (d <= ev.end && n < 62) { (out[dateKey(d)] = out[dateKey(d)] || []).push(ev); d.setDate(d.getDate() + 1); n++; }
+    // เริ่มจากวันแรกของช่วงที่แสดง (event ยาวหลายเดือนที่เริ่มก่อนหน้านั้นยังโชว์ครบ)
+    const d = startOfDay(new Date(Math.max(ev.start, start))); let n = 0;
+    while (d <= ev.end && d < end && n < 62) { (out[dateKey(d)] = out[dateKey(d)] || []).push(ev); d.setDate(d.getDate() + 1); n++; }
   }
   return out;
 }
@@ -5092,27 +5264,28 @@ function renderCalendar() {
   const gridStart = new Date(first);
   gridStart.setDate(1 - first.getDay());
 
-  // เตรียม map วัน -> tasks (เฉพาะที่มี due) — งานแบบช่วงวัน (range) จะถูกใส่ในทุกวันที่ครอบคลุม ไม่ใช่แค่วันเริ่ม
-  const byDay = {};
-  const MAX_SPAN_DAYS = 60; // กันช่วงวันยาวผิดปกติทำให้ค้าง
-  for (const t of state.tasks) {
-    if (!t.dueAt || !taskInFocus(t)) continue;
-    const span = taskSpan(t);
-    const d = new Date(span.start);
-    let n = 0;
-    while (d <= span.end && n < MAX_SPAN_DAYS) {
-      const k = dateKey(d);
-      (byDay[k] = byDay[k] || []).push(t);
-      d.setDate(d.getDate() + 1);
-      n++;
-    }
-  }
-
   const selDate = new Date(calSelected + "T00:00:00");
   // ช่วงที่ดึงจาก Google = ตารางเดือน 6 สัปดาห์ของเดือนที่กำลังดู (week/day ใช้เดือนของวันที่เลือก)
   const gBase = calMode === "month" ? calMonth : new Date(selDate.getFullYear(), selDate.getMonth(), 1);
   const gStart = new Date(gBase.getFullYear(), gBase.getMonth(), 1); gStart.setDate(1 - gStart.getDay());
   const gEnd = new Date(gStart); gEnd.setDate(gEnd.getDate() + 42);
+
+  // เตรียม map วัน -> tasks (เฉพาะที่มี due) — งานแบบช่วงวัน (range) ใส่ทุกวันที่ครอบคลุม
+  // เดินเฉพาะวันที่อยู่ในช่วงที่หน้าจอแสดง (ไม่ใช่นับจากวันเริ่มงาน) งานยาวหลายเดือนจึงยังโชว์ครบ และไม่ค้างถ้าช่วงยาวผิดปกติ
+  const winStart = new Date(Math.min(gridStart, gStart));
+  const winEnd = new Date(Math.max(gridStart.getTime() + 42 * 86400000, gEnd.getTime()));
+  const byDay = {};
+  for (const t of state.tasks) {
+    if (!t.dueAt || !taskInFocus(t)) continue;
+    const span = taskSpan(t);
+    if (isNaN(span.start) || span.end < winStart || span.start >= winEnd) continue;
+    const d = new Date(Math.max(span.start, winStart));
+    for (let n = 0; d <= span.end && d < winEnd && n < 100; n++) {
+      const k = dateKey(d);
+      (byDay[k] = byDay[k] || []).push(t);
+      d.setDate(d.getDate() + 1);
+    }
+  }
   greadEnsure(gStart, gEnd);
   const gByDay = greadOn() ? greadByDay(gStart, gEnd) : {};
   const gList = (k) => gByDay[k] || [];
@@ -5257,21 +5430,30 @@ function calShiftDays(n) {
 }
 
 function renderAll() {
+  // หมวดที่กรองอยู่ถูกลบ/ปิด/อยู่นอกโหมด -> กลับไปดูทั้งหมด (ไม่งั้นรายการว่างทั้งที่ dropdown ขึ้น "All categories")
+  if (allFilter && !activeCategories().some(c => c.id === allFilter && inFocus(c))) allFilter = "";
   const filtered = (allFilter ? state.tasks.filter(t => t.categoryId === allFilter) : state.tasks).filter(taskInFocus);
   const open = sortByDue(filtered.filter(t => t.status === "open"));
-  const done = filtered.filter(t => t.status === "done");
+  // งานเสร็จสะสมได้เป็นพันรายการ (งาน AI / Hevy) — แสดงล่าสุดก่อน จำกัดจำนวน ไม่ให้ทุกการติ๊กต้องวาดใหม่ทั้งหมด
+  const doneAll = filtered.filter(t => t.status === "done")
+    .sort((a, b) => new Date(b.doneAt || b.dueAt || 0) - new Date(a.doneAt || a.dueAt || 0));
+  const done = allShowAllDone ? doneAll : doneAll.slice(0, ALL_DONE_LIMIT);
   const options = activeCategories().filter(inFocus).map(c =>
     `<option value="${c.id}" ${allFilter === c.id ? "selected" : ""}>${esc(c.name)}</option>`).join("");
   return `<div class="page-head">
       <h1>All Tasks</h1>
-      <select class="filter-sel" onchange="allFilter=this.value;render()">
+      <select class="filter-sel" aria-label="Filter by category" onchange="allFilter=this.value;allShowAllDone=false;render()">
         <option value="">All categories</option>${options}
       </select>
     </div>` + sectionsHtml([
       { title: "Open", tasks: open },
-      { title: "Done", tasks: done },
-    ], "No tasks yet");
+      { title: doneAll.length > done.length ? `Done — latest ${done.length} of ${doneAll.length}` : "Done", tasks: done },
+    ], "No tasks yet")
+    + (doneAll.length > done.length
+      ? `<button class="btn btn-outline" style="margin-top:.5rem" onclick="allShowAllDone=true;render()">Show all ${doneAll.length} done tasks</button>` : "");
 }
+const ALL_DONE_LIMIT = 100;
+let allShowAllDone = false;
 
 function renderSettings() {
   const initial = (user?.name || "?").charAt(0).toUpperCase();
@@ -5351,7 +5533,7 @@ function renderSettings() {
       <form class="set-add" onsubmit="event.preventDefault();addCategory()">
         <span class="set-ico" style="background:var(--primary-soft);color:var(--primary)">${icon("plus", 14)}</span>
         <label class="sr-only" for="newCatName">New category name</label>
-        <input id="newCatName" placeholder="New category e.g. Health">
+        <input id="newCatName" maxlength="${CAT_NAME_MAX}" placeholder="New category e.g. Health">
         <button class="link-primary" type="submit">Add</button>
       </form>
       <div class="set-row static" style="flex-wrap:wrap;gap:.5rem">
@@ -5621,12 +5803,13 @@ function render() {
 }
 
 function switchTab(id) {
-  currentTab = id;
   // ออกจากหน้า pet ก่อน (ยกเว้นกำลังจับเวลาอยู่ — ให้จับต่อเบื้องหลังไม่ได้ เลยกันสลับพลาดด้วย confirm)
+  // ถามก่อนเปลี่ยนแท็บ: กดยกเลิกต้องอยู่หน้าเดิม ไม่ใช่ไปแท็บใหม่ทั้งที่นาฬิกายังเดินอยู่
   if (petView === "running") {
     if (!confirm("Leave the focus session? It will be cancelled.")) return;
     clearInterval(focusTimer); focusTimer = null; focusEndsAt = null;
   }
+  currentTab = id;
   petView = null;
   viewTransition = true;
   render();
@@ -5635,8 +5818,12 @@ function switchTab(id) {
 /* ---------- category ops ---------- */
 function addCategory() {
   const input = document.getElementById("newCatName");
-  const name = input.value.trim();
+  const name = input.value.trim().slice(0, CAT_NAME_MAX);
   if (!name) return;
+  if (state.categories.some(c => c.name.toLowerCase() === name.toLowerCase())) {
+    showToast("❌ A category with this name already exists");
+    return;
+  }
   state.categories.push({ id: uid(), name, color: newCatColor, icon: newCatIcon });
   save(); render();
 }
@@ -5690,7 +5877,7 @@ function openForm(taskId) {
       </div>
       <form onsubmit="submitForm(event, '${taskId || ""}')">
         <label class="fld">What needs to be done?
-          <input id="fTitle" required value="${t ? esc(t.title) : ""}" placeholder="e.g. Send report">
+          <input id="fTitle" required maxlength="${TITLE_MAX}" value="${t ? esc(t.title) : ""}" placeholder="e.g. Send report">
         </label>
         <label class="fld">Notes (optional)
           <textarea id="fNote" rows="2">${t ? esc(t.note || "") : ""}</textarea>
@@ -5783,7 +5970,7 @@ function closeForm() {
 
 function submitForm(e, taskId) {
   e.preventDefault();
-  const title = document.getElementById("fTitle").value.trim();
+  const title = document.getElementById("fTitle").value.trim().slice(0, TITLE_MAX);
   if (!title) return;
   const dueRaw = document.getElementById("fDue").value;
   const timeOn = document.getElementById("fTimeOn").checked;
@@ -5807,9 +5994,11 @@ function submitForm(e, taskId) {
     reminderMin: remRaw === "" ? null : Number(remRaw),
     recurrence: document.getElementById("fRec").value,
   };
-  if (taskId) {
-    const t = state.tasks.find(x => x.id === taskId);
-    Object.assign(t, data, { notifiedAt: null });
+  const existing = taskId ? state.tasks.find(x => x.id === taskId) : null;
+  if (taskId && !existing) showToast("This task was deleted on another device — saved as a new task");
+  if (existing) {
+    if (existing.dueAt !== data.dueAt) data.recurDay = null;   // เปลี่ยนวันเอง -> วันตั้งต้นของงานรายเดือนเปลี่ยนตาม
+    Object.assign(existing, data, { notifiedAt: null });
   } else {
     state.tasks.push({
       ...data, id: uid(), status: "open", doneAt: null, notifiedAt: null,
@@ -5831,16 +6020,17 @@ function enableNotify() {
 }
 function checkReminders() {
   const webNotify = ("Notification" in window) && window.Notification.permission === "granted" && !state.meta.notifOff;
-  if (!webNotify && !IS_NATIVE) return;
-  // ในแอป iOS แจ้งเตือนถูกตั้งกับระบบไว้แล้ว (runNativeNotifications) -> ที่นี่ทำแค่สถานะ (notifiedAt / รีเซ็ต checklist)
+  // ในแอป iOS แจ้งเตือนถูกตั้งกับระบบไว้แล้ว (runNativeNotifications) -> ที่นี่ทำแค่สถานะ (รีเซ็ต checklist)
+  // ไม่มีสิทธิ์แจ้งเตือนก็ยังต้องรีเซ็ต checklist ตามเวลา — แค่ไม่เด้งแจ้งเตือน / ไม่ส่งสรุปงานพรุ่งนี้
   const Notification = webNotify ? window.Notification : function () {};
   const now = Date.now();
   let fired = false;
-  for (const t of (IS_NATIVE ? [] : state.tasks)) {
+  for (const t of (webNotify && !IS_NATIVE ? state.tasks : [])) {
     if (t.status !== "open" || !t.dueAt || t.reminderMin == null || t.notifiedAt) continue;
     const remindAt = new Date(t.dueAt).getTime() - t.reminderMin * 60000;
     if (remindAt <= now) {
-      new Notification("⏰ " + t.title, { body: "Due " + fmtDateTime(new Date(t.dueAt)) });
+      // เปิดแอปหลังหายไปนาน: เตือนที่พลาดไปเกิน 12 ชม. ถือว่าผ่านไปแล้ว ไม่เด้งรัวทีเดียวหลายสิบอัน
+      if (remindAt >= now - 12 * 3600000) new Notification("⏰ " + t.title, { body: "Due " + fmtDateTime(new Date(t.dueAt)) });
       t.notifiedAt = new Date().toISOString();
       fired = true;
     }
@@ -5850,8 +6040,8 @@ function checkReminders() {
     const now2 = new Date();
     const t2 = String(now2.getHours()).padStart(2, "0") + ":" + String(now2.getMinutes()).padStart(2, "0");
     const k2 = dateKey(now2);
-    for (const cl of state.checklists) {
-      if (!cl.reminder || !cl.reminder.days.includes(now2.getDay())) continue;
+    for (const cl of state.checklists || []) {
+      if (!cl.reminder || !Array.isArray(cl.reminder.days) || !cl.reminder.days.includes(now2.getDay()) || !Array.isArray(cl.items)) continue;
       if (t2 < cl.reminder.time) continue;
       if (cl.lastNotified === k2) continue;
       cl.items.forEach(i => { i.checked = false; });
@@ -5866,7 +6056,7 @@ function checkReminders() {
   }
   // สรุปงานพรุ่งนี้ทุกเย็น (หลัง 18:00 วันละครั้ง) — เตรียมตัวล่วงหน้า
   const todayKey = dateKey(new Date());
-  if (!IS_NATIVE && new Date().getHours() >= 18 && state.meta.lastDigest !== todayKey) {
+  if (webNotify && !IS_NATIVE && new Date().getHours() >= 18 && state.meta.lastDigest !== todayKey) {
     const tmStart = startOfDay(new Date()); tmStart.setDate(tmStart.getDate() + 1);
     const tmEnd = new Date(tmStart); tmEnd.setDate(tmEnd.getDate() + 1);
     const tomorrow = state.tasks
@@ -5936,10 +6126,18 @@ function importData(input) {
       if (!confirm(`Import ${data.tasks.length} tasks and ${data.categories.length} categories? Current data will be replaced.`)) return;
       // รับทุก field (รวม routines / checklists / pet-XP) — migrate เติมส่วนที่ไฟล์เก่าไม่มี
       const imported = migrate(data);
-      for (const k of ["categories", "tasks", "routines", "routineLog", "checklists", "game", "meta", "journal", "pets"]) {
-        state[k] = imported[k];
+      const KEYS = ["categories", "tasks", "routines", "routineLog", "checklists", "game", "meta", "journal", "pets"];
+      const backup = JSON.stringify(KEYS.map(k => state[k]));
+      try {
+        for (const k of KEYS) state[k] = imported[k];
+        todayCat = null; todayProject = null; petsView = null; allFilter = "";
+        render();   // ลองแสดงผลก่อนบันทึก — ไฟล์ที่ทำให้หน้าจอพังต้องไม่ถูกเขียนทับข้อมูลเดิม
+      } catch (err) {
+        JSON.parse(backup).forEach((v, i) => { state[KEYS[i]] = v; });
+        render();
+        throw err;
       }
-      save(); render();
+      save();
       alert("Import complete ✅");
     } catch (e) {
       alert("Invalid file — must be a Kodo (or Solo Task) export");
@@ -6043,7 +6241,7 @@ function importHevy(input) {
     const parts = [already ? `${already} already imported` : "", later ? `${later} more next time — import the same file again` : ""].filter(Boolean);
     if (!confirm(`Import ${fresh.length} new workout${fresh.length > 1 ? "s" : ""} from Hevy${parts.length ? " (" + parts.join("; ") + ")" : ""}?`)) return;
     // หมวด Workout (มีอยู่แล้วใช้เลย ไม่มีก็สร้าง)
-    let cat = state.categories.find(c => /workout|gym|exercise|fitness|ออกกำลัง/i.test(c.name));
+    let cat = state.categories.find(c => !isAgentCategory(c) && /workout|gym|exercise|fitness|ออกกำลัง/i.test(c.name));
     if (!cat) {
       cat = { id: uid(), name: "Workout", color: "#f97316", icon: "dumbbell", schedule: null, enabled: true, focus: "personal" };
       state.categories.push(cat);
@@ -6095,9 +6293,9 @@ document.addEventListener("keydown", (e) => {
 window.addEventListener("storage", (e) => {
   if (e.key !== stateKey || !e.newValue) return;
   try {
-    const data = JSON.parse(e.newValue);
-    state.categories = data.categories;
-    state.tasks = data.tasks;
+    // รับทุกส่วน ไม่ใช่แค่ categories/tasks — ไม่งั้นแท็บนี้บันทึกครั้งถัดไปจะเขียน pets/routines/XP เก่าทับของแท็บอื่น
+    const data = migrate(JSON.parse(e.newValue));
+    for (const k of ["categories", "tasks", "routines", "routineLog", "checklists", "game", "meta", "journal", "pets"]) state[k] = data[k];
     render();
   } catch { /* ข้อมูลไม่ถูกต้อง ไม่ต้องทำอะไร */ }
 });
