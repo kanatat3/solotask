@@ -1,4 +1,4 @@
-const CACHE_NAME = "kodo-v4";
+const CACHE_NAME = "kodo-v5";
 // ไลบรารีจาก CDN ที่แอปใช้ (three.js สำหรับสัตว์เลี้ยง 3D) — เก็บ cache ครั้งแรกที่โหลด แล้วใช้ออฟไลน์ได้
 const RUNTIME_CACHE_PREFIXES = ["https://cdnjs.cloudflare.com/ajax/libs/three.js/"];
 const APP_SHELL = ["/", "/index.html", "/manifest.json"];
@@ -47,5 +47,28 @@ self.addEventListener("fetch", (e) => {
   }
   e.respondWith(
     caches.match(e.request).then((cached) => cached || fetch(e.request))
+  );
+});
+
+// Web Push จาก Edge Function "send-push" — ดังแม้ปิดแอปอยู่
+self.addEventListener("push", (e) => {
+  let data = { title: "Kodo", body: "You have a reminder", tag: "kodo", url: "/" };
+  try { data = { ...data, ...e.data.json() }; } catch { /* ใช้ข้อความเริ่มต้น */ }
+  e.waitUntil(self.registration.showNotification(String(data.title).slice(0, 140), {
+    body: String(data.body || "").slice(0, 300),
+    tag: String(data.tag || "kodo").slice(0, 80),
+    icon: "/kodo-list-192.png",
+    badge: "/kodo-list-192.png",
+    data: { url: "/" },   // เปิดได้เฉพาะหน้า Kodo เอง ไม่รับ URL จากข้อความ
+  }));
+});
+
+self.addEventListener("notificationclick", (e) => {
+  e.notification.close();
+  e.waitUntil(
+    self.clients.matchAll({ type: "window", includeUncontrolled: true }).then((list) => {
+      for (const c of list) if ("focus" in c) return c.focus();
+      return self.clients.openWindow("/");
+    })
   );
 });

@@ -1720,6 +1720,64 @@ async function runNativeNotifications(askPermission) {
   }
 }
 
+/* ---------- Web Push (เว็บ / Add to Home Screen) ----------
+   แจ้งเตือนดังแม้ปิดแอป: เครื่องนี้สมัครรับ push -> เก็บใน Supabase ตาราง push_subscriptions
+   -> Edge Function "send-push" (pg_cron ทุกนาที) ส่งเมื่อถึงเวลา (ดู supabase/PUSH_SETUP.md)
+   iPhone ต้องเปิดจากไอคอน Add to Home Screen (iOS 16.4+) ถึงจะสมัครได้; แอป iOS ใช้แจ้งเตือนของเครื่องแทน */
+const PUSH_VAPID_PUBLIC = "BEPsNJX_bg-pnmuYPuALmHr2QQBukYO5NAH-56HUneTYwq9_zYw22W-kgELDVhgTKSyOI6jbcv6_4cFVz-54XA0";
+let pushActive = false;   // เครื่องนี้ส่ง push ให้แล้ว -> ไม่ต้องเด้งแจ้งเตือนซ้ำจากในหน้าเว็บ
+function pushSupported() {
+  return !IS_NATIVE && "serviceWorker" in navigator && "PushManager" in window && "Notification" in window && cloudConfigured();
+}
+function vapidKeyBytes(b64) {
+  const raw = atob((b64 + "=".repeat((4 - b64.length % 4) % 4)).replace(/-/g, "+").replace(/_/g, "/"));
+  return Uint8Array.from(raw, c => c.charCodeAt(0));
+}
+/** สมัคร/อัปเดตการรับ push ของเครื่องนี้ (เงียบๆ ถ้า quiet) — คืน true ถ้าสำเร็จ */
+async function pushSubscribe(quiet) {
+  if (!pushSupported() || !sb || !sbUser || Notification.permission !== "granted") return false;
+  try {
+    const reg = await navigator.serviceWorker.ready;
+    let sub = await reg.pushManager.getSubscription();
+    if (!sub) sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: vapidKeyBytes(PUSH_VAPID_PUBLIC) });
+    const saveSub = (ps) => {
+      const j = ps.toJSON();
+      return sb.from("push_subscriptions").upsert({
+        user_id: sbUser.id, endpoint: j.endpoint, p256dh: j.keys.p256dh, auth: j.keys.auth,
+        tz: Intl.DateTimeFormat().resolvedOptions().timeZone || "Asia/Bangkok",
+        ua: navigator.userAgent.slice(0, 190), last_seen_at: new Date().toISOString(),
+      }, { onConflict: "endpoint" });
+    };
+    let { error } = await saveSub(sub);
+    if (error) {
+      // endpoint นี้เคยผูกกับบัญชีอื่นบนเครื่องเดียวกัน -> ขอ endpoint ใหม่แล้วลองอีกครั้ง
+      await sub.unsubscribe().catch(() => {});
+      sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: vapidKeyBytes(PUSH_VAPID_PUBLIC) });
+      ({ error } = await saveSub(sub));
+    }
+    if (error) throw new Error(error.message);
+    pushActive = true;
+    return true;
+  } catch (e) {
+    pushActive = false;
+    console.warn("push subscribe:", e);
+    if (!quiet) showToast("⚠️ Couldn't turn on background reminders — reminders still ring while Kodo is open");
+    return false;
+  }
+}
+/** เลิกรับ push บนเครื่องนี้ (ปิดแจ้งเตือน / sign out) */
+async function pushUnsubscribe() {
+  pushActive = false;
+  if (!pushSupported()) return;
+  try {
+    const reg = await navigator.serviceWorker.ready;
+    const sub = await reg.pushManager.getSubscription();
+    if (!sub) return;
+    if (sb && sbUser) await sb.from("push_subscriptions").delete().eq("endpoint", sub.endpoint);
+    await sub.unsubscribe();
+  } catch (e) { console.warn("push unsubscribe:", e); }
+}
+
 const REMINDER_OPTIONS = [
   ["", "No reminder"], ["0", "At due time"], ["15", "15 min before"],
   ["30", "30 min before"], ["60", "1 hour before"], ["1440", "1 day before"],
@@ -1815,6 +1873,7 @@ async function onCloudSignedIn(session) {
   viewTransition = true;
   render();
   setTimeout(autoCheckin, 400);
+  if (pushSupported() && Notification.permission === "granted" && !state.meta.notifOff) pushSubscribe(true);
 }
 
 async function pullCloud() {
@@ -2378,6 +2437,7 @@ async function doSignOut() {
       cloudDirty = false;
       syncState = "synced";
     }
+    await pushUnsubscribe();
     signingOut = true;
     try { await sb.auth.signOut(); } catch { /* ออฟไลน์: session ในเครื่องถูกล้างอยู่แล้ว */ }
     finally { signingOut = false; }
@@ -2604,7 +2664,10 @@ function toggleNotifications() {
   }
   if (Notification.permission !== "granted") {
     Notification.requestPermission().then(p => {
-      if (p === "granted") { state.meta.notifOff = false; save(); showToast("🔔 Notifications on"); }
+      if (p === "granted") {
+        state.meta.notifOff = false; save();
+        pushSubscribe().then(ok => { showToast(ok ? "🔔 Notifications on — they ring even when Kodo is closed" : "🔔 Notifications on"); render(); });
+      }
       else if (p === "denied") showToast("🔕 Notifications blocked — change it in the browser's site settings");
       render();
     });
@@ -2612,7 +2675,8 @@ function toggleNotifications() {
   }
   state.meta.notifOff = !state.meta.notifOff;
   save(); render();
-  showToast(state.meta.notifOff ? "🔕 Notifications off" : "🔔 Notifications on");
+  if (state.meta.notifOff) { pushUnsubscribe().then(render); showToast("🔕 Notifications off"); }
+  else pushSubscribe().then(ok => { showToast(ok ? "🔔 Notifications on — they ring even when Kodo is closed" : "🔔 Notifications on"); render(); });
 }
 /** หมวดที่เปิดใช้อยู่ */
 function activeCategories() {
@@ -2649,6 +2713,7 @@ function openSchedule(catId) {
 function saveSchedule() {
   const c = catById(editingScheduleCat);
   if (!c) return closeForm();
+  if (!document.getElementById("schStart")) return;   // หน้าต่างถูกปิดไปแล้ว
   const days = [...document.querySelectorAll("#schDays .day-pill.sel")].map(b => Number(b.dataset.day));
   const start = document.getElementById("schStart").value;
   const end = document.getElementById("schEnd").value;
@@ -5649,7 +5714,7 @@ function renderSettings() {
       <div class="set-row static">
         <span class="set-ico" style="background:color-mix(in srgb, #f59e0b 16%, var(--card));color:color-mix(in srgb, #f59e0b 55%, var(--fg))">${icon("bell", 14)}</span>
         <span class="set-label">Notifications
-          <span class="set-sub">${IS_NATIVE ? "Task reminders, checklists + tomorrow digest — even when Kodo is closed" : "Task reminders + tomorrow digest, while this page is open"}</span>
+          <span class="set-sub">${IS_NATIVE ? "Task reminders, checklists + tomorrow digest — even when Kodo is closed" : (pushActive ? "Task reminders, checklists + tomorrow digest — even when Kodo is closed" : "Task reminders + tomorrow digest, while this page is open")}</span>
         </span>
         <button class="switch" role="switch" aria-checked="${notifOn && !state.meta.notifOff}"
           aria-label="Toggle notifications" onclick="toggleNotifications()"></button>
@@ -6169,7 +6234,7 @@ function enableNotify() {
   Notification.requestPermission().then(() => render());
 }
 function checkReminders() {
-  const webNotify = ("Notification" in window) && window.Notification.permission === "granted" && !state.meta.notifOff;
+  const webNotify = ("Notification" in window) && window.Notification.permission === "granted" && !state.meta.notifOff && !pushActive;
   // ในแอป iOS แจ้งเตือนถูกตั้งกับระบบไว้แล้ว (runNativeNotifications) -> ที่นี่ทำแค่สถานะ (รีเซ็ต checklist)
   // ไม่มีสิทธิ์แจ้งเตือนก็ยังต้องรีเซ็ต checklist ตามเวลา — แค่ไม่เด้งแจ้งเตือน / ไม่ส่งสรุปงานพรุ่งนี้
   const Notification = webNotify ? window.Notification : function () {};
