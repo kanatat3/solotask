@@ -476,6 +476,80 @@
   .pp-bar span { display: block; height: 100%; background: var(--primary); border-radius: 999px; transition: width .5s linear; }
 
   /* real pets */
+  /* Pet Profile */
+  .pf-avatar { position: relative; flex-shrink: 0; border-radius: 50%; overflow: hidden; display: grid; place-items: center;
+    background: linear-gradient(135deg, var(--primary-soft), color-mix(in srgb, var(--primary) 22%, var(--card))); }
+  .pf-avatar img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+  .pf-avatar img.broken { display: none; }
+  .pf-avatar .pf-emoji { font-size: 1.4em; line-height: 1; }
+  .pf-avatar.lg { box-shadow: 0 0 0 3px var(--card), 0 8px 20px -10px rgba(40, 60, 120, .5); }
+  .pf-avatar.lg .pf-emoji { font-size: 2.2rem; }
+  .pf-head { display: flex; align-items: center; gap: .9rem; margin: .4rem 0 .9rem; }
+  .pf-head-text { flex: 1; min-width: 0; }
+  .pf-head h1 { font-size: 1.45rem; margin: 0; overflow-wrap: anywhere; }
+  .pf-breed { font-size: .84rem; color: var(--muted); margin-top: .1rem; overflow-wrap: anywhere; }
+  .pf-facts { font-size: .86rem; font-weight: 700; margin-top: .25rem; }
+  .pf-edit { align-self: flex-start; font-size: .78rem; display: inline-flex; align-items: center; gap: .25rem; flex-shrink: 0; }
+  .pf-switch { display: flex; gap: .4rem; overflow-x: auto; padding: .2rem 0 .3rem; scrollbar-width: none; }
+  .pf-switch::-webkit-scrollbar { display: none; }
+  .pf-switch-btn { flex-shrink: 0; display: inline-flex; align-items: center; gap: .4rem; padding: .25rem .7rem .25rem .25rem; border-radius: 999px;
+    border: 1px solid var(--border); background: var(--card); color: var(--fg); font: inherit; font-size: .78rem; font-weight: 700; cursor: pointer; }
+  .pf-switch-btn.sel { border-color: var(--primary); background: var(--primary-soft); color: var(--primary); }
+  .pf-tabs { width: 100%; margin-bottom: .8rem; }
+  .pf-tabs .cal-seg-btn { flex: 1; }
+  .pf-card { background: var(--card); border: 1px solid var(--edge); border-radius: var(--r-md); box-shadow: var(--shadow); padding: .8rem .9rem; margin-bottom: .75rem; scroll-margin-top: 1rem; }
+  .pf-card-title { display: flex; align-items: center; gap: .35rem; font-size: .8rem; font-weight: 800; margin-bottom: .4rem; }
+  .pf-card-title .link-primary { margin-left: auto; font-size: .78rem; }
+  .pf-quicks { display: grid; grid-template-columns: 1fr 1fr; gap: .5rem; margin-bottom: .75rem; }
+  .pf-quick { display: flex; align-items: center; gap: .5rem; padding: .6rem .65rem; border-radius: var(--r-md); border: 1px solid var(--edge);
+    background: var(--card); color: var(--fg); font: inherit; font-size: .8rem; font-weight: 700; cursor: pointer; text-align: left; box-shadow: var(--shadow); }
+  .pf-alert { width: 100%; display: flex; align-items: flex-start; gap: .55rem; text-align: left; font: inherit; font-size: .8rem; line-height: 1.45; cursor: pointer;
+    padding: .65rem .8rem; margin-bottom: .75rem; border-radius: var(--r-md); border: 1px solid color-mix(in srgb, #ef4444 25%, var(--border));
+    background: color-mix(in srgb, #ef4444 7%, var(--card)); color: var(--fg); }
+  .pf-alert > svg:first-child { flex-shrink: 0; margin-top: .15rem; color: var(--danger-text); }
+  .pf-alert span { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+  .pf-row, .pf-up, .pf-item { width: 100%; display: flex; align-items: center; gap: .6rem; text-align: left; font: inherit; color: var(--fg);
+    background: none; border: none; border-top: 1px solid var(--border); padding: .6rem .1rem; cursor: pointer; }
+  .pf-card-title + .pf-row, .pf-card-title + .pf-up, .pf-card-title + .pf-item, .pf-sub + .pf-item { border-top: none; }
+  .pf-row-label { flex: 1; font-size: .88rem; font-weight: 600; }
+  .pf-row-sub { font-size: .78rem; color: var(--muted); text-align: right; }
+  .pf-row > svg:last-child, .pf-alert > svg:last-child { flex-shrink: 0; color: var(--muted); }
+  .pf-up-t, .pf-item-main { flex: 1; min-width: 0; display: flex; flex-direction: column; font-size: .86rem; }
+  .pf-up-t span, .pf-item-main span { font-size: .74rem; color: var(--muted); overflow-wrap: anywhere; }
+  .pf-item-main b, .pf-up-t b { overflow-wrap: anywhere; }
+  .pf-up-d, .pf-item-date { flex-shrink: 0; font-size: .74rem; color: var(--muted); font-weight: 600; }
+  .pf-sub { font-size: .7rem; font-weight: 800; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; margin: .6rem 0 .1rem; }
+  /* สถานะแบบเบาๆ: จุดสี + ข้อความ ไม่ใช่ป้ายเตือนแรงๆ */
+  .pf-status { display: inline-flex; align-items: center; gap: .3rem; font-size: .72rem; font-weight: 600; color: var(--muted); flex-shrink: 0; }
+  .pf-status i { width: .5rem; height: .5rem; border-radius: 50%; background: var(--border); display: inline-block; }
+  .pf-status.ok i { background: #10b981; }
+  .pf-status.soon { color: color-mix(in srgb, #f59e0b 70%, var(--fg)); } .pf-status.soon i { background: #f59e0b; }
+  .pf-status.overdue { color: var(--danger-text); } .pf-status.overdue i { background: #ef4444; }
+  .pf-item .pf-status { max-width: 45%; text-align: right; }
+  .pf-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: .4rem; margin: .2rem 0 .5rem; }
+  .pf-stats div { background: var(--bg); border-radius: var(--r-sm); padding: .5rem .6rem; display: flex; flex-direction: column; gap: .1rem; }
+  .pf-stats span { font-size: .66rem; color: var(--muted); font-weight: 700; }
+  .pf-stats b { font-size: .95rem; } .pf-stats b.up { color: #0891b2; } .pf-stats b.down { color: #7c3aed; }
+  .pf-info-row { display: flex; flex-direction: column; gap: .1rem; padding: .45rem 0; border-top: 1px solid var(--border); font-size: .86rem; line-height: 1.45; }
+  .pf-info-row:first-of-type { border-top: none; }
+  .pf-info-row .k { font-size: .7rem; font-weight: 700; color: var(--muted); }
+  .pf-info-row span:last-child { white-space: pre-wrap; overflow-wrap: anywhere; }
+  .pf-info-row.hot .k { color: var(--danger-text); }
+  .pf-kinds { display: grid; grid-template-columns: repeat(2, 1fr); gap: .5rem; }
+  .pf-kind { display: flex; align-items: center; gap: .55rem; padding: .7rem; border-radius: var(--r-md); border: 1px solid var(--border);
+    background: var(--card); color: var(--fg); font: inherit; font-size: .84rem; font-weight: 700; cursor: pointer; text-align: left; }
+  .pf-doc { display: flex; align-items: center; gap: .2rem; border-top: 1px solid var(--border); }
+  .pf-card-title + .pf-doc, .rv-chips + .pf-doc { border-top: none; }
+  .pf-doc-open { flex: 1; min-width: 0; display: flex; align-items: center; gap: .6rem; background: none; border: none; font: inherit; color: var(--fg); text-align: left; padding: .5rem .1rem; cursor: pointer; }
+  .pf-doc-thumb { position: relative; flex-shrink: 0; width: 2.6rem; height: 2.6rem; border-radius: .6rem; overflow: hidden; display: grid; place-items: center; background: var(--bg); color: var(--muted); }
+  .pf-doc-thumb img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+  .pf-preview { display: block; width: 100%; max-height: 55dvh; object-fit: contain; border-radius: var(--r-sm); background: var(--bg); margin: .3rem 0 .8rem; min-height: 6rem; }
+  .pf-pdf { display: flex; flex-direction: column; align-items: center; gap: .4rem; padding: 1.4rem; margin: .3rem 0 .8rem; border-radius: var(--r-sm); background: var(--bg); color: var(--muted); font-size: .8rem; }
+  .pf-photo-edit { display: flex; align-items: center; gap: .9rem; margin-bottom: .6rem; }
+  .pf-photo-btn { position: relative; display: inline-flex; align-items: center; gap: .3rem; cursor: pointer; }
+  .pf-photo-btn .pf-file { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
+  .pf-attached { display: flex; flex-wrap: wrap; gap: .35rem; margin-bottom: .5rem; }
+  .pf-att { display: inline-flex; align-items: center; gap: .25rem; font: inherit; font-size: .74rem; padding: .25rem .55rem; border-radius: 999px; border: 1px solid var(--border); background: var(--bg); color: var(--fg); cursor: pointer; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .petr-card {
     display: flex; align-items: center; gap: .8rem; width: 100%; box-shadow: var(--shadow);
     background: var(--card); border: 1px solid var(--edge); border-radius: var(--r-md);
@@ -1551,20 +1625,59 @@ function migrate(s) {
   s.journal = (Array.isArray(s.journal) ? s.journal : []).filter(j => isObj(j) && safeId(j.id) && typeof j.date === "string" && DATE_RE.test(j.date));
   s.journal.forEach(j => { j.text = text(j.text); if (j.createdAt !== undefined) j.createdAt = iso(j.createdAt); });
   s.pets = (Array.isArray(s.pets) ? s.pets : []).filter(p => isObj(p) && safeId(p.id));
+  // สัตว์เลี้ยง (Pet Profile & Records) — path ของไฟล์ต้องอยู่ในรูปแบบที่แอปสร้างเอง (ใส่ลง data-pet-file และขอ URL จาก Storage)
+  const PET_PATH_RE = /^[A-Za-z0-9-]{1,64}\/[A-Za-z0-9_-]{1,64}\/[A-Za-z0-9_-]{1,64}\.(jpg|png|webp|gif|heic|pdf)$/;
+  const optDate = (v) => typeof v === "string" && DATE_RE.test(v) ? v : null;
+  const oneOf = (v, list, def) => list.includes(v) ? v : def;
+  const idList = (v) => (Array.isArray(v) ? v : []).filter(safeId).slice(0, 50);
+  const textMap = (v, keys) => { const o = {}; if (isObj(v)) for (const k of keys) if (typeof v[k] === "string" && v[k].trim()) o[k] = v[k]; return o; };
+  const PET_TYPES = ["dog", "cat", "cockatiel", "budgie", "lovebird", "conure", "parrot", "bird", "rabbit", "hamster", "fish", "reptile", "other"];
+  const REC_KEYS = ["visit", "diagnosis", "condition", "allergy", "treatment", "surgery", "blood", "med", "weight", "note", "care", "other"];
+  const CARE_K = ["diet", "feeding", "foodAllergies", "supplements", "grooming", "bathing", "nails", "dental", "exercise", "toilet", "sleep", "routines", "behavior"];
+  const INFO_K = ["conditions", "allergies", "special", "microchip", "insurance", "primaryVet", "emergencyVet", "emergencyContact", "sitter"];
+  const DOC_K = ["vaccine", "medical", "lab", "prescription", "insurance", "adoption", "registration", "pedigree", "photo", "other"];
   s.pets.forEach(p => {
     p.name = text(p.name).trim() || "Pet";
-    if (!["cockatiel", "budgie", "lovebird", "conure", "parrot", "bird", "dog", "cat", "other"].includes(p.species)) p.species = "other";
-    if (!["unknown", "male", "female"].includes(p.sex)) p.sex = "unknown";
-    if (p.hatchDate != null && !(typeof p.hatchDate === "string" && DATE_RE.test(p.hatchDate))) p.hatchDate = null;
-    p.notes = text(p.notes);
+    p.species = oneOf(p.species, PET_TYPES, "other");
+    p.sex = oneOf(p.sex, ["unknown", "male", "female"], "unknown");
+    p.neutered = oneOf(p.neutered, ["unknown", "yes", "no"], "unknown");
+    p.hatchDate = optDate(p.hatchDate); p.adoptionDate = optDate(p.adoptionDate);
+    p.birthEstimated = p.birthEstimated === true;
+    if (p.weightUnit !== undefined && p.weightUnit !== "kg" && p.weightUnit !== "g") delete p.weightUnit;
+    p.notes = text(p.notes); p.breed = text(p.breed); p.color = text(p.color); p.microchip = text(p.microchip);
+    p.photo = typeof p.photo === "string" && PET_PATH_RE.test(p.photo) ? p.photo : null;
+    p.docs = (Array.isArray(p.docs) ? p.docs : []).filter(d => isObj(d) && safeId(d.id) && typeof d.path === "string" && PET_PATH_RE.test(d.path));
+    p.docs.forEach(d => {
+      d.name = text(d.name).trim() || "Document"; d.category = oneOf(d.category, DOC_K, "other"); d.date = optDate(d.date) || TODAY;
+      d.mime = /\.pdf$/.test(d.path) ? "application/pdf" : (typeof d.mime === "string" && /^image\/[a-z+.-]{2,20}$/.test(d.mime) ? d.mime : "image/jpeg");
+      d.size = posNum(d.size) || 0; d.createdAt = iso(d.createdAt);
+    });
     p.records = (Array.isArray(p.records) ? p.records : []).filter(r => isObj(r) && safeId(r.id));
     p.records.forEach(r => {
-      if (!["checkup", "blood", "treatment", "med", "weight", "note"].includes(r.type)) r.type = "note";
-      if (!(typeof r.date === "string" && DATE_RE.test(r.date))) r.date = TODAY;
-      r.title = text(r.title); r.details = text(r.details);
+      if (r.type === "checkup") r.type = "visit";   // V7.1 และก่อนหน้า: "Health check" = การไปหาหมอ
+      r.type = oneOf(r.type, REC_KEYS, "note");
+      r.date = optDate(r.date) || TODAY;
+      r.title = text(r.title); r.details = text(r.details); r.clinic = text(r.clinic); r.vet = text(r.vet);
+      r.followUp = optDate(r.followUp);
       r.grams = posNum(r.grams) || null;
       r.values = (Array.isArray(r.values) ? r.values : []).filter(isObj).map(x => ({ k: text(x.k), v: text(x.v) }));
+      r.docIds = idList(r.docIds);
     });
+    p.vaccines = (Array.isArray(p.vaccines) ? p.vaccines : []).filter(v => isObj(v) && safeId(v.id) && text(v.name).trim());
+    p.vaccines.forEach(v => {
+      v.name = text(v.name).trim(); v.date = optDate(v.date) || TODAY; v.nextDue = optDate(v.nextDue);
+      v.dose = text(v.dose); v.clinic = text(v.clinic); v.notes = text(v.notes); v.docIds = idList(v.docIds);
+    });
+    p.meds = (Array.isArray(p.meds) ? p.meds : []).filter(m => isObj(m) && safeId(m.id) && text(m.name).trim());
+    p.meds.forEach(m => {
+      m.name = text(m.name).trim();
+      for (const k of ["purpose", "dosage", "frequency", "instructions", "vet", "notes"]) m[k] = text(m[k]);
+      m.start = optDate(m.start); m.end = optDate(m.end);
+      // ไว้ต่อยอดแจ้งเตือนยา: { enabled, times: ["HH:MM"] } | null
+      m.reminder = isObj(m.reminder) ? { enabled: m.reminder.enabled === true, times: (Array.isArray(m.reminder.times) ? m.reminder.times : []).filter(t => HHMM_RE.test(t)).slice(0, 8) } : null;
+    });
+    p.care = textMap(p.care, CARE_K);
+    p.info = textMap(p.info, INFO_K);
   });
   s.categories.forEach(c => {
     if (!SAFE_COLOR.test(String(c.color || ""))) c.color = "#94a3b8";
@@ -2531,6 +2644,7 @@ async function doSignOut() {
     sessionStorage.removeItem(greadTokenKey());
   } catch { /* ignore */ }
   greadReset();
+  petFileUrls.clear();
   localStorage.removeItem(USER_KEY);
   user = null;
   switchAccount(null); // กลับไป state ว่างของ anonymous — ไม่เห็นข้อมูลบัญชีเดิม
@@ -3729,71 +3843,859 @@ function giveUpFocus() {
   render();
 }
 
-/* ---------- real pets (สัตว์เลี้ยงจริงที่บ้าน — เน้นนก) ---------- */
-let petsView = null; // null = list | petId = detail
-let petsRecFilter = null; // null = status overview | record type = ดูประวัติเรื่องนั้น
-let recFormType = "checkup";
+/* ---------- Pet Profile & Records (สัตว์เลี้ยงจริงที่บ้าน) ----------
+   หน้า Pets: รายการสัตว์ -> โปรไฟล์ของแต่ละตัว (Overview / Health / Care / Documents)
+   ข้อมูลอยู่ใน state.pets[] (sync ไปกับ app_state) ส่วนไฟล์ (รูป/PDF) อยู่ใน Supabase Storage bucket "pet-files"
+   pet: { id, name, species, breed, sex, hatchDate, birthEstimated, weightUnit, color, microchip, neutered, adoptionDate, notes, photo,
+          records[], vaccines[], meds[], care{}, info{}, docs[] }
+   record: { id, type, date, title, details, clinic, vet, followUp, docIds[], values[{k,v}], grams }
+   vaccine: { id, name, date, dose, clinic, nextDue, notes, docIds[] }
+   med: { id, name, purpose, dosage, frequency, start, end, instructions, vet, notes, reminder }   (reminder = null ไว้ต่อยอดแจ้งเตือน)
+   doc: { id, name, category, date, path, mime, size, createdAt } */
+let petsView = null;          // id สัตว์ที่เปิดอยู่ | null = รายการ
+let petsTab = "overview";     // overview | health | care | docs
+let petsRecFilter = null;     // หมวดที่กรองในรายการบันทึกสุขภาพ (null = ทั้งหมด)
+let petsDocFilter = "all";
+let recFormType = "visit";
 
 const SPECIES = [
+  { id: "dog", label: "Dog", emoji: "🐕" },
+  { id: "cat", label: "Cat", emoji: "🐈" },
   { id: "cockatiel", label: "Cockatiel", emoji: "🦜" },
   { id: "budgie", label: "Budgie", emoji: "🐦" },
   { id: "lovebird", label: "Lovebird", emoji: "🐥" },
   { id: "conure", label: "Conure", emoji: "🦜" },
   { id: "parrot", label: "Parrot (other)", emoji: "🦜" },
   { id: "bird", label: "Other bird", emoji: "🐦" },
-  { id: "dog", label: "Dog", emoji: "🐕" },
-  { id: "cat", label: "Cat", emoji: "🐈" },
+  { id: "rabbit", label: "Rabbit", emoji: "🐇" },
+  { id: "hamster", label: "Hamster / small pet", emoji: "🐹" },
+  { id: "fish", label: "Fish", emoji: "🐟" },
+  { id: "reptile", label: "Reptile", emoji: "🦎" },
   { id: "other", label: "Other", emoji: "🐾" },
 ];
+const PET_SPECIES_IDS = SPECIES.map(s => s.id);
 const REC_TYPES = {
-  checkup: { label: "Health check", icon: "heart", color: "#10b981" },
-  blood: { label: "Blood test", icon: "droplet", color: "#ef4444" },
-  treatment: { label: "Treatment", icon: "medcross", color: "#f59e0b" },
-  med: { label: "Medicine", icon: "plus", color: "#8b5cf6" },
-  weight: { label: "Weight", icon: "chart", color: "#06b6d4" },
-  note: { label: "Note", icon: "edit", color: "#64748b" },
+  visit:     { label: "Vet visit", icon: "medcross", color: "#10b981", doc: "medical" },
+  diagnosis: { label: "Diagnosis", icon: "doc", color: "#6366f1", doc: "medical" },
+  condition: { label: "Condition", icon: "heart", color: "#ef4444", doc: "medical" },
+  allergy:   { label: "Allergy", icon: "x", color: "#f97316", doc: "medical" },
+  treatment: { label: "Treatment", icon: "medcross", color: "#f59e0b", doc: "medical" },
+  surgery:   { label: "Surgery", icon: "activity", color: "#8b5cf6", doc: "medical" },
+  blood:     { label: "Lab / test", icon: "droplet", color: "#e11d48", doc: "lab" },
+  med:       { label: "Medication note", icon: "plus", color: "#a855f7", doc: "prescription" },
+  weight:    { label: "Weight", icon: "chart", color: "#06b6d4", doc: "medical" },
+  note:      { label: "Health note", icon: "edit", color: "#64748b", doc: "medical" },
+  care:      { label: "Care note", icon: "repeat", color: "#0ea5e9", doc: "other" },
+  other:     { label: "Other", icon: "tag", color: "#94a3b8", doc: "other" },
 };
+const CARE_GROUPS = [
+  { key: "food", label: "Food & Diet", icon: "cart", fields: [["diet", "Food / diet"], ["feeding", "Feeding instructions"], ["foodAllergies", "Food allergies"], ["supplements", "Supplements"]] },
+  { key: "grooming", label: "Grooming", icon: "sun", fields: [["grooming", "Grooming"], ["bathing", "Bathing"], ["nails", "Nail trimming"], ["dental", "Dental care"]] },
+  { key: "routine", label: "Daily Routine", icon: "repeat", fields: [["exercise", "Exercise"], ["toilet", "Toilet habits"], ["sleep", "Sleep"], ["routines", "Other routines"]] },
+  { key: "behavior", label: "Behavior Notes", icon: "feather", fields: [["behavior", "Behavior notes"]] },
+];
+const CARE_KEYS = CARE_GROUPS.flatMap(g => g.fields.map(f => f[0]));
+const INFO_FIELDS = [
+  ["conditions", "Important medical conditions"], ["allergies", "Allergies"], ["special", "Special care instructions"],
+  ["microchip", "Microchip information"], ["insurance", "Insurance"], ["primaryVet", "Primary veterinarian"],
+  ["emergencyVet", "Emergency veterinarian"], ["emergencyContact", "Emergency contact"], ["sitter", "Pet sitter"],
+];
+const INFO_KEYS = INFO_FIELDS.map(f => f[0]);
+const DOC_CATS = {
+  vaccine: "Vaccination certificate", medical: "Medical record", lab: "Lab result", prescription: "Prescription",
+  insurance: "Insurance", adoption: "Adoption", registration: "Registration", pedigree: "Pedigree", photo: "Photo", other: "Other",
+};
+const BIRD_SPECIES = ["cockatiel", "budgie", "lovebird", "conure", "parrot", "bird", "hamster", "fish"];
+
 function speciesOf(p) { return SPECIES.find(s => s.id === p.species) || SPECIES[SPECIES.length - 1]; }
 function petById(id) { return state.pets.find(p => p.id === id); }
+function petUnit(p) { return p && (p.weightUnit === "kg" || p.weightUnit === "g") ? p.weightUnit : (p && BIRD_SPECIES.includes(p.species) ? "g" : "kg"); }
+function fmtWeight(p, grams) {
+  if (grams == null) return "";
+  if (petUnit(p) === "kg") { const kg = grams / 1000; return `${+kg.toFixed(kg < 10 ? 2 : 1)} kg`; }
+  return `${+Number(grams).toFixed(1)} g`;
+}
+function todayKey() { return dateKey(new Date()); }
+function daysUntil(key) { return key ? Math.round((new Date(key + "T00:00:00") - startOfDay(new Date())) / 86400000) : null; }
+function fmtDay(key) { return key ? fmtDate(new Date(key + "T00:00:00")) : ""; }
 
-/** อายุจากวันเกิด/วันฟัก เช่น "2y 3m" หรือ "8m" */
-function ageText(hatchDate) {
+/** อายุจากวันเกิด เช่น "3 years old", "8 months old" (ประมาณ = ขึ้นต้น ~) */
+function ageText(hatchDate, estimated) {
   if (!hatchDate) return "";
-  const b = new Date(hatchDate + "T00:00:00");
-  const now = new Date();
+  const b = new Date(hatchDate + "T00:00:00"), now = new Date();
   let months = (now.getFullYear() - b.getFullYear()) * 12 + (now.getMonth() - b.getMonth());
   if (now.getDate() < b.getDate()) months--;
   if (months < 0) return "";
   const y = Math.floor(months / 12), m = months % 12;
-  if (y === 0) return m + "m old";
-  return y + "y" + (m ? " " + m + "m" : "") + " old";
-}
-function latestWeight(p) {
-  const w = p.records.filter(r => r.type === "weight" && r.grams).sort((a, b) => b.date.localeCompare(a.date));
-  return w[0] || null;
-}
-/** กราฟน้ำหนักย้อนหลัง (สูงสุด 12 จุด) */
-function weightChartSvg(p) {
-  const pts = p.records.filter(r => r.type === "weight" && r.grams)
-    .sort((a, b) => a.date.localeCompare(b.date)).slice(-12);
-  if (pts.length < 2) return "";
-  const w = 280, h = 64, pad = 6;
-  const vals = pts.map(r => Number(r.grams));
-  const min = Math.min(...vals), max = Math.max(...vals);
-  const span = (max - min) || 1;
-  const xy = vals.map((v, i) => [
-    pad + i * (w - pad * 2) / (vals.length - 1),
-    h - pad - (v - min) / span * (h - pad * 2),
-  ]);
-  const line = xy.map(c => c.map(n => n.toFixed(1)).join(",")).join(" ");
-  return `<svg viewBox="0 0 ${w} ${h}" class="wt-chart" aria-label="Weight history">
-    <polyline points="${line}" fill="none" stroke="#06b6d4" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-    ${xy.map((c, i) => `<circle cx="${c[0].toFixed(1)}" cy="${c[1].toFixed(1)}" r="${i === xy.length - 1 ? 3.5 : 2}" fill="#06b6d4"/>`).join("")}
-  </svg>
-  <div class="wt-range"><span>${min} g</span><span>${max} g</span></div>`;
+  const txt = y === 0 ? (m === 0 ? "Under 1 month old" : `${m} month${m > 1 ? "s" : ""} old`)
+    : `${y} year${y > 1 ? "s" : ""}${y < 3 && m ? ` ${m} month${m > 1 ? "s" : ""}` : ""} old`;
+  return (estimated ? "~" : "") + txt;
 }
 
-/* ---- pet profile form ---- */
+/* ---- น้ำหนัก ---- */
+function weightRecords(p) { return p.records.filter(r => r.type === "weight" && r.grams).sort((a, b) => b.date.localeCompare(a.date)); }
+function latestWeight(p) { return weightRecords(p)[0] || null; }
+/** กราฟน้ำหนักย้อนหลัง (สูงสุด 12 จุด) */
+function weightChartSvg(p) {
+  const pts = weightRecords(p).slice(0, 12).reverse();
+  if (pts.length < 2) return "";
+  const w = 280, h = 70, pad = 8;
+  const vals = pts.map(r => Number(r.grams));
+  const min = Math.min(...vals), max = Math.max(...vals), span = (max - min) || 1;
+  const xy = vals.map((v, i) => [pad + i * (w - pad * 2) / (vals.length - 1), h - pad - (v - min) / span * (h - pad * 2)]);
+  const line = xy.map(c => c.map(n => n.toFixed(1)).join(",")).join(" ");
+  const area = `${pad},${h - pad} ${line} ${(w - pad).toFixed(1)},${h - pad}`;
+  return `<svg viewBox="0 0 ${w} ${h}" class="wt-chart" role="img" aria-label="Weight trend">
+    <polygon points="${area}" fill="color-mix(in srgb, #06b6d4 14%, transparent)"/>
+    <polyline points="${line}" fill="none" stroke="#06b6d4" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+    ${xy.map((c, i) => `<circle cx="${c[0].toFixed(1)}" cy="${c[1].toFixed(1)}" r="${i === xy.length - 1 ? 3.8 : 2.2}" fill="#06b6d4"/>`).join("")}
+  </svg>
+  <div class="wt-range"><span>${fmtWeight(p, min)}</span><span>${fmtWeight(p, max)}</span></div>`;
+}
+
+/* ---- สถานะวัคซีน / ยา ---- */
+/** วัคซีนแต่ละชื่อ ดูเฉพาะเข็มล่าสุด (เข็มเก่าที่เลยกำหนดไม่นับว่าค้าง) */
+function latestVaccines(p) {
+  const byName = new Map();
+  for (const v of p.vaccines.slice().sort((a, b) => b.date.localeCompare(a.date))) {
+    const k = v.name.trim().toLowerCase();
+    if (!byName.has(k)) byName.set(k, v);
+  }
+  return [...byName.values()];
+}
+function vaccineStatus(v, p) {
+  const latest = !p || latestVaccines(p).includes(v);
+  if (!latest) return { key: "past", label: "Previous dose" };
+  if (!v.nextDue) return { key: "none", label: "No next dose" };
+  const d = daysUntil(v.nextDue);
+  if (d < 0) return { key: "overdue", label: `Overdue · ${fmtDay(v.nextDue)}` };
+  if (d <= 30) return { key: "soon", label: `Due soon · ${fmtDay(v.nextDue)}` };
+  return { key: "ok", label: `Up to date · next ${fmtDay(v.nextDue)}` };
+}
+function medStatus(m) {
+  const t = todayKey();
+  if (m.start && m.start > t) return "upcoming";
+  if (m.end && m.end < t) return "completed";
+  return "active";
+}
+function petUpcoming(p) {
+  const items = [];
+  for (const v of latestVaccines(p)) {
+    if (!v.nextDue) continue;
+    const d = daysUntil(v.nextDue);
+    if (d <= 60) items.push({ date: v.nextDue, title: v.name, sub: d < 0 ? "Vaccine overdue" : "Vaccine due", status: d < 0 ? "overdue" : d <= 30 ? "soon" : "ok", open: `openVaccineForm('${p.id}','${v.id}')` });
+  }
+  for (const r of p.records) {
+    if (!r.followUp) continue;
+    const d = daysUntil(r.followUp);
+    if (d >= -14 && d <= 60) items.push({ date: r.followUp, title: r.title || REC_TYPES[r.type].label, sub: "Follow-up", status: d < 0 ? "overdue" : d <= 7 ? "soon" : "ok", open: `openRecordForm('${p.id}','${r.id}')` });
+  }
+  for (const m of p.meds) {
+    const s = medStatus(m);
+    if (s === "upcoming" && daysUntil(m.start) <= 30) items.push({ date: m.start, title: m.name, sub: "Medication starts", status: "ok", open: `openMedForm('${p.id}','${m.id}')` });
+    if (s === "active" && m.end && daysUntil(m.end) <= 7) items.push({ date: m.end, title: m.name, sub: "Medication ends", status: "soon", open: `openMedForm('${p.id}','${m.id}')` });
+  }
+  return items.sort((a, b) => a.date.localeCompare(b.date));
+}
+
+/* ---- ไฟล์ (Supabase Storage) ---- */
+const PET_BUCKET = "pet-files";
+const PET_FILE_MAX = 10 * 1024 * 1024;
+const PET_FILE_TYPES = /^(image\/(jpeg|png|webp|gif|heic|heif)|application\/pdf)$/;
+const petFileUrls = new Map();   // path -> { url, exp }
+function petFilesReady() { return !!(sb && sbUser); }
+async function shrinkImage(file, max) {
+  try {
+    const bmp = await createImageBitmap(file);
+    const k = Math.min(1, max / Math.max(bmp.width, bmp.height));
+    const c = document.createElement("canvas");
+    c.width = Math.max(1, Math.round(bmp.width * k)); c.height = Math.max(1, Math.round(bmp.height * k));
+    c.getContext("2d").drawImage(bmp, 0, 0, c.width, c.height);
+    return await new Promise(r => c.toBlob(b => r(b || file), "image/jpeg", 0.86));
+  } catch { return file; }   // HEIC ที่เบราว์เซอร์อ่านไม่ได้ -> อัปโหลดไฟล์เดิม
+}
+async function petFileUpload(p, file, maxPx) {
+  if (!petFilesReady()) throw new Error("Sign in with cloud sync to upload files");
+  let type = file.type || (/\.pdf$/i.test(file.name || "") ? "application/pdf" : "");
+  if (!PET_FILE_TYPES.test(type)) throw new Error("Only photos (JPG, PNG, WebP, HEIC) and PDF files can be uploaded");
+  let blob = file;
+  if (type.startsWith("image/") && type !== "image/gif") { blob = await shrinkImage(file, maxPx || 2000); type = blob.type || type; }
+  if (blob.size > PET_FILE_MAX) throw new Error("File is larger than 10 MB");
+  const ext = type === "application/pdf" ? "pdf" : type === "image/png" ? "png" : type === "image/webp" ? "webp" : type === "image/gif" ? "gif" : /hei/.test(type) ? "heic" : "jpg";
+  const path = `${sbUser.id}/${p.id}/${uid()}.${ext}`;
+  const { error } = await sb.storage.from(PET_BUCKET).upload(path, blob, { contentType: type, upsert: false });
+  if (error) throw new Error(error.message);
+  return { path, mime: type, size: blob.size };
+}
+async function petFileUrl(path) {
+  const c = petFileUrls.get(path);
+  if (c && c.exp > Date.now()) return c.url;
+  if (!petFilesReady()) return "";
+  const { data, error } = await sb.storage.from(PET_BUCKET).createSignedUrl(path, 3600);
+  if (error || !data?.signedUrl) return "";
+  petFileUrls.set(path, { url: data.signedUrl, exp: Date.now() + 50 * 60000 });
+  return data.signedUrl;
+}
+async function petFileRemove(paths) {
+  const list = paths.filter(Boolean);
+  if (!list.length || !petFilesReady()) return;
+  try { await sb.storage.from(PET_BUCKET).remove(list); } catch { /* ไฟล์ค้างใน storage ไม่กระทบการใช้งาน */ }
+  list.forEach(x => petFileUrls.delete(x));
+}
+/** ใส่รูปจริงให้ <img data-pet-file> ที่ยังไม่มี src (เรียกทุกครั้งที่หน้าเปลี่ยน) */
+function hydratePetFiles() {
+  document.querySelectorAll("img[data-pet-file]:not([data-loading])").forEach(img => {
+    img.setAttribute("data-loading", "1");
+    petFileUrl(img.dataset.petFile).then(url => { if (url && img.isConnected) img.src = url; else img.classList.add("broken"); });
+  });
+}
+function petPhotoHtml(p, size, cls = "") {
+  const sp = speciesOf(p);
+  return p.photo
+    ? `<span class="pf-avatar ${cls}" style="width:${size};height:${size}"><img data-pet-file="${esc(p.photo)}" alt="${esc(p.name)}"><span class="pf-emoji">${sp.emoji}</span></span>`
+    : `<span class="pf-avatar ${cls}" style="width:${size};height:${size}"><span class="pf-emoji">${sp.emoji}</span></span>`;
+}
+function uploadHint() {
+  return petFilesReady() ? "" : `<p class="hint" style="margin:.2rem 0 .6rem">${icon("lock", 11)} Files are stored in your cloud account — sign in with cloud sync to attach photos and documents.</p>`;
+}
+function fileInputHtml(id, multiple) {
+  return `<input type="file" id="${id}" accept="image/*,application/pdf" ${multiple ? "multiple" : ""} ${petFilesReady() ? "" : "disabled"} class="pf-file">`;
+}
+/** อัปโหลดไฟล์จาก <input type=file> แล้วเพิ่มเป็นเอกสารของสัตว์ -> คืน id เอกสาร */
+async function attachFiles(p, inputId, category, date, titleBase) {
+  const input = document.getElementById(inputId);
+  const files = input ? [...(input.files || [])] : [];
+  const ids = [];
+  for (const f of files) {
+    const up = await petFileUpload(p, f);
+    const doc = { id: uid(), name: (titleBase ? titleBase + " — " : "") + String(f.name || "File").replace(/\.[a-z0-9]+$/i, "").slice(0, 80),
+      category, date: date || todayKey(), path: up.path, mime: up.mime, size: up.size, createdAt: new Date().toISOString() };
+    p.docs.push(doc);
+    ids.push(doc.id);
+  }
+  return ids;
+}
+async function withBusy(btn, fn) {
+  const b = btn instanceof Element ? btn : null;
+  if (b) { b.disabled = true; b.dataset.label = b.textContent; b.textContent = "Saving…"; }
+  try { await fn(); }
+  catch (e) { showToast("❌ " + (e.message || "Couldn't save")); }
+  finally { if (b && b.isConnected) { b.disabled = false; b.textContent = b.dataset.label; } }
+}
+
+/* ---- ตัวช่วยฟอร์ม ---- */
+function sheetHtml(title, body, label) {
+  return `<div class="overlay" onclick="if(event.target===this)closeForm()">
+    <div class="sheet" role="dialog" aria-label="${esc(label || title)}">
+      <div class="sheet-head"><h2 style="overflow-wrap:anywhere">${title}</h2>
+        <button class="x-btn" aria-label="Close" onclick="closeForm()">✕</button></div>
+      ${body}
+    </div></div>`;
+}
+const val = (id) => (document.getElementById(id)?.value || "").trim();
+const dateVal = (id) => { const v = val(id); return /^\d{4}-\d{2}-\d{2}$/.test(v) ? v : null; };
+function attachedDocsHtml(p, ids) {
+  const docs = (ids || []).map(id => p.docs.find(d => d.id === id)).filter(Boolean);
+  if (!docs.length) return "";
+  return `<div class="pf-attached">${docs.map(d => `<button type="button" class="pf-att" onclick="openDocPreview('${p.id}','${d.id}')">${icon(d.mime === "application/pdf" ? "doc" : "eye", 12)} ${esc(d.name)}</button>`).join("")}</div>`;
+}
+
+/* ---- โปรไฟล์ ---- */
+let petPhotoDraft = null;   // { file } รูปที่เลือกในฟอร์มแต่ยังไม่บันทึก
+function openPetForm(petId) {
+  const p = petId ? petById(petId) : null;
+  petPhotoDraft = null;
+  const spOpts = SPECIES.map(s => `<option value="${s.id}" ${p && p.species === s.id ? "selected" : ""}>${s.emoji} ${s.label}</option>`).join("");
+  const sel = (id, opts, cur) => `<select id="${id}">${opts.map(([v, l]) => `<option value="${v}" ${cur === v ? "selected" : ""}>${l}</option>`).join("")}</select>`;
+  document.getElementById("modal").innerHTML = sheetHtml(p ? "Edit profile" : "Add pet", `
+    <form onsubmit="savePet(event, '${petId || ""}')">
+      <div class="pf-photo-edit">
+        ${p ? petPhotoHtml(p, "4.2rem") : `<span class="pf-avatar" style="width:4.2rem;height:4.2rem"><span class="pf-emoji">🐾</span></span>`}
+        <label class="link-primary pf-photo-btn">${icon("upload", 13)} ${p && p.photo ? "Change photo" : "Add photo"}
+          <input type="file" id="pfPhoto" accept="image/*" ${petFilesReady() ? "" : "disabled"} class="pf-file" onchange="previewPetPhoto(this)"></label>
+      </div>
+      ${uploadHint()}
+      <label class="fld">Name<input id="pfName" required maxlength="40" value="${p ? esc(p.name) : ""}" placeholder="e.g. Mochi"></label>
+      <div class="row2">
+        <label class="fld">Species<select id="pfSpecies">${spOpts}</select></label>
+        <label class="fld">Breed<input id="pfBreed" maxlength="60" value="${p ? esc(p.breed) : ""}" placeholder="e.g. Shiba Inu"></label>
+      </div>
+      <div class="row2">
+        <label class="fld">Sex${sel("pfSex", [["unknown", "Unknown"], ["male", "Male"], ["female", "Female"]], p ? p.sex : "unknown")}</label>
+        <label class="fld">Neutered / spayed${sel("pfNeutered", [["unknown", "Unknown"], ["yes", "Yes"], ["no", "No"]], p ? p.neutered : "unknown")}</label>
+      </div>
+      <div class="row2">
+        <label class="fld">Date of birth<input type="date" id="pfHatch" value="${p?.hatchDate || ""}" onkeydown="submitOnEnter(event)"></label>
+        <label class="fld">Adoption date<input type="date" id="pfAdopt" value="${p?.adoptionDate || ""}" onkeydown="submitOnEnter(event)"></label>
+      </div>
+      <label class="fld-check"><input type="checkbox" id="pfEstimated" ${p?.birthEstimated ? "checked" : ""}> Birth date is an estimate</label>
+      <div class="row2">
+        <label class="fld">Weight unit${sel("pfUnit", [["", "Auto (by species)"], ["kg", "Kilograms (kg)"], ["g", "Grams (g)"]], p && p.weightUnit ? p.weightUnit : "")}</label>
+        <label class="fld">Microchip number<input id="pfChip" maxlength="40" value="${p ? esc(p.microchip) : ""}" inputmode="numeric"></label>
+      </div>
+      <label class="fld">Color / identifying features<input id="pfColor" maxlength="120" value="${p ? esc(p.color) : ""}" placeholder="e.g. Red coat, white socks"></label>
+      <label class="fld">Notes<textarea id="pfNotes" rows="2" maxlength="1000">${p ? esc(p.notes || "") : ""}</textarea></label>
+      <button type="submit" class="btn btn-primary">Save</button>
+      ${p ? `<button type="button" class="btn btn-danger-outline" onclick="deletePet('${p.id}')">Delete pet</button>` : ""}
+    </form>`, p ? "Edit pet profile" : "Add pet");
+  setTimeout(() => { if (!p) document.getElementById("pfName")?.focus(); }, 50);
+}
+function previewPetPhoto(input) {
+  const f = input.files && input.files[0];
+  if (!f) return;
+  petPhotoDraft = { file: f };
+  const box = input.closest(".pf-photo-edit")?.querySelector(".pf-avatar");
+  if (box && f.type.startsWith("image/")) box.innerHTML = `<img src="${URL.createObjectURL(f)}" alt="">`;
+}
+async function savePet(e, petId) {
+  e.preventDefault();
+  const btn = e.submitter || document.querySelector("#modal .btn-primary");
+  const data = {
+    name: val("pfName"), species: val("pfSpecies"), breed: val("pfBreed"), sex: val("pfSex") || "unknown",
+    neutered: val("pfNeutered") || "unknown", hatchDate: dateVal("pfHatch"), adoptionDate: dateVal("pfAdopt"),
+    birthEstimated: !!document.getElementById("pfEstimated")?.checked,
+    microchip: val("pfChip"), color: val("pfColor"), notes: val("pfNotes"),
+  };
+  if (!data.name) return;
+  const existing = petId ? petById(petId) : null;
+  if (petId && !existing) showToast("This pet was deleted on another device — saved as a new pet");
+  await withBusy(btn, async () => {
+    let p = existing;
+    const unit = val("pfUnit");
+    if (unit === "kg" || unit === "g") data.weightUnit = unit;
+    if (p) { Object.assign(p, data); if (!unit) delete p.weightUnit; }
+    else {
+      p = { id: uid(), ...data, photo: null, records: [], vaccines: [], meds: [], care: {}, info: {}, docs: [] };
+      state.pets.push(p);
+      petsView = p.id; petsTab = "overview";
+    }
+    if (petPhotoDraft) {
+      const old = p.photo;
+      const up = await petFileUpload(p, petPhotoDraft.file, 720);
+      p.photo = up.path;
+      petPhotoDraft = null;
+      if (old) petFileRemove([old]);
+    }
+    save(); closeForm(); render();
+  });
+}
+async function deletePet(id) {
+  const p = petById(id);
+  if (!confirm(`Delete ${p?.name || "this pet"} and all records and files?`)) return;
+  state.pets = state.pets.filter(x => x.id !== id);
+  petsView = null;
+  save(); closeForm(); render();
+  if (p) petFileRemove([p.photo, ...p.docs.map(d => d.path)]);
+}
+
+/* ---- เพิ่มบันทึก: ถามก่อนว่าจะบันทึกอะไร ---- */
+const ADD_KINDS = [
+  ["visit", "Vet Visit", "medcross", "#10b981"], ["vaccine", "Vaccination", "check", "#6366f1"], ["med", "Medication", "plus", "#a855f7"],
+  ["weight", "Weight", "chart", "#06b6d4"], ["note", "Health Note", "edit", "#64748b"], ["care", "Care Note", "repeat", "#0ea5e9"],
+  ["doc", "Document", "doc", "#f59e0b"], ["other", "Other", "tag", "#94a3b8"],
+];
+function openAddRecord(petId) {
+  const p = petById(petId);
+  if (!p) return;
+  document.getElementById("modal").innerHTML = sheetHtml(`Add to ${esc(p.name)}`, `
+    <p class="hint" style="margin:-.2rem 0 .8rem">What do you want to record?</p>
+    <div class="pf-kinds">${ADD_KINDS.map(([k, label, ic, col]) => `
+      <button class="pf-kind" onclick="startAddRecord('${p.id}','${k}')">
+        <span class="set-ico" style="background:color-mix(in srgb, ${col} 16%, var(--card));color:color-mix(in srgb, ${col} 60%, var(--fg))">${icon(ic, 16)}</span>${label}</button>`).join("")}
+    </div>`, "Add record");
+}
+function startAddRecord(petId, kind) {
+  if (kind === "vaccine") return openVaccineForm(petId);
+  if (kind === "med") return openMedForm(petId);
+  if (kind === "doc") return openDocForm(petId);
+  openRecordForm(petId, "", kind);
+}
+
+/* ---- บันทึกสุขภาพ ---- */
+function openRecordForm(petId, recId, preset) {
+  const p = petById(petId);
+  if (!p) { petsView = null; render(); return; }   // ถูกลบจากอีกเครื่องแล้ว
+  const r = recId ? p.records.find(x => x.id === recId) : null;
+  recFormType = r?.type || (REC_TYPES[preset] ? preset : preset === "checkup" ? "visit" : "visit");
+  const unit = petUnit(p);
+  const gramsShown = r?.grams ? (unit === "kg" ? +(r.grams / 1000).toFixed(3) : r.grams) : "";
+  document.getElementById("modal").innerHTML = sheetHtml(`${r ? "Edit record" : "New record"} — ${esc(p.name)}`, `
+      <div class="setup-label">Category</div>
+      <div class="setup-chips" id="recTypes">${Object.entries(REC_TYPES).filter(([t]) => t !== "med" || recFormType === "med").map(([t, cfg]) => `
+        <button type="button" class="setup-chip ${recFormType === t ? "sel" : ""}" data-type="${t}"
+          onclick="recFormType='${t}';refreshRecForm('${petId}','${recId || ""}')"
+          style="${recFormType === t ? `background:color-mix(in srgb, ${cfg.color} 16%, var(--card));border-color:${cfg.color};color:color-mix(in srgb, ${cfg.color} 55%, var(--fg))` : ""}">
+          ${icon(cfg.icon, 12)} ${cfg.label}</button>`).join("")}
+      </div>
+      <form onsubmit="saveRecord(event, '${petId}', '${recId || ""}')" style="margin-top:.75rem">
+        <div class="row2">
+          <label class="fld">Date<input type="date" id="rcDate" required value="${r?.date || todayKey()}" onkeydown="submitOnEnter(event)"></label>
+          <label class="fld" id="rcWeightWrap" style="display:${recFormType === "weight" ? "" : "none"}">Weight (${unit})
+            <input type="number" id="rcGrams" step="${unit === "kg" ? "0.01" : "0.1"}" min="0" value="${gramsShown}" placeholder="${unit === "kg" ? "e.g. 8.4" : "e.g. 92.5"}">
+          </label>
+          <label class="fld" id="rcFollowWrap" style="display:${recFormType === "weight" ? "none" : ""}">Follow-up date<input type="date" id="rcFollow" value="${r?.followUp || ""}"></label>
+        </div>
+        <label class="fld">Title<input id="rcTitle" maxlength="120" value="${r ? esc(r.title || "") : ""}" placeholder="e.g. Annual checkup"></label>
+        <div id="rcBloodWrap" style="display:${recFormType === "blood" ? "" : "none"}">
+          <div class="setup-label">Test results (name · value)</div>
+          <div id="bloodRows">${(r?.values?.length ? r.values : [{ k: "", v: "" }]).map(row => `
+            <div class="bl-row">
+              <input class="bl-k" placeholder="e.g. PCV / Uric acid" value="${esc(row.k || "")}" list="bloodPresets" aria-label="Test name">
+              <input class="bl-v" placeholder="value + unit" value="${esc(row.v || "")}" aria-label="Test value">
+              <button type="button" class="rt-del" aria-label="Remove row" onclick="this.parentElement.remove()">${icon("x", 12)}</button>
+            </div>`).join("")}
+          </div>
+          <datalist id="bloodPresets">
+            ${["PCV / Hematocrit", "RBC", "WBC", "Hemoglobin", "Glucose", "Uric acid", "BUN", "Creatinine", "ALT", "AST (SGOT)", "CK", "Total protein", "Albumin", "Calcium", "Phosphorus", "Bile acids"].map(x => `<option value="${x}">`).join("")}
+          </datalist>
+          <button type="button" class="link-primary" style="margin:.35rem 0 .6rem" onclick="addBloodRow()">+ Add row</button>
+        </div>
+        <div class="row2" id="rcVetWrap" style="display:${recFormType === "weight" ? "none" : ""}">
+          <label class="fld">Clinic<input id="rcClinic" maxlength="120" value="${r ? esc(r.clinic || "") : ""}"></label>
+          <label class="fld">Veterinarian<input id="rcVet" maxlength="120" value="${r ? esc(r.vet || "") : ""}"></label>
+        </div>
+        <label class="fld">Notes<textarea id="rcDetails" rows="3" maxlength="4000">${r ? esc(r.details || "") : ""}</textarea></label>
+        <div id="rcAttachWrap" style="display:${recFormType === "weight" ? "none" : ""}">
+          ${attachedDocsHtml(p, r?.docIds)}
+          <label class="fld">Attach photos / PDF${fileInputHtml("rcFiles", true)}</label>
+          ${uploadHint()}
+        </div>
+        <button type="submit" class="btn btn-primary">Save record</button>
+        ${r ? `<button type="button" class="btn btn-danger-outline" onclick="deleteRecord('${petId}','${r.id}')">Delete record</button>` : ""}
+      </form>`, "Health record");
+}
+function refreshRecForm(petId, recId) {
+  const show = (id, on) => { const el = document.getElementById(id); if (el) el.style.display = on ? "" : "none"; };
+  const w = recFormType === "weight";
+  show("rcWeightWrap", w); show("rcFollowWrap", !w); show("rcVetWrap", !w); show("rcAttachWrap", !w);
+  show("rcBloodWrap", recFormType === "blood");
+  document.querySelectorAll("#recTypes .setup-chip").forEach(b => {
+    const t = b.dataset.type, cfg = REC_TYPES[t], sel = t === recFormType;
+    b.classList.toggle("sel", sel);
+    b.style.cssText = sel ? `background:color-mix(in srgb, ${cfg.color} 16%, var(--card));border-color:${cfg.color};color:color-mix(in srgb, ${cfg.color} 55%, var(--fg))` : "";
+  });
+}
+function addBloodRow() {
+  const div = document.createElement("div");
+  div.className = "bl-row";
+  div.innerHTML = `<input class="bl-k" placeholder="e.g. PCV / Uric acid" list="bloodPresets" aria-label="Test name">
+    <input class="bl-v" placeholder="value + unit" aria-label="Test value">
+    <button type="button" class="rt-del" aria-label="Remove row" onclick="this.parentElement.remove()">${icon("x", 12)}</button>`;
+  document.getElementById("bloodRows").appendChild(div);
+}
+async function saveRecord(e, petId, recId) {
+  e.preventDefault();
+  const p = petById(petId);
+  if (!p) return closeForm();
+  const unit = petUnit(p);
+  const num = Number(val("rcGrams"));
+  const old = recId ? p.records.find(x => x.id === recId) : null;
+  const rec = {
+    id: recId || uid(), type: recFormType, date: dateVal("rcDate") || todayKey(),
+    title: val("rcTitle"), details: val("rcDetails"),
+    clinic: recFormType === "weight" ? "" : val("rcClinic"), vet: recFormType === "weight" ? "" : val("rcVet"),
+    followUp: recFormType === "weight" ? null : dateVal("rcFollow"),
+    values: recFormType === "blood"
+      ? [...document.querySelectorAll("#bloodRows .bl-row")].map(row => ({ k: row.querySelector(".bl-k").value.trim(), v: row.querySelector(".bl-v").value.trim() })).filter(x => x.k || x.v)
+      : [],
+    grams: recFormType === "weight" && num > 0 ? +(unit === "kg" ? num * 1000 : num).toFixed(1) : null,
+    docIds: old?.docIds ? old.docIds.slice() : [],
+  };
+  if (recFormType === "weight" && !rec.grams) { showToast(`❌ Enter the weight in ${unit}`); return; }
+  await withBusy(e.submitter, async () => {
+    if (recFormType !== "weight") rec.docIds.push(...await attachFiles(p, "rcFiles", REC_TYPES[recFormType].doc, rec.date, rec.title || REC_TYPES[recFormType].label));
+    if (recId) { const i = p.records.findIndex(x => x.id === recId); if (i >= 0) p.records[i] = rec; else p.records.push(rec); }
+    else p.records.push(rec);
+    p.records.sort((a, b) => b.date.localeCompare(a.date));
+    save(); closeForm(); render();
+  });
+}
+function deleteRecord(petId, recId) {
+  if (!confirm("Delete this record? Attached documents stay in Documents.")) return;
+  const p = petById(petId);
+  if (p) p.records = p.records.filter(r => r.id !== recId);
+  save(); closeForm(); render();
+}
+function openWeightForm(petId) { openRecordForm(petId, "", "weight"); }
+
+/* ---- วัคซีน ---- */
+function openVaccineForm(petId, vacId) {
+  const p = petById(petId);
+  if (!p) return;
+  const v = vacId ? p.vaccines.find(x => x.id === vacId) : null;
+  const names = [...new Set(p.vaccines.map(x => x.name))];
+  document.getElementById("modal").innerHTML = sheetHtml(`${v ? "Edit vaccination" : "New vaccination"} — ${esc(p.name)}`, `
+    <form onsubmit="saveVaccine(event, '${petId}', '${vacId || ""}')">
+      <label class="fld">Vaccine name<input id="vcName" required maxlength="80" list="vcNames" value="${v ? esc(v.name) : ""}" placeholder="e.g. Rabies"></label>
+      <datalist id="vcNames">${[...names, "Rabies", "DHPP", "FVRCP", "Leptospirosis", "Bordetella", "FeLV", "Polyomavirus"].map(n => `<option value="${esc(n)}">`).join("")}</datalist>
+      <div class="row2">
+        <label class="fld">Date given<input type="date" id="vcDate" required value="${v?.date || todayKey()}"></label>
+        <label class="fld">Next due date<input type="date" id="vcNext" value="${v?.nextDue || ""}"></label>
+      </div>
+      <div class="row2">
+        <label class="fld">Dose<input id="vcDose" maxlength="60" value="${v ? esc(v.dose) : ""}" placeholder="e.g. 1st booster"></label>
+        <label class="fld">Clinic / veterinarian<input id="vcClinic" maxlength="120" value="${v ? esc(v.clinic) : ""}"></label>
+      </div>
+      <label class="fld">Notes<textarea id="vcNotes" rows="2" maxlength="2000">${v ? esc(v.notes) : ""}</textarea></label>
+      ${attachedDocsHtml(p, v?.docIds)}
+      <label class="fld">Certificate / document${fileInputHtml("vcFiles", true)}</label>
+      ${uploadHint()}
+      <button type="submit" class="btn btn-primary">Save vaccination</button>
+      ${v ? `<button type="button" class="btn btn-danger-outline" onclick="deleteVaccine('${petId}','${v.id}')">Delete vaccination</button>` : ""}
+    </form>`, "Vaccination");
+}
+async function saveVaccine(e, petId, vacId) {
+  e.preventDefault();
+  const p = petById(petId);
+  if (!p) return closeForm();
+  const old = vacId ? p.vaccines.find(x => x.id === vacId) : null;
+  const v = { id: vacId || uid(), name: val("vcName"), date: dateVal("vcDate") || todayKey(), nextDue: dateVal("vcNext"),
+    dose: val("vcDose"), clinic: val("vcClinic"), notes: val("vcNotes"), docIds: old?.docIds ? old.docIds.slice() : [] };
+  if (!v.name) return;
+  if (v.nextDue && v.nextDue < v.date) { showToast("❌ Next due date can't be before the date given"); return; }
+  await withBusy(e.submitter, async () => {
+    v.docIds.push(...await attachFiles(p, "vcFiles", "vaccine", v.date, v.name));
+    if (old) Object.assign(old, v); else p.vaccines.push(v);
+    save(); closeForm(); render();
+  });
+}
+function deleteVaccine(petId, vacId) {
+  if (!confirm("Delete this vaccination?")) return;
+  const p = petById(petId);
+  if (p) p.vaccines = p.vaccines.filter(x => x.id !== vacId);
+  save(); closeForm(); render();
+}
+
+/* ---- ยา ---- */
+function openMedForm(petId, medId) {
+  const p = petById(petId);
+  if (!p) return;
+  const m = medId ? p.meds.find(x => x.id === medId) : null;
+  document.getElementById("modal").innerHTML = sheetHtml(`${m ? "Edit medication" : "New medication"} — ${esc(p.name)}`, `
+    <form onsubmit="saveMed(event, '${petId}', '${medId || ""}')">
+      <label class="fld">Medication name<input id="mdName" required maxlength="80" value="${m ? esc(m.name) : ""}" placeholder="e.g. Amoxicillin"></label>
+      <label class="fld">Purpose<input id="mdPurpose" maxlength="120" value="${m ? esc(m.purpose) : ""}" placeholder="e.g. Ear infection"></label>
+      <div class="row2">
+        <label class="fld">Dosage<input id="mdDose" maxlength="60" value="${m ? esc(m.dosage) : ""}" placeholder="e.g. 50 mg"></label>
+        <label class="fld">Frequency<input id="mdFreq" maxlength="60" value="${m ? esc(m.frequency) : ""}" placeholder="e.g. Twice a day"></label>
+      </div>
+      <div class="row2">
+        <label class="fld">Start date<input type="date" id="mdStart" value="${m?.start || todayKey()}"></label>
+        <label class="fld">End date<input type="date" id="mdEnd" value="${m?.end || ""}"></label>
+      </div>
+      <label class="fld">Instructions<textarea id="mdInstr" rows="2" maxlength="1000" placeholder="e.g. Give with food">${m ? esc(m.instructions) : ""}</textarea></label>
+      <label class="fld">Prescribing veterinarian<input id="mdVet" maxlength="120" value="${m ? esc(m.vet) : ""}"></label>
+      <label class="fld">Notes<textarea id="mdNotes" rows="2" maxlength="1000">${m ? esc(m.notes) : ""}</textarea></label>
+      <button type="submit" class="btn btn-primary">Save medication</button>
+      ${m ? `<button type="button" class="btn btn-danger-outline" onclick="deleteMed('${petId}','${m.id}')">Delete medication</button>` : ""}
+    </form>`, "Medication");
+}
+function saveMed(e, petId, medId) {
+  e.preventDefault();
+  const p = petById(petId);
+  if (!p) return closeForm();
+  const old = medId ? p.meds.find(x => x.id === medId) : null;
+  const m = { id: medId || uid(), name: val("mdName"), purpose: val("mdPurpose"), dosage: val("mdDose"), frequency: val("mdFreq"),
+    start: dateVal("mdStart"), end: dateVal("mdEnd"), instructions: val("mdInstr"), vet: val("mdVet"), notes: val("mdNotes"), reminder: old?.reminder || null };
+  if (!m.name) return;
+  if (m.start && m.end && m.end < m.start) { showToast("❌ End date can't be before the start date"); return; }
+  if (old) Object.assign(old, m); else p.meds.push(m);
+  save(); closeForm(); render();
+}
+function deleteMed(petId, medId) {
+  if (!confirm("Delete this medication?")) return;
+  const p = petById(petId);
+  if (p) p.meds = p.meds.filter(x => x.id !== medId);
+  save(); closeForm(); render();
+}
+
+/* ---- การดูแล / ข้อมูลสำคัญ ---- */
+function openCareForm(petId, groupKey) {
+  const p = petById(petId), g = CARE_GROUPS.find(x => x.key === groupKey);
+  if (!p || !g) return;
+  document.getElementById("modal").innerHTML = sheetHtml(`${g.label} — ${esc(p.name)}`, `
+    <p class="hint" style="margin:-.2rem 0 .7rem">Fill in only what's useful — you can leave anything blank.</p>
+    ${g.fields.map(([k, l]) => `<label class="fld">${l}<textarea id="care-${k}" rows="2" maxlength="2000">${esc(p.care[k] || "")}</textarea></label>`).join("")}
+    <button class="btn btn-primary" onclick="saveCare('${p.id}','${g.key}')">Save</button>`, g.label);
+}
+function saveCare(petId, groupKey) {
+  const p = petById(petId), g = CARE_GROUPS.find(x => x.key === groupKey);
+  if (!p || !g) return closeForm();
+  for (const [k] of g.fields) { const el = document.getElementById("care-" + k); if (el) { const v = el.value.trim(); if (v) p.care[k] = v; else delete p.care[k]; } }
+  save(); closeForm(); render();
+}
+function openInfoSheet(petId, editing) {
+  const p = petById(petId);
+  if (!p) return;
+  const filled = INFO_FIELDS.filter(([k]) => p.info[k]);
+  const view = `
+    ${p.microchip ? `<div class="pf-info-row"><span class="k">Microchip no.</span><span>${esc(p.microchip)}</span></div>` : ""}
+    ${filled.map(([k, l]) => `<div class="pf-info-row ${["conditions", "allergies", "special"].includes(k) ? "hot" : ""}"><span class="k">${l}</span><span>${esc(p.info[k])}</span></div>`).join("")}
+    ${!filled.length && !p.microchip ? `<p class="empty-sm">Nothing saved yet — add vets, emergency contacts and allergies so they're one tap away.</p>` : ""}
+    <button class="btn btn-primary" onclick="openInfoSheet('${p.id}', true)">${icon("edit", 14)} Edit important information</button>`;
+  const edit = `
+    <p class="hint" style="margin:-.2rem 0 .7rem">Leave blank anything that doesn't apply.</p>
+    ${INFO_FIELDS.map(([k, l]) => `<label class="fld">${l}<textarea id="info-${k}" rows="2" maxlength="1000">${esc(p.info[k] || "")}</textarea></label>`).join("")}
+    <button class="btn btn-primary" onclick="saveInfo('${p.id}')">Save</button>`;
+  document.getElementById("modal").innerHTML = sheetHtml(`Important information — ${esc(p.name)}`, editing ? edit : view, "Important information");
+}
+function saveInfo(petId) {
+  const p = petById(petId);
+  if (!p) return closeForm();
+  for (const [k] of INFO_FIELDS) { const el = document.getElementById("info-" + k); if (el) { const v = el.value.trim(); if (v) p.info[k] = v; else delete p.info[k]; } }
+  save(); closeForm(); render();
+}
+
+/* ---- เอกสาร ---- */
+function openDocForm(petId, docId) {
+  const p = petById(petId);
+  if (!p) return;
+  const d = docId ? p.docs.find(x => x.id === docId) : null;
+  const cats = Object.entries(DOC_CATS).map(([k, l]) => `<option value="${k}" ${d?.category === k ? "selected" : ""}>${l}</option>`).join("");
+  document.getElementById("modal").innerHTML = sheetHtml(d ? "Edit document" : `Upload document — ${esc(p.name)}`, `
+    <form onsubmit="saveDoc(event, '${petId}', '${docId || ""}')">
+      ${d ? "" : `<label class="fld">File (photo or PDF, up to 10 MB)${fileInputHtml("dcFile", false).replace("<input", "<input required")}</label>${uploadHint()}`}
+      <label class="fld">Name<input id="dcName" maxlength="100" value="${d ? esc(d.name) : ""}" placeholder="Uses the file name if blank"></label>
+      <div class="row2">
+        <label class="fld">Category<select id="dcCat">${cats}</select></label>
+        <label class="fld">Document date<input type="date" id="dcDate" value="${d?.date || todayKey()}"></label>
+      </div>
+      <button type="submit" class="btn btn-primary">${d ? "Save" : "Upload"}</button>
+      ${d ? `<button type="button" class="btn btn-danger-outline" onclick="deleteDoc('${petId}','${d.id}')">Delete document</button>` : ""}
+    </form>`, "Document");
+}
+async function saveDoc(e, petId, docId) {
+  e.preventDefault();
+  const p = petById(petId);
+  if (!p) return closeForm();
+  const cat = DOC_CATS[val("dcCat")] ? val("dcCat") : "other";
+  const d = docId ? p.docs.find(x => x.id === docId) : null;
+  if (d) {
+    d.name = val("dcName") || d.name; d.category = cat; d.date = dateVal("dcDate") || d.date;
+    save(); closeForm(); render();
+    return;
+  }
+  const f = document.getElementById("dcFile")?.files?.[0];
+  if (!f) { showToast("❌ Choose a file to upload"); return; }
+  await withBusy(e.submitter, async () => {
+    const up = await petFileUpload(p, f);
+    p.docs.push({ id: uid(), name: (val("dcName") || String(f.name || "Document").replace(/\.[a-z0-9]+$/i, "")).slice(0, 100), category: cat,
+      date: dateVal("dcDate") || todayKey(), path: up.path, mime: up.mime, size: up.size, createdAt: new Date().toISOString() });
+    petsTab = "docs";
+    save(); closeForm(); render();
+  });
+}
+function deleteDoc(petId, docId) {
+  const p = petById(petId);
+  const d = p?.docs.find(x => x.id === docId);
+  if (!d || !confirm(`Delete "${d.name}"? The file will be removed.`)) return;
+  p.docs = p.docs.filter(x => x.id !== docId);
+  for (const list of [p.records, p.vaccines]) list.forEach(x => { x.docIds = (x.docIds || []).filter(id => id !== docId); });
+  save(); closeForm(); render();
+  petFileRemove([d.path]);
+}
+async function openDocPreview(petId, docId) {
+  const p = petById(petId);
+  const d = p?.docs.find(x => x.id === docId);
+  if (!d) return;
+  const isPdf = d.mime === "application/pdf";
+  document.getElementById("modal").innerHTML = sheetHtml(esc(d.name), `
+    <div class="detail-chips"><span class="chip" style="background:var(--primary-soft);color:var(--primary)">${esc(DOC_CATS[d.category] || "Other")}</span>
+      <span class="chip" style="background:var(--bg);color:var(--muted)">${fmtDay(d.date)}</span>
+      ${d.size ? `<span class="chip" style="background:var(--bg);color:var(--muted)">${d.size > 1048576 ? (d.size / 1048576).toFixed(1) + " MB" : Math.max(1, Math.round(d.size / 1024)) + " KB"}</span>` : ""}</div>
+    ${isPdf ? `<div class="pf-pdf">${icon("doc", 34)}<span>PDF document</span></div>` : `<img class="pf-preview" data-pet-file="${esc(d.path)}" alt="${esc(d.name)}">`}
+    <button class="btn btn-primary" onclick="openPetFile('${p.id}','${d.id}')">${icon("eye", 14)} ${isPdf ? "Open PDF" : "Open full size"}</button>
+    <button class="btn btn-outline" onclick="openDocForm('${p.id}','${d.id}')">${icon("edit", 14)} Rename / category</button>`, "Document preview");
+}
+async function openPetFile(petId, docId) {
+  const d = petById(petId)?.docs.find(x => x.id === docId);
+  if (!d) return;
+  const w = window.open("", "_blank");   // เปิดแท็บก่อนภายใต้การกด (ไม่โดนบล็อก popup) แล้วค่อยใส่ลิงก์
+  const url = await petFileUrl(d.path);
+  if (!url) { if (w) w.close(); showToast("❌ Couldn't open the file — check your connection"); return; }
+  if (w) { w.opener = null; w.location.href = url; } else location.assign(url);
+}
+
+/* ---- หน้าจอ ---- */
+function renderPets() {
+  if (petsView) {
+    const p = petById(petsView);
+    if (p) return renderPetProfile(p);
+    petsView = null;
+  }
+  const cards = state.pets.map(p => {
+    const sp = speciesOf(p), w = latestWeight(p);
+    const due = latestVaccines(p).filter(v => ["overdue", "soon"].includes(vaccineStatus(v, p).key)).length;
+    return `<button class="petr-card" onclick="openPetProfile('${p.id}')">
+      ${petPhotoHtml(p, "3rem")}
+      <span class="petr-info">
+        <b>${esc(p.name)}</b>
+        <span class="petr-sub">${esc([p.breed || sp.label, ageText(p.hatchDate, p.birthEstimated), w ? fmtWeight(p, w.grams) : ""].filter(Boolean).join(" · "))}</span>
+        ${due ? `<span class="pf-status soon"><i></i>${due} vaccine${due > 1 ? "s" : ""} due</span>` : ""}
+      </span>
+      ${icon("right", 15)}
+    </button>`;
+  }).join("");
+  return `<h1>My Pets</h1>
+    ${cards || `<p class="empty" style="margin-top:2.5rem">No pets yet — add your first pet 🐾</p>`}
+    <button class="ov-card rt-card cl-new" style="margin-top:.6rem" onclick="openPetForm()">${icon("plus", 15)} Add pet</button>`;
+}
+function openPetProfile(id) { petsView = id; petsTab = "overview"; petsRecFilter = null; viewTransition = true; render(); }
+function setPetsTab(tab, anchor) {
+  petsTab = tab; render();
+  const el = anchor && document.getElementById(anchor);
+  if (el) el.scrollIntoView({ block: "start", behavior: "smooth" }); else window.scrollTo(0, 0);
+}
+function pfRow(label, sub, onclick, ic, col) {
+  return `<button class="pf-row" onclick="${onclick}">
+    <span class="set-ico" style="background:color-mix(in srgb, ${col} 15%, var(--card));color:color-mix(in srgb, ${col} 60%, var(--fg))">${icon(ic, 14)}</span>
+    <span class="pf-row-label">${label}</span><span class="pf-row-sub">${sub}</span>${icon("right", 14)}</button>`;
+}
+
+function renderPetProfile(p) {
+  const sp = speciesOf(p), w = latestWeight(p);
+  const switcher = state.pets.length > 1 ? `<div class="pf-switch" role="tablist" aria-label="Switch pet">${state.pets.map(x => `
+      <button class="pf-switch-btn ${x.id === p.id ? "sel" : ""}" role="tab" aria-selected="${x.id === p.id}" onclick="openPetProfile('${x.id}')">${petPhotoHtml(x, "1.6rem")}<span>${esc(x.name)}</span></button>`).join("")}</div>` : "";
+  const facts = [ageText(p.hatchDate, p.birthEstimated), w ? fmtWeight(p, w.grams) : ""].filter(Boolean).join(" • ");
+  const header = `<div class="pf-head">
+      ${petPhotoHtml(p, "5rem", "lg")}
+      <div class="pf-head-text">
+        <h1>${esc(p.name)}</h1>
+        <div class="pf-breed">${esc([p.breed, sp.label].filter(Boolean).join(" · "))}</div>
+        ${facts ? `<div class="pf-facts">${esc(facts)}</div>` : ""}
+      </div>
+      <button class="link-primary pf-edit" onclick="openPetForm('${p.id}')" aria-label="Edit profile">${icon("edit", 13)} Edit</button>
+    </div>`;
+  const tabs = `<div class="cal-seg pf-tabs" role="tablist">${[["overview", "Overview"], ["health", "Health"], ["care", "Care"], ["docs", "Documents"]].map(([k, l]) =>
+    `<button role="tab" aria-selected="${petsTab === k}" class="cal-seg-btn ${petsTab === k ? "sel" : ""}" onclick="setPetsTab('${k}')">${l}</button>`).join("")}</div>`;
+  const body = petsTab === "health" ? petHealthHtml(p) : petsTab === "care" ? petCareHtml(p) : petsTab === "docs" ? petDocsHtml(p) : petOverviewHtml(p);
+  return `<button class="back-btn" onclick="petsView=null;viewTransition=true;render()">${icon("left", 15)} My Pets</button>
+    ${switcher}${header}${tabs}<div class="pf-body">${body}</div>`;
+}
+
+function petOverviewHtml(p) {
+  const quick = [["Health Record", `openRecordForm('${p.id}','','visit')`, "medcross", "#10b981"], ["Weight", `openWeightForm('${p.id}')`, "chart", "#06b6d4"],
+    ["Vaccination", `openVaccineForm('${p.id}')`, "check", "#6366f1"], ["Medication", `openMedForm('${p.id}')`, "plus", "#a855f7"]]
+    .map(([l, fn, ic, col]) => `<button class="pf-quick" onclick="${fn}"><span class="set-ico" style="background:color-mix(in srgb, ${col} 15%, var(--card));color:color-mix(in srgb, ${col} 60%, var(--fg))">${icon(ic, 15)}</span>+ ${l}</button>`).join("");
+  const hot = ["allergies", "conditions", "special"].filter(k => p.info[k]);
+  const important = hot.length ? `<button class="pf-alert" onclick="openInfoSheet('${p.id}')">
+      ${icon("heart", 14)}<span>${hot.map(k => `<b>${INFO_FIELDS.find(f => f[0] === k)[1]}:</b> ${esc(p.info[k])}`).join("<br>")}</span>${icon("right", 14)}</button>` : "";
+  const up = petUpcoming(p);
+  const upcoming = `<div class="pf-card"><div class="pf-card-title">Upcoming</div>
+    ${up.length ? up.slice(0, 5).map(it => `<button class="pf-up" onclick="${it.open}">
+        <span class="pf-status ${it.status}"><i></i></span><span class="pf-up-t"><b>${esc(it.title)}</b><span>${it.sub}</span></span>
+        <span class="pf-up-d">${fmtDay(it.date)}</span></button>`).join("")
+      : `<p class="empty-sm" style="margin:.2rem 0">Nothing coming up ✓</p>`}</div>`;
+  const vax = latestVaccines(p);
+  const overdue = vax.filter(v => vaccineStatus(v, p).key === "overdue").length, soon = vax.filter(v => vaccineStatus(v, p).key === "soon").length;
+  const activeMeds = p.meds.filter(m => medStatus(m) === "active").length;
+  const visits = p.records.filter(r => r.type === "visit").length;
+  const w = latestWeight(p);
+  const health = `<div class="pf-card"><div class="pf-card-title">Health</div>
+    ${pfRow("Vaccinations", overdue ? `<span class="pf-status overdue"><i></i>${overdue} overdue</span>` : soon ? `<span class="pf-status soon"><i></i>${soon} due soon</span>` : `${p.vaccines.length} record${p.vaccines.length === 1 ? "" : "s"}`, `setPetsTab('health','pf-vax')`, "check", "#6366f1")}
+    ${pfRow("Medications", `${activeMeds} active`, `setPetsTab('health','pf-meds')`, "plus", "#a855f7")}
+    ${pfRow("Vet Visits", `${visits} record${visits === 1 ? "" : "s"}`, `petsRecFilter='visit';setPetsTab('health','pf-recs')`, "medcross", "#10b981")}
+    ${pfRow("Weight", w ? fmtWeight(p, w.grams) : "Add", `setPetsTab('health','pf-weight')`, "chart", "#06b6d4")}
+  </div>`;
+  const care = `<div class="pf-card"><div class="pf-card-title">Care</div>
+    ${CARE_GROUPS.map(g => { const n = g.fields.filter(([k]) => p.care[k]).length; return pfRow(g.label, n ? `${n} saved` : "Add", `openCareForm('${p.id}','${g.key}')`, g.icon, "#0ea5e9"); }).join("")}
+  </div>`;
+  const infoN = INFO_FIELDS.filter(([k]) => p.info[k]).length;
+  const info = `<div class="pf-card"><div class="pf-card-title">Information</div>
+    ${pfRow("Pet Details", esc(speciesOf(p).label), `openPetForm('${p.id}')`, "user", "#64748b")}
+    ${pfRow("Important Information", infoN ? `${infoN} saved` : "Add", `openInfoSheet('${p.id}')`, "bell", "#ef4444")}
+    ${pfRow("Documents", `${p.docs.length} file${p.docs.length === 1 ? "" : "s"}`, `setPetsTab('docs')`, "folder", "#f59e0b")}
+  </div>`;
+  return `${important}<div class="pf-quicks">${quick}</div>${upcoming}${health}${care}${info}`;
+}
+
+function petHealthHtml(p) {
+  // วัคซีน
+  const vax = p.vaccines.slice().sort((a, b) => b.date.localeCompare(a.date));
+  const vaxHtml = vax.map(v => { const s = vaccineStatus(v, p); return `<button class="pf-item" onclick="openVaccineForm('${p.id}','${v.id}')">
+      <span class="pf-item-main"><b>${esc(v.name)}</b><span>${fmtDay(v.date)}${v.dose ? " · " + esc(v.dose) : ""}${v.clinic ? " · " + esc(v.clinic) : ""}</span></span>
+      <span class="pf-status ${s.key}"><i></i>${s.label}</span></button>`; }).join("");
+  // ยา
+  const medGroup = (key, label) => {
+    const list = p.meds.filter(m => medStatus(m) === key).sort((a, b) => String(b.start || "").localeCompare(String(a.start || "")));
+    return list.length ? `<div class="pf-sub">${label} · ${list.length}</div>${list.map(m => `<button class="pf-item" onclick="openMedForm('${p.id}','${m.id}')">
+        <span class="pf-item-main"><b>${esc(m.name)}</b><span>${esc([m.dosage, m.frequency, m.purpose].filter(Boolean).join(" · "))}</span></span>
+        <span class="pf-item-date">${m.start ? fmtDay(m.start) : ""}${m.end ? " – " + fmtDay(m.end) : ""}</span></button>`).join("")}` : "";
+  };
+  const medsHtml = medGroup("active", "Active") + medGroup("upcoming", "Upcoming") + medGroup("completed", "Completed");
+  // น้ำหนัก
+  const ws = weightRecords(p), cur = ws[0], prev = ws[1];
+  const diff = cur && prev ? cur.grams - prev.grams : null;
+  const weightHtml = cur ? `<div class="pf-stats">
+      <div><span>Current</span><b>${fmtWeight(p, cur.grams)}</b></div>
+      <div><span>Previous</span><b>${prev ? fmtWeight(p, prev.grams) : "—"}</b></div>
+      <div><span>Change</span><b class="${diff > 0 ? "up" : diff < 0 ? "down" : ""}">${diff == null ? "—" : (diff > 0 ? "+" : diff < 0 ? "−" : "±") + fmtWeight(p, Math.abs(diff))}</b></div>
+    </div>${weightChartSvg(p)}
+    ${ws.slice(0, 8).map(r => `<button class="pf-item" onclick="openRecordForm('${p.id}','${r.id}')"><span class="pf-item-main"><b>${fmtWeight(p, r.grams)}</b><span>${esc(r.details || "")}</span></span><span class="pf-item-date">${fmtDay(r.date)}</span></button>`).join("")}`
+    : `<p class="empty-sm">No weights yet</p>`;
+  // บันทึกทั้งหมด (ไม่รวมน้ำหนัก)
+  const types = [...new Set(p.records.filter(r => r.type !== "weight").map(r => r.type))];
+  if (petsRecFilter && !types.includes(petsRecFilter)) petsRecFilter = null;
+  const recs = p.records.filter(r => r.type !== "weight" && (!petsRecFilter || r.type === petsRecFilter));
+  const chips = types.length > 1 ? `<div class="rv-chips" style="padding-bottom:.4rem">
+      <button class="rv-chip ${!petsRecFilter ? "sel" : ""}" onclick="petsRecFilter=null;render()">All</button>
+      ${types.map(t => `<button class="rv-chip ${petsRecFilter === t ? "sel" : ""}" onclick="petsRecFilter='${t}';render()">${REC_TYPES[t].label}</button>`).join("")}</div>` : "";
+  const sec = (id, title, addFn, content) => `<div class="pf-card" id="${id}"><div class="pf-card-title">${title}<button class="link-primary" onclick="${addFn}">+ Add</button></div>${content}</div>`;
+  return sec("pf-vax", "Vaccinations", `openVaccineForm('${p.id}')`, vaxHtml || `<p class="empty-sm">No vaccinations yet</p>`)
+    + sec("pf-meds", "Medications", `openMedForm('${p.id}')`, medsHtml || `<p class="empty-sm">No medications yet</p>`)
+    + sec("pf-weight", "Weight", `openWeightForm('${p.id}')`, weightHtml)
+    + sec("pf-recs", "Health records", `openRecordForm('${p.id}','','visit')`, chips + (recs.map(r => recCardHtml(p, r)).join("") || `<p class="empty-sm">No records yet</p>`));
+}
+
+function recCardHtml(p, r) {
+  const cfg = REC_TYPES[r.type] || REC_TYPES.note;
+  const vals = (r.values || []).filter(x => x.k || x.v);
+  const who = [r.clinic, r.vet].filter(Boolean).join(" · ");
+  return `<button class="petr-rec" onclick="openRecordForm('${p.id}','${r.id}')">
+    <span class="set-ico" style="background:color-mix(in srgb, ${cfg.color} 16%, var(--card));color:color-mix(in srgb, ${cfg.color} 55%, var(--fg))">${icon(cfg.icon, 14)}</span>
+    <span class="petr-rec-body">
+      <span class="petr-rec-head"><b>${esc(r.title || cfg.label)}</b><span class="petr-sub">${fmtDay(r.date)}</span></span>
+      <span class="petr-sub">${cfg.label}${who ? " · " + esc(who) : ""}</span>
+      ${r.type === "weight" && r.grams ? `<span class="petr-sub">⚖️ ${fmtWeight(p, r.grams)}</span>` : ""}
+      ${vals.length ? `<span class="bl-table">${vals.map(x => `<span class="bl-cell"><i>${esc(x.k)}</i><b>${esc(x.v)}</b></span>`).join("")}</span>` : ""}
+      ${r.details ? `<span class="petr-sub" style="white-space:pre-wrap">${esc(r.details)}</span>` : ""}
+      ${r.followUp ? `<span class="pf-status ${daysUntil(r.followUp) < 0 ? "overdue" : "ok"}"><i></i>Follow-up ${fmtDay(r.followUp)}</span>` : ""}
+      ${(r.docIds || []).length ? `<span class="petr-sub">${icon("doc", 11)} ${(r.docIds || []).length} attachment${r.docIds.length > 1 ? "s" : ""}</span>` : ""}
+    </span>
+  </button>`;
+}
+
+function petCareHtml(p) {
+  const groups = CARE_GROUPS.map(g => {
+    const rows = g.fields.filter(([k]) => p.care[k]).map(([k, l]) => `<div class="pf-info-row"><span class="k">${l}</span><span>${esc(p.care[k])}</span></div>`).join("");
+    return `<div class="pf-card"><div class="pf-card-title">${icon(g.icon, 13)} ${g.label}<button class="link-primary" onclick="openCareForm('${p.id}','${g.key}')">${rows ? "Edit" : "+ Add"}</button></div>
+      ${rows || `<p class="empty-sm" style="margin:.1rem 0">Nothing saved</p>`}</div>`;
+  }).join("");
+  const notes = p.records.filter(r => r.type === "care");
+  return groups + `<div class="pf-card"><div class="pf-card-title">Care notes<button class="link-primary" onclick="openRecordForm('${p.id}','','care')">+ Add</button></div>
+    ${notes.map(r => recCardHtml(p, r)).join("") || `<p class="empty-sm" style="margin:.1rem 0">No care notes yet</p>`}</div>`;
+}
+
+function petDocsHtml(p) {
+  const cats = [...new Set(p.docs.map(d => d.category))];
+  if (petsDocFilter !== "all" && !cats.includes(petsDocFilter)) petsDocFilter = "all";
+  const docs = p.docs.filter(d => petsDocFilter === "all" || d.category === petsDocFilter).sort((a, b) => b.date.localeCompare(a.date));
+  const chips = cats.length > 1 ? `<div class="rv-chips"><button class="rv-chip ${petsDocFilter === "all" ? "sel" : ""}" onclick="petsDocFilter='all';render()">All</button>
+    ${cats.map(c => `<button class="rv-chip ${petsDocFilter === c ? "sel" : ""}" onclick="petsDocFilter='${c}';render()">${DOC_CATS[c]}</button>`).join("")}</div>` : "";
+  return `<div class="pf-card"><div class="pf-card-title">Documents & files<button class="link-primary" onclick="openDocForm('${p.id}')">${icon("upload", 12)} Upload</button></div>
+    ${uploadHint()}${chips}
+    ${docs.map(d => `<div class="pf-doc">
+        <button class="pf-doc-open" onclick="openDocPreview('${p.id}','${d.id}')">
+          <span class="pf-doc-thumb">${d.mime === "application/pdf" ? icon("doc", 18) : `<img data-pet-file="${esc(d.path)}" alt="">`}</span>
+          <span class="pf-item-main"><b>${esc(d.name)}</b><span>${esc(DOC_CATS[d.category] || "Other")} · ${fmtDay(d.date)}</span></span>
+        </button>
+        <button class="rt-del" aria-label="Rename or categorize ${esc(d.name)}" onclick="openDocForm('${p.id}','${d.id}')">${icon("edit", 13)}</button>
+        <button class="rt-del" aria-label="Delete ${esc(d.name)}" onclick="deleteDoc('${p.id}','${d.id}')">${icon("trash", 13)}</button>
+      </div>`).join("") || `<p class="empty-sm">No documents yet — upload vaccine certificates, lab results, prescriptions or photos</p>`}
+  </div>`;
+}
+
+/* ---- สัตว์เลี้ยงเสมือน (Puff / นก): ตั้งชื่อ + เลือกสายพันธุ์ ---- */
 let petPickSpecies = null;
 function openPetSettings() {
   const sp = petSpecies(), lvl = levelInfo().level;
@@ -3838,279 +4740,6 @@ function savePetSettings(e) {
   if (petPickSpecies && PET_SPECIES[petPickSpecies]) state.game.petSpecies = petPickSpecies;
   petPickSpecies = null;
   save(); closeForm(); render();
-}
-
-function openPetForm(petId) {
-  const p = petId ? petById(petId) : null;
-  const spOpts = SPECIES.map(s =>
-    `<option value="${s.id}" ${p && p.species === s.id ? "selected" : ""}>${s.emoji} ${s.label}</option>`).join("");
-  document.getElementById("modal").innerHTML = `
-  <div class="overlay" onclick="if(event.target===this)closeForm()">
-    <div class="sheet">
-      <div class="sheet-head">
-        <h2>${p ? "Edit pet" : "Add pet"}</h2>
-        <button class="x-btn" aria-label="Close" onclick="closeForm()">✕</button>
-      </div>
-      <form onsubmit="savePet(event, '${petId || ""}')">
-        <label class="fld">Name
-          <input id="pfName" required maxlength="40" value="${p ? esc(p.name) : ""}" placeholder="e.g. Mango">
-        </label>
-        <div class="row2">
-          <label class="fld">Species<select id="pfSpecies">${spOpts}</select></label>
-          <label class="fld">Sex
-            <select id="pfSex">
-              ${["unknown", "male", "female"].map(x =>
-                `<option value="${x}" ${p && p.sex === x ? "selected" : ""}>${x[0].toUpperCase() + x.slice(1)}</option>`).join("")}
-            </select>
-          </label>
-        </div>
-        <label class="fld">Hatch / birth date
-          <input type="date" id="pfHatch" value="${p?.hatchDate || ""}" onkeydown="submitOnEnter(event)">
-        </label>
-        <label class="fld">Notes (diet, band no., vet clinic…)
-          <textarea id="pfNotes" rows="2" maxlength="500">${p ? esc(p.notes || "") : ""}</textarea>
-        </label>
-        <button type="submit" class="btn btn-primary">Save</button>
-        ${p ? `<button type="button" class="btn btn-danger-outline" onclick="deletePet('${p.id}')">Delete pet</button>` : ""}
-      </form>
-    </div>
-  </div>`;
-  setTimeout(() => document.getElementById("pfName")?.focus(), 50);
-}
-function savePet(e, petId) {
-  e.preventDefault();
-  const data = {
-    name: document.getElementById("pfName").value.trim(),
-    species: document.getElementById("pfSpecies").value,
-    sex: document.getElementById("pfSex").value,
-    hatchDate: document.getElementById("pfHatch").value || null,
-    notes: document.getElementById("pfNotes").value.trim(),
-  };
-  if (!data.name) return;
-  const existing = petId ? petById(petId) : null;
-  if (petId && !existing) showToast("This pet was deleted on another device — saved as a new pet");
-  if (existing) Object.assign(existing, data);
-  else {
-    const p = { id: uid(), ...data, records: [] };
-    state.pets.push(p);
-    petsView = p.id;
-  }
-  save(); closeForm(); render();
-}
-function deletePet(id) {
-  const p = petById(id);
-  if (!confirm(`Delete ${p?.name || "this pet"} and all records?`)) return;
-  state.pets = state.pets.filter(x => x.id !== id);
-  petsView = null;
-  save(); closeForm(); render();
-}
-
-/* ---- record form ---- */
-function openRecordForm(petId, recId, preset) {
-  const p = petById(petId);
-  if (!p) { petsView = null; render(); return; }   // ถูกลบจากอีกเครื่องแล้ว
-  const r = recId ? p.records.find(x => x.id === recId) : null;
-  recFormType = r?.type || preset || "checkup";
-  document.getElementById("modal").innerHTML = `
-  <div class="overlay" onclick="if(event.target===this)closeForm()">
-    <div class="sheet">
-      <div class="sheet-head">
-        <h2>${r ? "Edit record" : "New record"} — ${esc(p.name)}</h2>
-        <button class="x-btn" aria-label="Close" onclick="closeForm()">✕</button>
-      </div>
-      <div class="setup-label">Type</div>
-      <div class="setup-chips" id="recTypes">${Object.entries(REC_TYPES).map(([t, cfg]) => `
-        <button type="button" class="setup-chip ${recFormType === t ? "sel" : ""}" data-type="${t}"
-          onclick="recFormType='${t}';refreshRecForm('${petId}','${recId || ""}')"
-          style="${recFormType === t ? `background:color-mix(in srgb, ${cfg.color} 16%, var(--card));border-color:${cfg.color};color:color-mix(in srgb, ${cfg.color} 55%, var(--fg))` : ""}">
-          ${icon(cfg.icon, 12)} ${cfg.label}</button>`).join("")}
-      </div>
-      <form onsubmit="saveRecord(event, '${petId}', '${recId || ""}')" style="margin-top:.75rem">
-        <div class="row2">
-          <label class="fld">Date<input type="date" id="rcDate" required value="${r?.date || dateKey(new Date())}" onkeydown="submitOnEnter(event)"></label>
-          <label class="fld" id="rcWeightWrap" style="display:${recFormType === "weight" ? "" : "none"}">Weight (g)
-            <input type="number" id="rcGrams" step="0.1" min="0" value="${r?.grams || ""}" placeholder="e.g. 92.5">
-          </label>
-        </div>
-        <label class="fld">Title
-          <input id="rcTitle" maxlength="120" value="${r ? esc(r.title || "") : ""}"
-            placeholder="e.g. Annual checkup at Bird Hospital">
-        </label>
-        <div id="rcBloodWrap" style="display:${recFormType === "blood" ? "" : "none"}">
-          <div class="setup-label">Test results (name · value)</div>
-          <div id="bloodRows">${(r?.values?.length ? r.values : [{ k: "", v: "" }]).map(row => `
-            <div class="bl-row">
-              <input class="bl-k" placeholder="e.g. PCV / Uric acid" value="${esc(row.k || "")}" list="bloodPresets">
-              <input class="bl-v" placeholder="value + unit" value="${esc(row.v || "")}">
-              <button type="button" class="rt-del" aria-label="Remove row" onclick="this.parentElement.remove()">${icon("x", 12)}</button>
-            </div>`).join("")}
-          </div>
-          <datalist id="bloodPresets">
-            ${["PCV / Hematocrit", "RBC", "WBC", "Hemoglobin", "Glucose", "Uric acid", "AST (SGOT)", "CK", "Total protein", "Albumin", "Calcium", "Phosphorus", "Bile acids"].map(x => `<option value="${x}">`).join("")}
-          </datalist>
-          <button type="button" class="link-primary" style="margin:.35rem 0 .6rem" onclick="addBloodRow()">+ Add row</button>
-        </div>
-        <label class="fld">Details (vet, meds, dosage, findings…)
-          <textarea id="rcDetails" rows="3" maxlength="2000">${r ? esc(r.details || "") : ""}</textarea>
-        </label>
-        <button type="submit" class="btn btn-primary">Save record</button>
-        ${r ? `<button type="button" class="btn btn-danger-outline" onclick="deleteRecord('${petId}','${r.id}')">Delete record</button>` : ""}
-      </form>
-    </div>
-  </div>`;
-}
-function refreshRecForm(petId, recId) {
-  // อัปเดตเฉพาะส่วนที่ขึ้นกับ type โดยไม่ทิ้งค่าที่พิมพ์ไว้
-  document.getElementById("rcWeightWrap").style.display = recFormType === "weight" ? "" : "none";
-  document.getElementById("rcBloodWrap").style.display = recFormType === "blood" ? "" : "none";
-  document.querySelectorAll("#recTypes .setup-chip").forEach(b => {
-    const t = b.dataset.type, cfg = REC_TYPES[t];
-    const sel = t === recFormType;
-    b.classList.toggle("sel", sel);
-    b.style.cssText = sel ? `background:color-mix(in srgb, ${cfg.color} 16%, var(--card));border-color:${cfg.color};color:color-mix(in srgb, ${cfg.color} 55%, var(--fg))` : "";
-  });
-}
-function addBloodRow() {
-  const div = document.createElement("div");
-  div.className = "bl-row";
-  div.innerHTML = `<input class="bl-k" placeholder="e.g. PCV / Uric acid" list="bloodPresets">
-    <input class="bl-v" placeholder="value + unit">
-    <button type="button" class="rt-del" aria-label="Remove row" onclick="this.parentElement.remove()">${icon("x", 12)}</button>`;
-  document.getElementById("bloodRows").appendChild(div);
-}
-function saveRecord(e, petId, recId) {
-  e.preventDefault();
-  const p = petById(petId);
-  if (!p) return closeForm();
-  const rec = {
-    id: recId || uid(),
-    type: recFormType,
-    date: document.getElementById("rcDate").value,
-    title: document.getElementById("rcTitle").value.trim(),
-    details: document.getElementById("rcDetails").value.trim(),
-    values: recFormType === "blood"
-      ? [...document.querySelectorAll("#bloodRows .bl-row")].map(row => ({
-          k: row.querySelector(".bl-k").value.trim(),
-          v: row.querySelector(".bl-v").value.trim(),
-        })).filter(x => x.k || x.v)
-      : [],
-    grams: recFormType === "weight" ? Number(document.getElementById("rcGrams").value) || null : null,
-  };
-  if (recFormType === "weight" && !rec.grams) { showToast("❌ Enter the weight in grams"); return; }
-  if (recId) {
-    const i = p.records.findIndex(x => x.id === recId);
-    if (i >= 0) p.records[i] = rec;
-  } else {
-    p.records.push(rec);
-  }
-  p.records.sort((a, b) => b.date.localeCompare(a.date));
-  save(); closeForm(); render();
-}
-function deleteRecord(petId, recId) {
-  if (!confirm("Delete this record?")) return;
-  const p = petById(petId);
-  if (p) p.records = p.records.filter(r => r.id !== recId);
-  save(); closeForm(); render();
-}
-
-/* ---- pets views ---- */
-function renderPets() {
-  if (petsView) {
-    const p = petById(petsView);
-    if (p) return renderPetDetail(p);
-    petsView = null;
-  }
-  const cards = state.pets.map(p => {
-    const sp = speciesOf(p);
-    const w = latestWeight(p);
-    const lastRec = p.records[0];
-    return `<button class="petr-card" onclick="petsView='${p.id}';petsRecFilter=null;viewTransition=true;render()">
-      <span class="petr-avatar">${sp.emoji}</span>
-      <span class="petr-info">
-        <b>${esc(p.name)}</b>
-        <span class="petr-sub">${sp.label}${p.hatchDate ? " · " + ageText(p.hatchDate) : ""}${w ? " · " + w.grams + " g" : ""}</span>
-        ${lastRec ? `<span class="petr-sub">${REC_TYPES[lastRec.type]?.label || ""} · ${fmtDate(new Date(lastRec.date + "T00:00:00"))}</span>` : ""}
-      </span>
-      ${icon("right", 15)}
-    </button>`;
-  }).join("");
-  return `<h1>My Pets</h1>
-    ${cards || `<p class="empty" style="margin-top:2.5rem">No pets yet — add your bird 🦜</p>`}
-    <button class="ov-card rt-card cl-new" style="margin-top:.6rem" onclick="openPetForm()">
-      ${icon("plus", 15)} Add pet</button>`;
-}
-
-function recCardHtml(p, r) {
-  const cfg = REC_TYPES[r.type] || REC_TYPES.note;
-  const vals = (r.values || []).filter(x => x.k || x.v);
-  return `<button class="petr-rec" onclick="openRecordForm('${p.id}','${r.id}')">
-    <span class="set-ico" style="background:color-mix(in srgb, ${cfg.color} 16%, var(--card));color:color-mix(in srgb, ${cfg.color} 55%, var(--fg))">${icon(cfg.icon, 14)}</span>
-    <span class="petr-rec-body">
-      <span class="petr-rec-head"><b>${esc(r.title || cfg.label)}</b>
-        <span class="petr-sub">${fmtDate(new Date(r.date + "T00:00:00"))}</span></span>
-      ${r.type === "weight" && r.grams ? `<span class="petr-sub">⚖️ ${r.grams} g</span>` : ""}
-      ${vals.length ? `<span class="bl-table">${vals.map(x =>
-        `<span class="bl-cell"><i>${esc(x.k)}</i><b>${esc(x.v)}</b></span>`).join("")}</span>` : ""}
-      ${r.details ? `<span class="petr-sub" style="white-space:pre-wrap">${esc(r.details)}</span>` : ""}
-    </span>
-  </button>`;
-}
-
-function renderPetDetail(p) {
-  const sp = speciesOf(p);
-
-  // ---- ดูประวัติของเรื่องเดียว (กดจากการ์ด status) ----
-  if (petsRecFilter) {
-    const cfg = REC_TYPES[petsRecFilter];
-    const recs = p.records.filter(r => r.type === petsRecFilter);
-    return `<button class="back-btn" onclick="petsRecFilter=null;viewTransition=true;render()">${icon("left", 15)} ${esc(p.name)}</button>
-      <div class="petr-head" style="margin-bottom:.75rem">
-        <span class="set-ico" style="width:2.5rem;height:2.5rem;background:color-mix(in srgb, ${cfg.color} 16%, var(--card));color:color-mix(in srgb, ${cfg.color} 55%, var(--fg))">${icon(cfg.icon, 18)}</span>
-        <span style="flex:1;min-width:0">
-          <h1 style="font-size:1.2rem">${cfg.label}</h1>
-          <span class="petr-sub">${recs.length} record${recs.length === 1 ? "" : "s"} · newest first</span>
-        </span>
-      </div>
-      ${petsRecFilter === "weight" && recs.length >= 2 ? `<div class="pp-card" style="max-width:none;margin-bottom:.75rem">${weightChartSvg(p)}</div>` : ""}
-      ${recs.map(r => recCardHtml(p, r)).join("") || `<p class="empty-sm">No records yet — tap + to add one</p>`}`;
-  }
-
-  // ---- status overview: เฉพาะรายการล่าสุดของแต่ละเรื่อง ----
-  const statusCards = Object.entries(REC_TYPES).map(([t, cfg]) => {
-    const list = p.records.filter(r => r.type === t);
-    if (!list.length) return "";
-    const last = list[0]; // records เรียงใหม่→เก่าอยู่แล้ว
-    const vals = (last.values || []).filter(x => x.k || x.v);
-    let summary = "";
-    if (t === "weight" && last.grams) summary = `<span class="petr-status-big">${last.grams} g</span>`;
-    else if (t === "blood") summary = `<span class="petr-sub">${vals.length} values · ${esc(last.title || "latest panel")}</span>`;
-    else summary = `<span class="petr-sub">${esc(last.title || last.details || cfg.label)}</span>`;
-    return `<button class="petr-status" onclick="petsRecFilter='${t}';viewTransition=true;render()">
-      <span class="petr-status-head">
-        <span class="set-ico" style="background:color-mix(in srgb, ${cfg.color} 16%, var(--card));color:color-mix(in srgb, ${cfg.color} 55%, var(--fg))">${icon(cfg.icon, 14)}</span>
-        <span class="name">${cfg.label}</span>
-        ${list.length > 1 ? `<span class="petr-count">${list.length}</span>` : ""}
-      </span>
-      ${summary}
-      <span class="petr-sub">${fmtDate(new Date(last.date + "T00:00:00"))} ${icon("right", 10)}</span>
-      ${t === "weight" ? `<span class="petr-chart-mini">${weightChartSvg(p)}</span>` : ""}
-    </button>`;
-  }).join("");
-
-  return `<button class="back-btn" onclick="petsView=null;viewTransition=true;render()">${icon("left", 15)} My Pets</button>
-    <div class="petr-head">
-      <span class="petr-avatar big">${sp.emoji}</span>
-      <span style="flex:1;min-width:0">
-        <h1 style="font-size:1.3rem">${esc(p.name)}</h1>
-        <span class="petr-sub">${sp.label} · ${p.sex !== "unknown" ? p.sex + " · " : ""}${p.hatchDate ? ageText(p.hatchDate) : "age unknown"}</span>
-      </span>
-      <button class="ov-more" aria-label="Edit ${esc(p.name)}" onclick="openPetForm('${p.id}')">${icon("edit", 15)}</button>
-    </div>
-    ${p.notes ? `<p class="petr-notes">${esc(p.notes)}</p>` : ""}
-    <h2 class="section-title">Status</h2>
-    ${statusCards
-      ? `<div class="ov-grid">${statusCards}</div>`
-      : `<p class="empty" style="margin-top:1.5rem">No records yet — tap <b>+</b> to add the first one<br><span class="petr-sub">health check · blood test · weight…</span></p>`}`;
 }
 
 /* ---------- pet journal ---------- */
@@ -6980,14 +7609,14 @@ fab.innerHTML = icon("plus", 26);
 fab.onclick = () => {
   // ปุ่ม + ทำตามบริบท: หน้า Pets = เพิ่มสัตว์เลี้ยง/record, หน้าอื่น = เพิ่ม task
   if (currentTab === "pets" && !petView) {
-    if (petsView) openRecordForm(petsView, "", petsRecFilter || "checkup");
+    if (petsView && petById(petsView)) openAddRecord(petsView);
     else openPetForm();
     return;
   }
   openForm(null);
 };
 render();
-new MutationObserver(() => hydratePets()).observe(document.body, { childList: true, subtree: true });
+new MutationObserver(() => { hydratePets(); hydratePetFiles(); }).observe(document.body, { childList: true, subtree: true });
 hydratePets();
 // กลับมาที่แท็บแล้ววิวสดหยุดอยู่ (ซ่อนแท็บ = หยุด loop ประหยัดแบต) -> เดินต่อ
 document.addEventListener("visibilitychange", () => {
