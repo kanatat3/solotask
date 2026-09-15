@@ -794,6 +794,36 @@
   .ps-topic { font-weight: 700; color: var(--fg); }
   .ps-desc { color: var(--muted); }
   .ps-date { flex-shrink: 0; font-size: .68rem; color: var(--muted); margin-top: .1rem; }
+  /* รายงาน review จาก agent */
+  .rv-summary { font-size: .88rem; line-height: 1.55; padding: .7rem .85rem; border-radius: var(--r-sm);
+    background: color-mix(in srgb, var(--primary) 9%, var(--card)); border-left: 3px solid var(--primary); white-space: pre-wrap; overflow-wrap: anywhere; }
+  .rv-summary.sm { font-size: .8rem; padding: .5rem .65rem; }
+  .rv-row { display: flex; align-items: center; gap: .5rem; font-size: .82rem; margin-top: .55rem; }
+  .rv-row .k { color: var(--muted); min-width: 4.5rem; }
+  .rv-tests { display: inline-flex; align-items: center; gap: .3rem; font-size: .72rem; font-weight: 700; padding: .15rem .55rem; border-radius: 999px; }
+  .rv-tests.ok { background: color-mix(in srgb, #10b981 15%, var(--card)); color: var(--success); }
+  .rv-tests.fail { background: color-mix(in srgb, #ef4444 15%, var(--card)); color: var(--danger-text); }
+  .rv-hint { font-style: normal; font-weight: 600; color: var(--muted); font-size: .66rem; margin-left: .3rem; }
+  .rv-card { display: flex; gap: .65rem; align-items: flex-start; padding: .7rem .75rem; margin: .45rem 0;
+    border: 1px solid var(--border); border-radius: var(--r-sm); background: var(--bg); }
+  .rv-rank { flex-shrink: 0; width: 1.6rem; height: 1.6rem; border-radius: 50%; display: grid; place-items: center;
+    background: var(--bg); color: var(--muted); font-size: .78rem; font-weight: 800; }
+  .rv-card.top .rv-rank, .rv-mini .rv-rank { background: var(--primary); color: #fff; }
+  .rv-rank.sm { width: 1.25rem; height: 1.25rem; font-size: .66rem; }
+  .rv-body { flex: 1; min-width: 0; }
+  .rv-text { font-size: .86rem; line-height: 1.5; overflow-wrap: anywhere; }
+  .rv-text .ps-topic { display: block; margin-bottom: .1rem; }
+  .rv-size { display: inline-block; margin-top: .35rem; font-size: .64rem; font-weight: 700; padding: .05rem .5rem; border-radius: 999px; }
+  .rv-mini .rv-size { margin: 0; }
+  .rv-wait { margin-top: .8rem; }
+  .rv-wait ul { list-style: none; margin: 0; padding: 0; }
+  .rv-wait li { display: flex; gap: .45rem; align-items: flex-start; font-size: .82rem; line-height: 1.45; padding: .3rem 0; color: var(--fg); }
+  .rv-wait li svg { flex-shrink: 0; margin-top: .2rem; color: #f59e0b; }
+  .rv-details { margin: .8rem 0 .4rem; }
+  .rv-details summary { cursor: pointer; font-size: .78rem; font-weight: 700; color: var(--primary); }
+  .rv-mini { display: flex; align-items: center; gap: .5rem; padding: .3rem 0; font-size: .82rem; }
+  .rv-mini-t { flex: 1; min-width: 0; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .rv-foot { display: flex; align-items: center; gap: .7rem; flex-wrap: wrap; margin-top: .4rem; }
   .ps-more {
     background: none; border: none; cursor: pointer; font: inherit; font-size: .74rem; font-weight: 700;
     color: var(--primary); padding: .3rem .2rem 0 1.15rem;
@@ -1877,7 +1907,10 @@ function agentCategoryFor(project) {
    log-task.ps1 ส่งโน้ตเป็นหัวข้อ:  [overview-only] [overview] [added] [changed] [fixed] [details]
    รายการในหัวข้อ list ขึ้นต้น "- "; แอป import จะแปะบรรทัด "⏱ ช่วงเวลา" ไว้บนสุดอีกที
    โน้ตแบบเก่า (ไม่มีหัวข้อ) ยังอ่านได้: ทั้งก้อนถือเป็นรายละเอียด */
-const AGENT_LIST_SECTIONS = ["overview", "added", "changed", "fixed"];
+const AGENT_LIST_SECTIONS = ["overview", "added", "changed", "fixed", "suggest", "waiting"];
+// รายงาน review จาก agent: [summary] ข้อความสั้น, [tests] ผลเทสต์บรรทัดเดียว, [suggest] ข้อเสนอเรียงตามลำดับความสำคัญ
+// ("- [S|M|L] English title — คำอธิบายไทย"), [waiting] สิ่งที่รอผู้ใช้ทำ
+const AGENT_TEXT_SECTIONS = ["summary", "tests"];
 const CHANGE_KINDS = [
   { key: "added",   label: "Added",    color: "#10b981" },
   { key: "changed", label: "Improved", color: "#6366f1" },
@@ -1894,14 +1927,15 @@ function topicHtml(text) {
 
 function parseAgentNote(note) {
   const out = { structured: false, overviewOnly: false, time: "",
-                overview: [], added: [], changed: [], fixed: [], details: "" };
+                overview: [], added: [], changed: [], fixed: [], suggest: [], waiting: [], summary: "", tests: "", details: "" };
+  const textSec = { summary: [], tests: [] };
   const lines = String(note || "").replace(/\r/g, "").split("\n");
   let sec = null;                 // null = ก่อนเจอหัวข้อแรก
   const pre = [], det = [];
   for (const raw of lines) {
     const line = raw.trim();
     const m = /^\[([a-z-]+)\]$/.exec(line);
-    if (m && (m[1] === "overview-only" || m[1] === "details" || AGENT_LIST_SECTIONS.includes(m[1]))) {
+    if (m && (m[1] === "overview-only" || m[1] === "details" || AGENT_LIST_SECTIONS.includes(m[1]) || AGENT_TEXT_SECTIONS.includes(m[1]))) {
       out.structured = true;
       if (m[1] === "overview-only") out.overviewOnly = true;
       else sec = m[1];
@@ -1909,6 +1943,7 @@ function parseAgentNote(note) {
     }
     if (sec === null) { pre.push(raw); continue; }
     if (sec === "details") { det.push(raw); continue; }
+    if (AGENT_TEXT_SECTIONS.includes(sec)) { if (line) textSec[sec].push(line); continue; }
     if (line) out[sec].push(line.startsWith("- ") ? line.slice(2).trim() : line);
   }
   // บรรทัด ⏱ ที่แอปแปะไว้บนสุด -> แยกเก็บเป็นเวลาทำงาน
@@ -1918,6 +1953,8 @@ function parseAgentNote(note) {
     pre.splice(firstIdx, 1);
   }
   out.details = [pre.join("\n").trim(), det.join("\n").trim()].filter(Boolean).join("\n\n");
+  out.summary = textSec.summary.join("\n");
+  out.tests = textSec.tests.join(" ");
   return out;
 }
 
@@ -4263,7 +4300,8 @@ function firstNoteLine(note) {
   const p = parseAgentNote(note);
   const firstText = s => s.split("\n").map(x => x.trim()).find(x => x && !x.startsWith("(auto)")) || "";
   let line = "";
-  if (p.added[0]) line = "Added: " + p.added[0];
+  if (p.suggest.length) line = `${p.suggest.length} suggestion${p.suggest.length > 1 ? "s" : ""}${p.tests ? " · " + p.tests : ""}${p.summary ? " · " + firstText(p.summary) : ""}`;
+  else if (p.added[0]) line = "Added: " + p.added[0];
   else if (p.changed[0]) line = "Improved: " + p.changed[0];
   else if (p.fixed[0]) line = "Fixed: " + p.fixed[0];
   else line = firstText(p.details) || p.time;
@@ -4282,6 +4320,7 @@ function openTaskDetail(id) {
     t.recurrence && t.recurrence !== "none" ? `<span class="chip" style="background:var(--bg);color:var(--muted)">${icon("repeat", 10)} ${RECURRENCE_LABELS[t.recurrence]}</span>` : "",
   ].join("");
   const p = parseAgentNote(t.note);
+  const isReview = p.suggest.length > 0;
   const rows = [];
   if (p.time) rows.push(`<div class="detail-row"><span class="k">Time spent</span><span>${esc(p.time.replace(/^⏱\s*/, ""))}</span></div>`);
   if (t.dueAt) rows.push(`<div class="detail-row"><span class="k">${isRangeTask(t) ? "Dates" : "Due"}</span><span>${fmtSpan(t)}</span></div>`);
@@ -4294,7 +4333,7 @@ function openTaskDetail(id) {
     </div>`).join("");
   // บรรทัด ⏱ ถูกย้ายไปแถว "ใช้เวลา" แล้ว — รายละเอียดจึงเอาส่วนที่เหลือ (ทั้งโน้ตแบบใหม่และแบบเก่า)
   const detailsText = p.details;
-  const bodyHtml = (kindBlocks || detailsText)
+  const bodyHtml = isReview ? reviewBodyHtml(p) : (kindBlocks || detailsText)
     ? `${kindBlocks}${detailsText ? `${kindBlocks ? `<div class="ps-kind" style="color:var(--muted)">Details</div>` : ""}<div class="detail-note">${esc(detailsText)}</div>` : ""}`
     : `<p class="hint">No details</p>`;
   document.getElementById("modal").innerHTML = `
@@ -4796,6 +4835,7 @@ function projectChanges(catId) {
   const tasks = allTasksOf(catId).slice().sort((a, b) => when(b).localeCompare(when(a)));
   for (const t of tasks) {
     const p = parseAgentNote(t.note);
+    if (p.suggest.length) continue;   // รายงาน review อยู่ในการ์ด "Latest review" ไม่ใช่การเปลี่ยนแปลงของแอป
     const at = when(t);
     if (p.added.length + p.changed.length + p.fixed.length) {
       for (const k of ["added", "changed", "fixed"]) for (const text of p[k]) groups[k].push({ text, task: t, at });
@@ -4864,7 +4904,7 @@ function projectSummaryHtml(cat) {
     ${total ? sections : `<div class="cat-note-body auto">ยังไม่มีบันทึกการเปลี่ยนแปลง</div>`}
   </div>`;
 
-  return overviewCard + changesCard;
+  return latestReviewCardHtml(cat) + overviewCard + changesCard;
 }
 
 function copyOverview(catId) {
@@ -4890,6 +4930,64 @@ function copyChanges(catId) {
   copyText(lines.join("\n"), "changes");
 }
 
+/* ---------- รายงาน review จาก agent ---------- */
+const REVIEW_SIZES = { S: ["Small", "#10b981"], M: ["Medium", "#f59e0b"], L: ["Large", "#ef4444"] };
+function reviewItem(text) {
+  const m = /^\[(S|M|L)\]\s*/i.exec(text);
+  return { size: m ? m[1].toUpperCase() : "", text: m ? text.slice(m[0].length) : text };
+}
+function isReviewTask(t) { return !!t && String(t.note || "").includes("[suggest]") && parseAgentNote(t.note).suggest.length > 0; }
+function reviewTestsPill(tests) {
+  if (!tests) return "";
+  const bad = /fail|error|ล้ม|ไม่ผ่าน/i.test(tests);
+  return `<span class="rv-tests ${bad ? "fail" : "ok"}">${icon(bad ? "x" : "check", 11)} ${esc(tests)}</span>`;
+}
+function sizeChip(size) {
+  const sz = REVIEW_SIZES[size];
+  return sz ? `<span class="rv-size" style="background:color-mix(in srgb, ${sz[1]} 15%, var(--card));color:color-mix(in srgb, ${sz[1]} 60%, var(--fg))">${sz[0]}</span>` : "";
+}
+/** หน้ารายละเอียดของรายงาน: สรุป -> ผลเทสต์ -> การ์ดข้อเสนอเรียงลำดับ -> รอผู้ใช้ทำ -> รายละเอียดเต็ม (ยุบไว้) */
+function reviewBodyHtml(p) {
+  const cards = p.suggest.map((raw, i) => {
+    const it = reviewItem(raw);
+    return `<div class="rv-card ${i < 3 ? "top" : ""}">
+      <span class="rv-rank">${i + 1}</span>
+      <div class="rv-body"><div class="rv-text">${topicHtml(it.text)}</div>${sizeChip(it.size)}</div>
+    </div>`;
+  }).join("");
+  return `${p.summary ? `<div class="rv-summary">${esc(p.summary)}</div>` : ""}
+    ${p.tests ? `<div class="rv-row"><span class="k">Tests</span>${reviewTestsPill(p.tests)}</div>` : ""}
+    <div class="ps-kind" style="margin-top:.7rem">Suggestions <span>${p.suggest.length}</span> <em class="rv-hint">most valuable first</em></div>
+    ${cards}
+    ${p.waiting.length ? `<div class="rv-wait"><div class="ps-kind">Waiting on you <span>${p.waiting.length}</span></div>
+      <ul>${p.waiting.map(x => `<li>${icon("clock", 12)}<span>${topicHtml(x)}</span></li>`).join("")}</ul></div>` : ""}
+    ${p.details ? `<details class="rv-details"><summary>Full report</summary><div class="detail-note">${esc(p.details)}</div></details>` : ""}`;
+}
+/** การ์ด "รีวิวล่าสุด" บนหน้าโปรเจกต์ AI */
+function latestReviewCardHtml(cat) {
+  const when = t => t.doneAt || t.dueAt || t.createdAt || "";
+  const reviews = allTasksOf(cat.id).filter(isReviewTask).sort((a, b) => when(b).localeCompare(when(a)));
+  if (!reviews.length) return "";
+  const t = reviews[0], p = parseAgentNote(t.note);
+  const top = p.suggest.slice(0, 3).map((raw, i) => {
+    const it = reviewItem(raw);
+    const m = /^([^\u0E00-\u0E7F]{2,90}?)\s+[—–-]\s+/.exec(it.text);
+    return `<div class="rv-mini"><span class="rv-rank sm">${i + 1}</span><span class="rv-mini-t">${esc(m ? m[1] : it.text)}</span>${sizeChip(it.size)}</div>`;
+  }).join("");
+  return `<div class="cat-note rv-latest">
+    <div class="cat-note-head">${icon("checksquare", 13)} Latest review<span class="spacer"></span>
+      <span class="cat-note-meta" style="margin:0">${when(t) ? fmtDate(new Date(when(t))) : ""}</span></div>
+    ${p.summary ? `<div class="rv-summary sm">${esc(p.summary)}</div>` : ""}
+    ${p.tests ? `<div style="margin:.35rem 0">${reviewTestsPill(p.tests)}</div>` : ""}
+    ${top}
+    <div class="rv-foot">
+      <button class="link-primary rv-open" onclick="openTaskDetail('${t.id}')">Open full review (${p.suggest.length})</button>
+      ${p.waiting.length ? `<span class="cat-note-meta" style="margin:0">${p.waiting.length} waiting on you</span>` : ""}
+      ${reviews.length > 1 ? `<span class="cat-note-meta" style="margin:0">${reviews.length - 1} earlier</span>` : ""}
+    </div>
+  </div>`;
+}
+
 function copyTaskDetail(id) {
   const t = state.tasks.find(x => x.id === id);
   if (!t) return;
@@ -4902,6 +5000,10 @@ function copyTaskDetail(id) {
     if (!p[k.key].length) continue;
     lines.push("", k.label, ...p[k.key].map(x => "• " + x));
   }
+  if (p.summary) lines.push("", "Summary", p.summary);
+  if (p.tests) lines.push("Tests: " + p.tests);
+  if (p.suggest.length) lines.push("", "Suggestions", ...p.suggest.map((x, i) => { const it = reviewItem(x); return `${i + 1}. ${it.text}${it.size ? " [" + REVIEW_SIZES[it.size][0] + "]" : ""}`; }));
+  if (p.waiting.length) lines.push("", "Waiting on you", ...p.waiting.map(x => "• " + x));
   if (p.details) lines.push("", "Details", p.details);
   copyText(lines.join("\n"), "task details");
 }
