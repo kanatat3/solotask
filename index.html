@@ -850,6 +850,58 @@
   .rv-mini { display: flex; align-items: center; gap: .5rem; padding: .3rem 0; font-size: .82rem; }
   .rv-mini-t { flex: 1; min-width: 0; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .rv-foot { display: flex; align-items: center; gap: .7rem; flex-wrap: wrap; margin-top: .4rem; }
+  /* Daily review: billboard บนหน้าแรก + ฟีด */
+  .rb-head { display: flex; align-items: center; gap: .5rem; margin: 1.1rem 0 .55rem; }
+  .rb-head .spacer { flex: 1; }
+  .rb-count { font-size: .68rem; font-weight: 800; padding: .12rem .5rem; border-radius: 999px; background: var(--primary); color: #fff; }
+  .rb-count.done { background: var(--bg); color: var(--muted); }
+  .rb-row { display: flex; gap: .7rem; overflow-x: auto; scroll-snap-type: x mandatory; padding: .2rem .1rem .8rem; margin: 0 -.1rem; scrollbar-width: none; }
+  .rb-row::-webkit-scrollbar { display: none; }
+  .rb-card {
+    flex: 0 0 min(78%, 17rem); scroll-snap-align: start; min-height: 10.5rem; text-align: left; cursor: pointer;
+    display: flex; flex-direction: column; gap: .35rem; padding: .95rem 1rem; border: none; border-radius: 1.3rem; color: #fff; font: inherit;
+    background: radial-gradient(circle at 85% 10%, rgba(255,255,255,.35), rgba(255,255,255,0) 45%), linear-gradient(145deg, color-mix(in srgb, var(--rb) 72%, #fff) 0%, var(--rb) 55%, color-mix(in srgb, var(--rb) 70%, #000) 100%);
+    box-shadow: 0 12px 24px -14px color-mix(in srgb, var(--rb) 80%, #000);
+  }
+  .rb-card .rv-avatar { box-shadow: 0 0 0 2px rgba(255,255,255,.6); }
+  .rb-card.read { filter: saturate(.55); opacity: .85; }
+  .rb-top { display: flex; align-items: center; justify-content: space-between; }
+  .rb-badge { font-size: .64rem; font-weight: 800; padding: .15rem .5rem; border-radius: 999px; background: rgba(255,255,255,.95); color: var(--rb); display: inline-flex; align-items: center; gap: .2rem; }
+  .rb-app { font-size: 1.2rem; font-weight: 800; letter-spacing: -.01em; margin-top: .25rem; overflow-wrap: anywhere; }
+  .rb-text { font-size: .8rem; line-height: 1.45; opacity: .95; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+  .rb-meta { margin-top: auto; font-size: .7rem; font-weight: 700; opacity: .9; }
+  .rv-avatar { flex-shrink: 0; border-radius: 50%; display: grid; place-items: center; color: #fff; font-size: .78rem; font-weight: 800; }
+  .rv-feed { max-width: 40rem; margin: 0 auto; }
+  .rv-feed-head { display: flex; align-items: center; }
+  .rv-feed-head .spacer { flex: 1; }
+  .rv-chips { display: flex; gap: .4rem; overflow-x: auto; padding-bottom: .6rem; scrollbar-width: none; }
+  .rv-chips::-webkit-scrollbar { display: none; }
+  .rv-chip { flex-shrink: 0; border: 1px solid var(--border); background: var(--card); color: var(--fg); font: inherit; font-size: .76rem; font-weight: 700; padding: .35rem .8rem; border-radius: 999px; cursor: pointer; }
+  .rv-chip.sel { background: var(--primary); border-color: var(--primary); color: #fff; }
+  .rv-day { position: sticky; top: 0; z-index: 2; margin: .9rem 0 .5rem; padding: .35rem 0; font-size: .74rem; font-weight: 800; color: var(--muted); background: var(--bg); }
+  .rv-facts { display: flex; flex-wrap: wrap; gap: .35rem; }
+  .rv-fact { font-size: .76rem; line-height: 1.35; padding: .28rem .6rem; border-radius: .7rem; background: var(--bg); color: var(--fg); overflow-wrap: anywhere; }
+  .rv-fact.ok { background: color-mix(in srgb, #10b981 13%, var(--card)); color: var(--success); font-weight: 600; }
+  .rv-fact.warn { background: color-mix(in srgb, #f59e0b 14%, var(--card)); color: color-mix(in srgb, #f59e0b 60%, var(--fg)); font-weight: 600; }
+  .rv-post { scroll-margin-top: 2.8rem; background: var(--card); border: 1px solid var(--edge); border-radius: 1.2rem; box-shadow: var(--shadow); padding: 1rem 1rem 1.05rem; margin-bottom: .8rem; }
+  .rv-post-head { display: flex; align-items: center; gap: .65rem; margin-bottom: .7rem; }
+  .rv-post-who { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+  .rv-post-app { font-size: .98rem; overflow-wrap: anywhere; }
+  .rv-post-time { font-size: .7rem; color: var(--muted); }
+  .rv-read-btn { flex-shrink: 0; font: inherit; font-size: .68rem; font-weight: 800; padding: .2rem .6rem; border-radius: 999px; cursor: pointer; border: none; background: var(--primary); color: #fff; display: inline-flex; align-items: center; gap: .2rem; }
+  .rv-post.read .rv-read-btn { background: var(--bg); color: var(--muted); }
+  .rv-post-text { font-size: .9rem; line-height: 1.6; white-space: pre-wrap; overflow-wrap: anywhere; }
+  .rv-post-sec { font-size: .72rem; font-weight: 800; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; margin: .9rem 0 .35rem; }
+  .rv-step { display: flex; gap: .6rem; align-items: flex-start; padding: .5rem 0; border-top: 1px solid var(--border); }
+  .rv-step:first-of-type { border-top: none; }
+  .rv-step .rv-rank { color: #fff; }
+  .rv-step-body { flex: 1; min-width: 0; font-size: .86rem; line-height: 1.5; overflow-wrap: anywhere; }
+  .rv-step-body b { display: block; }
+  .rv-step-body span { color: var(--muted); }
+  .rv-todo { list-style: none; margin: 0; padding: 0; }
+  .rv-todo li { display: flex; gap: .45rem; align-items: flex-start; font-size: .85rem; line-height: 1.45; padding: .28rem 0; overflow-wrap: anywhere; }
+  .rv-todo li svg { flex-shrink: 0; margin-top: .22rem; color: #f59e0b; }
+  .rv-quiet { margin-top: .8rem; font-size: .78rem; color: var(--muted); }
   .ps-more {
     background: none; border: none; cursor: pointer; font: inherit; font-size: .74rem; font-weight: 700;
     color: var(--primary); padding: .3rem .2rem 0 1.15rem;
@@ -1537,6 +1589,10 @@ function migrate(s) {
   if (!Array.isArray(s.routines)) s.routines = [];
   if (!s.routineLog || typeof s.routineLog !== "object") s.routineLog = {};
   if (!s.meta || typeof s.meta !== "object") s.meta = {};
+  if (s.meta.reviewRead !== undefined) {
+    const rr = isObj(s.meta.reviewRead) ? Object.entries(s.meta.reviewRead).filter(([k, v]) => /^[A-Za-z0-9_-]{1,64}:\d{1,3}$/.test(k) && typeof v === "string") : [];
+    s.meta.reviewRead = Object.fromEntries(rr.sort((a, b) => b[1].localeCompare(a[1])).slice(0, 1000));
+  }
   // checklists: [{id, title, items:[{id, text, checked}], reminder: {days:[0-6], time:"HH:MM"}|null}]
   if (!Array.isArray(s.checklists)) s.checklists = [];
   // gamification: check-in รายวัน + XP + level ของสัตว์เลี้ยง
@@ -4670,7 +4726,8 @@ const AI_HUB = "__ai_hub__";
 function isAgentCategory(c) {
   return !!c && (c.name === AGENT_CAT_FALLBACK || c.name.startsWith(AGENT_CAT_PREFIX));
 }
-function agentCategories() { return activeCategories().filter(isAgentCategory); }
+const DAILY_REVIEW_CAT = "AI · Daily Review";   // รายงานรีวิวรายวันอ่านในหน้า Daily review (ไม่แยกเป็นโปรเจกต์)
+function agentCategories() { return activeCategories().filter(c => isAgentCategory(c) && c.name !== DAILY_REVIEW_CAT); }
 /** ชื่อโปรเจกต์ล้วนๆ (ตัด "AI · " ออก) */
 function agentCatLabel(c) {
   return c.name.startsWith(AGENT_CAT_PREFIX) ? c.name.slice(AGENT_CAT_PREFIX.length) : c.name;
@@ -4973,6 +5030,7 @@ function renderHome() {
     </section>
     <div class="sheet-body">
     ${focusSwitchHtml()}
+    ${reviewBillboardHtml()}
     <div class="stat-row">
       <div class="stat-card">
         <span class="stat-ico" style="background:color-mix(in srgb, #ef4444 14%, var(--card));color:var(--danger-text)">${icon("bell", 13)}</span>
@@ -5235,6 +5293,209 @@ function latestReviewCardHtml(cat) {
       ${reviews.length > 1 ? `<span class="cat-note-meta" style="margin:0">${reviews.length - 1} earlier</span>` : ""}
     </div>
   </div>`;
+}
+
+/* ---------- Daily review feed ----------
+   รายงานรีวิวรายวันจาก agent -> โพสต์ละ 1 แอป (+ โพสต์ภาพรวม) อ่านเลื่อนต่อกันแบบฟีด
+   - รายงานรวมทุกโปรเจกต์: "สรุปวันนี้: ..." แล้วบล็อก "[App] สถานะ: ..." / "ควรทำต่อ:" 1. 2. / "ต้องให้คุณทำเอง: a · b"
+   - รายงานแบบมีหัวข้อ [summary]/[tests]/[suggest]/[waiting] -> 1 โพสต์ของแอปตามหมวด
+   อ่านแล้ว: state.meta.reviewRead = { "<taskId>:<index>": ISO } (sync ข้ามเครื่อง) */
+let reviewView = null;   // null | { filter: "all" | "unread" | "app:<name>" }
+function isDailyReviewTask(t) {
+  return !!t && t.status === "done" && (/^daily (review|suggestions)\b/i.test(t.title || "") || isReviewTask(t));
+}
+function splitTopic(text) {
+  const m = /^(.{2,90}?)\s+[—–]\s+(.+)$/s.exec(String(text || ""));
+  return m ? { title: m[1].trim(), text: m[2].trim() } : { title: String(text || "").trim(), text: "" };
+}
+function reviewPostsOf(t) {
+  if (!t) return [];
+  const at = t.doneAt || t.dueAt || t.createdAt || "";
+  const note = String(t.note || "");
+  if (isReviewTask(t)) {
+    const p = parseAgentNote(note), cat = catById(t.categoryId);
+    return [{ key: t.id + ":0", taskId: t.id, at, app: cat && isAgentCategory(cat) ? agentCatLabel(cat) : "Kodo",
+      status: p.summary, tests: p.tests,
+      next: p.suggest.map(x => { const it = reviewItem(x); return { ...splitTopic(it.text), size: it.size }; }),
+      waiting: p.waiting, quiet: "" }];
+  }
+  const posts = [];
+  let overview = [], quiet = "", cur = null;
+  for (const raw of note.replace(/\r/g, "").split("\n")) {
+    const line = raw.trim();
+    const head = /^\[([^\]]{1,60})\]\s*(.*)$/.exec(line);
+    if (head && !["details", "summary", "tests"].includes(head[1].toLowerCase())) {
+      cur = { app: head[1].trim(), status: [], next: [], waiting: [], mode: "status" };
+      posts.push(cur);
+      const rest = head[2].replace(/^สถานะ\s*:\s*/, "");
+      if (rest) cur.status.push(rest);
+      continue;
+    }
+    if (/^โปรเจกต์ที่ไม่มีความเคลื่อนไหว\s*:/.test(line)) { quiet = line.replace(/^[^:]*:\s*/, ""); cur = null; continue; }
+    if (!cur) { if (line || overview.length) overview.push(line.replace(/^สรุปวันนี้\s*:\s*/, "")); continue; }
+    if (!line) continue;
+    if (/^ควรทำต่อ\s*:?$/.test(line)) { cur.mode = "next"; continue; }
+    const wait = /^ต้องให้คุณทำเอง\s*:\s*(.*)$/.exec(line);
+    if (wait) {
+      cur.mode = "waiting";
+      if (wait[1] && !/^ไม่มี\.?$/.test(wait[1].trim())) cur.waiting.push(...wait[1].split(/\s+·\s+/).map(x => x.trim()).filter(Boolean));
+      continue;
+    }
+    const num = /^\d+[.)]\s+(.*)$/.exec(line);
+    if (num && cur.mode !== "waiting") { cur.mode = "next"; cur.next.push(splitTopic(num[1])); continue; }
+    if (cur.mode === "next" && cur.next.length) { const last = cur.next[cur.next.length - 1]; last.text = (last.text ? last.text + " " : "") + line; continue; }
+    if (cur.mode === "waiting") { cur.waiting.push(line.replace(/^[-•]\s*/, "")); continue; }
+    cur.status.push(line);
+  }
+  const out = [];
+  const ovText = overview.join("\n").trim();
+  if (ovText || quiet) out.push({ app: "Overview", status: ovText, next: [], waiting: [], quiet });
+  out.push(...posts.map(x => ({ app: x.app, status: x.status.join("\n"), next: x.next, waiting: x.waiting, quiet: "" })));
+  if (!out.length && note.trim()) out.push({ app: "Overview", status: note.trim(), next: [], waiting: [], quiet: "" });
+  return out.map((x, i) => ({ ...x, key: t.id + ":" + i, taskId: t.id, at, tests: x.tests || "" }));
+}
+function allReviewPosts() {
+  const when = t => t.doneAt || t.dueAt || t.createdAt || "";
+  return state.tasks.filter(isDailyReviewTask).sort((a, b) => when(b).localeCompare(when(a))).flatMap(reviewPostsOf);
+}
+function reviewRead(key) { return !!(state.meta.reviewRead && state.meta.reviewRead[key]); }
+function markReviewRead(keys, read = true) {
+  if (!state.meta.reviewRead || typeof state.meta.reviewRead !== "object") state.meta.reviewRead = {};
+  let changed = false;
+  for (const k of keys) {
+    if (read && !state.meta.reviewRead[k]) { state.meta.reviewRead[k] = new Date().toISOString(); changed = true; }
+    if (!read && state.meta.reviewRead[k]) { delete state.meta.reviewRead[k]; changed = true; }
+  }
+  if (changed) save();
+  return changed;
+}
+function reviewAppColor(app) {
+  if (app === "Overview") return "#6366f1";
+  const cat = state.categories.find(c => c.name.toLowerCase() === (AGENT_CAT_PREFIX + app).toLowerCase());
+  if (cat) return cat.color;
+  let h = 0; for (const ch of app) h = (h * 31 + ch.charCodeAt(0)) >>> 0;
+  return COLORS[h % COLORS.length];
+}
+function reviewAvatar(app, size) {
+  const col = reviewAppColor(app);
+  const letters = app === "Overview" ? icon("checksquare", Math.round(size * 0.5)) : esc(app.split(/\s+/).map(w => w[0]).join("").slice(0, 2).toUpperCase());
+  return `<span class="rv-avatar" style="width:${size}px;height:${size}px;background:linear-gradient(135deg, color-mix(in srgb, ${col} 70%, #fff), ${col})">${letters}</span>`;
+}
+function reviewWhen(at) {
+  if (!at) return "";
+  const d = new Date(at);
+  return (isToday(d) ? "Today" : fmtDate(d)) + " · " + fmtTime(d);
+}
+const REVIEW_RECENT_DAYS = 7;
+
+/** แถบ billboard บนหน้าแรก: การ์ดใหญ่ของรีวิวล่าสุด 1 ใบต่อแอป */
+function reviewBillboardHtml() {
+  if (focusMode === "personal") return "";
+  const posts = allReviewPosts();
+  if (!posts.length) return "";
+  const latestDay = dateKey(new Date(posts[0].at || Date.now()));
+  const latest = posts.filter(x => x.at && dateKey(new Date(x.at)) === latestDay);
+  const since = Date.now() - REVIEW_RECENT_DAYS * 86400000;
+  const unread = posts.filter(x => !reviewRead(x.key) && new Date(x.at || 0).getTime() >= since).length;
+  const cards = latest.map(x => {
+    const col = reviewAppColor(x.app), read = reviewRead(x.key);
+    const firstLine = String(x.status || "").split("\n").find(Boolean) || "";
+    const meta = [x.next.length ? `${x.next.length} next step${x.next.length > 1 ? "s" : ""}` : "", x.waiting.length ? `${x.waiting.length} for you` : ""].filter(Boolean).join(" · ");
+    return `<button class="rb-card ${read ? "read" : ""}" data-key="${x.key}" onclick="openReview('${x.key}')"
+        style="--rb:${col}" aria-label="${esc(x.app)} review${read ? " (read)" : " (new)"}">
+      <span class="rb-top">${reviewAvatar(x.app, 30)}<span class="rb-badge">${read ? icon("check", 11) + " Read" : "New"}</span></span>
+      <span class="rb-app">${esc(x.app)}</span>
+      <span class="rb-text">${esc(firstLine)}</span>
+      <span class="rb-meta">${esc(meta || reviewWhen(x.at))}</span>
+    </button>`;
+  }).join("");
+  return `<div class="rb-head"><h2 class="section-title" style="margin:0">Daily review</h2>
+      ${unread ? `<span class="rb-count">${unread} new</span>` : `<span class="rb-count done">All read</span>`}
+      <span class="spacer"></span><button class="link-primary" onclick="openReview(null)">See all</button></div>
+    <div class="rb-row">${cards}</div>`;
+}
+
+function openReview(key) {
+  reviewView = { filter: "all", focus: key || null };
+  if (key) markReviewRead([key]);
+  viewTransition = true;
+  render();
+}
+function closeReview() { reviewView = null; viewTransition = true; render(); }
+function setReviewFilter(f) { if (reviewView) { reviewView.filter = f; reviewView.focus = null; render(); window.scrollTo(0, 0); } }
+function toggleReviewRead(key) { markReviewRead([key], !reviewRead(key)); render(); }
+function markAllReviewsRead() { markReviewRead(allReviewPosts().map(x => x.key)); render(); }
+
+/** สถานะของแอป: บรรทัดที่คั่นด้วย " · " แตกเป็นชิปอ่านง่าย ส่วนข้อความยาว (ภาพรวม) แสดงเป็นย่อหน้า */
+function reviewStatusHtml(x) {
+  if (!x.status) return "";
+  if (x.app !== "Overview" && x.status.includes(" · ")) {
+    const parts = x.status.split("\n").join(" · ").split(/\s+·\s+/).map(p => p.trim()).filter(Boolean);
+    return `<div class="rv-facts">${parts.map(p => `<span class="rv-fact ${/ผ่าน|pass|✓/i.test(p) && !/fail|ล้ม|ไม่ผ่าน/i.test(p) ? "ok" : /fail|ล้ม|ไม่ผ่าน|ยังไม่ push|ค้าง/i.test(p) ? "warn" : ""}">${esc(p)}</span>`).join("")}</div>`;
+  }
+  return `<div class="rv-post-text">${esc(x.status)}</div>`;
+}
+/** หน้า Daily review เต็มจอ: โพสต์ต่อแอป เลื่อนอ่านต่อกัน แบ่งตามวัน */
+function renderReviewFeed() {
+  const all = allReviewPosts();
+  const f = reviewView.filter || "all";
+  const posts = all.filter(x => f === "all" ? true : f === "unread" ? !reviewRead(x.key) : "app:" + x.app === f);
+  const apps = [...new Set(all.map(x => x.app))];
+  const chip = (val, label) => `<button class="rv-chip ${f === val ? "sel" : ""}" data-filter="${esc(val)}" onclick="setReviewFilter(this.dataset.filter)">${label}</button>`;
+  const unreadN = all.filter(x => !reviewRead(x.key)).length;
+  let lastDay = "", body = "";
+  for (const x of posts) {
+    const day = x.at ? dateKey(new Date(x.at)) : "";
+    if (day !== lastDay) {
+      lastDay = day;
+      const d = x.at ? new Date(x.at) : null;
+      body += `<div class="rv-day">${d ? (isToday(d) ? "Today" : fmtDate(d)) + " · " + d.getDate() + " " + MONTHS_SHORT[d.getMonth()] : ""}</div>`;
+    }
+    const read = reviewRead(x.key);
+    body += `<article class="rv-post ${read ? "read" : ""}" data-key="${x.key}">
+      <header class="rv-post-head">${reviewAvatar(x.app, 40)}
+        <span class="rv-post-who"><b class="rv-post-app">${esc(x.app)}</b><span class="rv-post-time">Daily review · ${esc(reviewWhen(x.at))}</span></span>
+        <button class="rv-read-btn" onclick="toggleReviewRead('${x.key}')" aria-label="${read ? "Mark as unread" : "Mark as read"}">${read ? icon("check", 12) + " Read" : "New"}</button>
+      </header>
+      ${reviewStatusHtml(x)}
+      ${x.tests ? `<div style="margin:.5rem 0">${reviewTestsPill(x.tests)}</div>` : ""}
+      ${x.next.length ? `<div class="rv-post-sec">Next steps</div>${x.next.map((n, i) => `
+        <div class="rv-step"><span class="rv-rank ${i < 3 ? "" : "sm"}" style="background:${reviewAppColor(x.app)}">${i + 1}</span>
+          <div class="rv-step-body"><b>${esc(n.title)}</b>${n.text ? `<span>${esc(n.text)}</span>` : ""}${sizeChip(n.size)}</div></div>`).join("")}` : ""}
+      ${x.waiting.length ? `<div class="rv-post-sec">For you</div><ul class="rv-todo">${x.waiting.map(w => `<li>${icon("clock", 12)}<span>${topicHtml(w)}</span></li>`).join("")}</ul>` : ""}
+      ${x.quiet ? `<div class="rv-quiet">No activity: ${esc(x.quiet)}</div>` : ""}
+    </article>`;
+  }
+  return `<div class="rv-feed">
+    <div class="rv-feed-head"><button class="back-btn" onclick="closeReview()">${icon("left", 15)} Home</button>
+      <span class="spacer"></span>${unreadN ? `<button class="link-primary rv-markall" onclick="markAllReviewsRead()">Mark all read</button>` : ""}</div>
+    <h1 style="margin:.2rem 0 .6rem">Daily review</h1>
+    <div class="rv-chips">${chip("all", "All")}${chip("unread", `Unread${unreadN ? " · " + unreadN : ""}`)}${apps.map(a => chip("app:" + a, esc(a))).join("")}</div>
+    ${body || `<p class="empty">${f === "unread" ? "You're all caught up ✓" : "No reviews yet"}</p>`}
+  </div>`;
+}
+/** เลื่อนมาเห็นโพสต์เกือบทั้งใบ ~1.2 วิ = อ่านแล้ว (แบบฟีด) */
+let reviewObserver = null;
+function watchReviewPosts() {
+  if (reviewObserver) reviewObserver.disconnect();
+  if (!("IntersectionObserver" in window)) return;
+  const timers = new Map();
+  reviewObserver = new IntersectionObserver((entries) => {
+    for (const e of entries) {
+      const key = e.target.dataset.key;
+      if (e.isIntersecting && e.intersectionRatio >= 0.6) {
+        if (!timers.has(key) && !reviewRead(key)) timers.set(key, setTimeout(() => {
+          timers.delete(key);
+          if (!reviewView || !e.target.isConnected) return;
+          markReviewRead([key]);
+          e.target.classList.add("read");
+          const b = e.target.querySelector(".rv-read-btn");
+          if (b) { b.innerHTML = icon("check", 12) + " Read"; b.setAttribute("aria-label", "Mark as unread"); }
+        }, 1200));
+      } else if (timers.has(key)) { clearTimeout(timers.get(key)); timers.delete(key); }
+    }
+  }, { threshold: [0, 0.6, 1] });
+  document.querySelectorAll(".rv-post:not(.read)").forEach(el => reviewObserver.observe(el));
 }
 
 function copyTaskDetail(id) {
@@ -6168,6 +6429,18 @@ function render() {
     view.classList.remove("anim"); void view.offsetWidth; view.classList.add("anim");
     return;
   }
+  if (reviewView && !petView) {
+    view.innerHTML = renderReviewFeed();
+    fabEl.style.display = "none";
+    if (viewTransition) {
+      viewTransition = false;
+      view.classList.remove("anim"); void view.offsetWidth; view.classList.add("anim");
+      const target = reviewView.focus && document.querySelector(`.rv-post[data-key="${reviewView.focus}"]`);
+      if (target) target.scrollIntoView({ block: "start" }); else window.scrollTo(0, 0);
+    }
+    watchReviewPosts();
+    return;
+  }
   if (petView) {
     view.innerHTML = renderPetPage();
     fabEl.style.display = "none";
@@ -6210,6 +6483,7 @@ function switchTab(id) {
   }
   currentTab = id;
   petView = null;
+  reviewView = null;
   viewTransition = true;
   render();
 }
