@@ -1,0 +1,167 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="referrer" content="no-referrer">
+<meta name="robots" content="noindex">
+<title>Send a request · Kodo</title>
+<link rel="icon" href="kodo-list-32.png">
+<style>
+  :root { --bg: #f3f4f8; --card: #fff; --fg: #1e2335; --muted: #6b7280; --border: #e3e6ef; --primary: #6366f1; --danger: #dc2626; --ok: #059669; }
+  @media (prefers-color-scheme: dark) { :root { --bg: #0f1220; --card: #181c2e; --fg: #e8eaf3; --muted: #9aa1b6; --border: #2a3047; } }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--fg); font: 15px/1.5 -apple-system, "Segoe UI", "Noto Sans Thai", Roboto, sans-serif; }
+  main { max-width: 38rem; margin: 0 auto; padding: max(1.2rem, env(safe-area-inset-top)) 1rem 3rem; }
+  .brand { display: flex; align-items: center; gap: .55rem; font-weight: 800; color: var(--primary); margin-bottom: 1rem; }
+  .brand img { width: 28px; height: 28px; border-radius: 8px; }
+  .card { background: var(--card); border: 1px solid var(--border); border-radius: 1.1rem; padding: 1.1rem; box-shadow: 0 6px 24px -14px rgba(30, 40, 90, .35); }
+  h1 { font-size: 1.35rem; margin: 0 0 .15rem; overflow-wrap: anywhere; }
+  .sub { color: var(--muted); font-size: .88rem; margin: 0 0 1rem; }
+  label { display: block; font-size: .8rem; font-weight: 700; color: var(--muted); margin: .8rem 0 .3rem; }
+  input[type=text], textarea { width: 100%; font: inherit; color: var(--fg); background: var(--bg); border: 1px solid var(--border); border-radius: .75rem; padding: .7rem .8rem; }
+  textarea { min-height: 11rem; resize: vertical; font-size: .95rem; }
+  textarea.code { font-family: ui-monospace, "Cascadia Code", Consolas, monospace; font-size: .86rem; }
+  input:focus, textarea:focus { outline: 2px solid var(--primary); outline-offset: 1px; }
+  .drop { margin-top: .6rem; border: 2px dashed var(--border); border-radius: .9rem; padding: .9rem; text-align: center; color: var(--muted); font-size: .85rem; cursor: pointer; }
+  .drop.over { border-color: var(--primary); color: var(--primary); background: color-mix(in srgb, var(--primary) 7%, transparent); }
+  .files { display: grid; grid-template-columns: repeat(auto-fill, minmax(6.5rem, 1fr)); gap: .5rem; margin-top: .6rem; }
+  .file { position: relative; border: 1px solid var(--border); border-radius: .7rem; overflow: hidden; background: var(--bg); font-size: .7rem; }
+  .file img { display: block; width: 100%; height: 5.5rem; object-fit: cover; }
+  .file .ico { height: 5.5rem; display: grid; place-items: center; font-size: 1.6rem; }
+  .file .nm { padding: .3rem .4rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .file button { position: absolute; top: .25rem; right: .25rem; width: 1.5rem; height: 1.5rem; border-radius: 50%; border: none; background: rgba(0,0,0,.6); color: #fff; cursor: pointer; }
+  .row { display: flex; align-items: center; gap: .5rem; margin-top: .5rem; font-size: .8rem; color: var(--muted); }
+  .btn { display: block; width: 100%; margin-top: 1.1rem; padding: .85rem; border: none; border-radius: .9rem; background: var(--primary); color: #fff; font: inherit; font-weight: 800; cursor: pointer; }
+  .btn:disabled { opacity: .6; cursor: progress; }
+  .msg { margin-top: .8rem; font-size: .85rem; }
+  .msg.err { color: var(--danger); } .msg.ok { color: var(--ok); }
+  .done { text-align: center; padding: 1.5rem .5rem; }
+  .done .big { font-size: 2.6rem; }
+  .hint { font-size: .75rem; color: var(--muted); margin-top: .35rem; }
+</style>
+</head>
+<body>
+<main>
+  <div class="brand"><img src="kodo-list-192.png" alt="">Kodo</div>
+  <div class="card" id="app"><p class="sub">Loading…</p></div>
+</main>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<script>
+(() => {
+  const SB_URL = "https://towguwjwflxrfiidpken.supabase.co";
+  const SB_KEY = "sb_publishable_nyM22Il9GueZ6gOBnM002A_xSfZYUop";   // publishable key — ส่งได้แค่ผ่านฟังก์ชันที่ตรวจลิงก์
+  const BUCKET = "request-files";
+  const MAX_FILES = 10, MAX_SIZE = 10 * 1024 * 1024;
+  const TYPES = { "image/jpeg": "jpg", "image/png": "png", "image/webp": "webp", "image/gif": "gif", "image/heic": "heic", "image/heif": "heif",
+    "application/pdf": "pdf", "text/plain": "txt", "text/csv": "csv", "text/markdown": "md", "application/json": "json", "application/zip": "zip",
+    "application/x-zip-compressed": "zip", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": "xlsx",
+    "application/vnd.openxmlformats-officedocument.wordprocessingml.document": "docx", "application/vnd.openxmlformats-officedocument.presentationml.presentation": "pptx",
+    "application/vnd.ms-excel": "xls", "application/msword": "doc", "video/mp4": "mp4", "video/quicktime": "mov" };
+  const EXT_TYPES = { txt: "text/plain", log: "text/plain", md: "text/markdown", csv: "text/csv", json: "application/json", zip: "application/zip",
+    pdf: "application/pdf", xlsx: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", docx: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    png: "image/png", jpg: "image/jpeg", jpeg: "image/jpeg", heic: "image/heic", mp4: "video/mp4", mov: "video/quicktime" };
+  const app = document.getElementById("app");
+  const esc = (s) => String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+  const token = new URLSearchParams(location.hash.slice(1)).get("t") || "";
+  const files = [];   // { file, type, url }
+
+  if (!/^[A-Za-z0-9_-]{24,64}$/.test(token)) { app.innerHTML = `<h1>Link not valid</h1><p class="sub">Ask for a new request link.</p>`; return; }
+  if (!window.supabase) { app.innerHTML = `<h1>Can't connect</h1><p class="sub">Check your internet connection and reload.</p>`; return; }
+  const sb = window.supabase.createClient(SB_URL, SB_KEY, { auth: { persistSession: false, autoRefreshToken: false } });
+
+  const rid = () => Array.from(crypto.getRandomValues(new Uint8Array(12)), b => b.toString(16).padStart(2, "0")).join("");
+  function fileType(f) {
+    if (TYPES[f.type]) return f.type;
+    const ext = (String(f.name || "").split(".").pop() || "").toLowerCase();
+    return EXT_TYPES[ext] || "";
+  }
+
+  function renderForm(project) {
+    app.innerHTML = `
+      <h1>Send a request · ${esc(project)}</h1>
+      <p class="sub">Tell us what should be fixed or changed. You can paste screenshots, code or anything else.<br>แจ้งสิ่งที่ต้องการให้แก้ไข วางรูป โค้ด หรือแนบไฟล์ได้เลย</p>
+      <label for="who">Your name (optional)</label>
+      <input type="text" id="who" maxlength="80" autocomplete="name" placeholder="e.g. Nok from Sales">
+      <label for="body">What needs to change?</label>
+      <textarea id="body" maxlength="20000" placeholder="Describe the problem or idea. Paste screenshots (Ctrl/⌘+V) or code here."></textarea>
+      <div class="row"><input type="checkbox" id="mono"><label for="mono" style="margin:0;font-weight:600">Code mode (monospace)</label></div>
+      <div class="drop" id="drop" role="button" tabindex="0">📎 Drop files here, paste, or <u>choose files</u><div class="hint">Images, PDF, text, Office, zip, video · up to 10 files, 10 MB each</div></div>
+      <input type="file" id="picker" multiple hidden>
+      <div class="files" id="files"></div>
+      <button class="btn" id="send">Send request</button>
+      <div class="msg" id="msg" role="status" aria-live="polite"></div>`;
+    const body = document.getElementById("body"), drop = document.getElementById("drop"), picker = document.getElementById("picker");
+    document.getElementById("mono").onchange = (e) => body.classList.toggle("code", e.target.checked);
+    drop.onclick = () => picker.click();
+    drop.onkeydown = (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); picker.click(); } };
+    picker.onchange = () => { addFiles(picker.files); picker.value = ""; };
+    ["dragenter", "dragover"].forEach(ev => drop.addEventListener(ev, (e) => { e.preventDefault(); drop.classList.add("over"); }));
+    ["dragleave", "drop"].forEach(ev => drop.addEventListener(ev, (e) => { e.preventDefault(); drop.classList.remove("over"); }));
+    drop.addEventListener("drop", (e) => addFiles(e.dataTransfer.files));
+    document.addEventListener("paste", (e) => {
+      const pasted = [...(e.clipboardData?.files || [])];
+      if (pasted.length) { e.preventDefault(); addFiles(pasted.map((f, i) => f.name && f.name !== "image.png" ? f : new File([f], `pasted-${Date.now()}-${i}.${(TYPES[f.type] || "png")}`, { type: f.type }))); }
+    });
+    document.getElementById("send").onclick = send;
+  }
+
+  function addFiles(list) {
+    const msg = document.getElementById("msg");
+    msg.className = "msg"; msg.textContent = "";
+    for (const f of list) {
+      if (files.length >= MAX_FILES) { msg.className = "msg err"; msg.textContent = `Up to ${MAX_FILES} files`; break; }
+      const type = fileType(f);
+      if (!type) { msg.className = "msg err"; msg.textContent = `"${f.name}" isn't a supported file type`; continue; }
+      if (f.size > MAX_SIZE) { msg.className = "msg err"; msg.textContent = `"${f.name}" is larger than 10 MB`; continue; }
+      files.push({ file: f, type, url: type.startsWith("image/") ? URL.createObjectURL(f) : "" });
+    }
+    renderFiles();
+  }
+  function renderFiles() {
+    const box = document.getElementById("files");
+    box.innerHTML = files.map((x, i) => `<div class="file">${x.url ? `<img src="${x.url}" alt="">` : `<div class="ico">📄</div>`}
+      <div class="nm" title="${esc(x.file.name)}">${esc(x.file.name)}</div><button aria-label="Remove ${esc(x.file.name)}" data-i="${i}">✕</button></div>`).join("");
+    box.querySelectorAll("button").forEach(b => b.onclick = () => { const x = files.splice(Number(b.dataset.i), 1)[0]; if (x && x.url) URL.revokeObjectURL(x.url); renderFiles(); });
+  }
+
+  async function send() {
+    const btn = document.getElementById("send"), msg = document.getElementById("msg");
+    const body = document.getElementById("body").value;
+    const author = document.getElementById("who").value.trim();
+    if (!body.trim() && !files.length) { msg.className = "msg err"; msg.textContent = "Write something or attach a file"; return; }
+    btn.disabled = true; msg.className = "msg"; msg.textContent = "Sending…";
+    try {
+      const attachments = [];
+      for (let i = 0; i < files.length; i++) {
+        const x = files[i];
+        msg.textContent = `Uploading ${i + 1} of ${files.length}…`;
+        const path = `${token}/${rid()}.${TYPES[x.type]}`;
+        const { error } = await sb.storage.from(BUCKET).upload(path, x.file, { contentType: x.type, upsert: false });
+        if (error) throw new Error(`Couldn't upload "${x.file.name}": ${error.message}`);
+        attachments.push({ path, name: String(x.file.name || "file").slice(0, 120), mime: x.type, size: x.file.size });
+      }
+      const { error } = await sb.rpc("submit_project_request", { t: token, author, body, attachments });
+      if (error) throw new Error(error.message);
+      app.innerHTML = `<div class="done"><div class="big">✅</div><h1>Request sent</h1><p class="sub">Thank you! ส่งเรื่องเรียบร้อยแล้ว</p>
+        <button class="btn" id="again" style="max-width:16rem;margin:1rem auto 0">Send another</button></div>`;
+      files.length = 0;
+      document.getElementById("again").onclick = () => start();
+    } catch (e) {
+      msg.className = "msg err"; msg.textContent = e.message || "Couldn't send — try again";
+      btn.disabled = false;
+    }
+  }
+
+  async function start() {
+    const { data, error } = await sb.rpc("request_link_info", { t: token });
+    const row = Array.isArray(data) ? data[0] : null;
+    if (error || !row) { app.innerHTML = `<h1>Link not found</h1><p class="sub">This request link doesn't exist. Ask for a new one.</p>`; return; }
+    if (!row.active) { app.innerHTML = `<h1>This link is closed</h1><p class="sub">Ask for a new request link.</p>`; return; }
+    renderForm(row.project);
+  }
+  start();
+})();
+</script>
+</body>
+</html>

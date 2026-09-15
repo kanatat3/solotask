@@ -924,6 +924,29 @@
   .rv-mini { display: flex; align-items: center; gap: .5rem; padding: .3rem 0; font-size: .82rem; }
   .rv-mini-t { flex: 1; min-width: 0; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .rv-foot { display: flex; align-items: center; gap: .7rem; flex-wrap: wrap; margin-top: .4rem; }
+  /* Requests */
+  .rq-card { width: 100%; display: flex; align-items: center; gap: .65rem; text-align: left; font: inherit; color: var(--fg); cursor: pointer; }
+  .rq-card-t { flex: 1; min-width: 0; display: flex; flex-direction: column; font-size: .88rem; }
+  .rq-card-t span { font-size: .76rem; color: var(--muted); }
+  .rq-card > svg:last-child { color: var(--muted); flex-shrink: 0; }
+  .rq-banner { display: flex; align-items: center; flex-wrap: wrap; gap: .4rem; margin: 1rem 0 .2rem; padding: .6rem .75rem; border-radius: var(--r-md);
+    background: color-mix(in srgb, #f59e0b 10%, var(--card)); border: 1px solid color-mix(in srgb, #f59e0b 30%, var(--border)); }
+  .rq-banner > svg { color: color-mix(in srgb, #f59e0b 70%, var(--fg)); flex-shrink: 0; }
+  .rq-banner-t { font-size: .84rem; margin-right: .2rem; }
+  .rq-url { font-family: ui-monospace, Consolas, monospace; font-size: .74rem; background: var(--bg); border-radius: var(--r-sm); padding: .5rem .6rem; overflow-wrap: anywhere; margin-bottom: .5rem; }
+  .rq-link-btns { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: .4rem; }
+  .rq-link-btns .btn { margin: 0; padding: .55rem .4rem; font-size: .78rem; }
+  .rq-text { font-size: .9rem; line-height: 1.6; white-space: pre-wrap; overflow-wrap: anywhere; margin: .2rem 0 .5rem; }
+  .rq-code { margin: .3rem 0 .6rem; padding: .7rem .8rem; border-radius: var(--r-sm); background: #0f172a; color: #e2e8f0; overflow-x: auto;
+    font: .78rem/1.55 ui-monospace, "Cascadia Code", Consolas, monospace; white-space: pre; }
+  .rq-imgs { display: grid; grid-template-columns: repeat(auto-fill, minmax(7rem, 1fr)); gap: .4rem; margin: .3rem 0 .6rem; }
+  .rq-img { position: relative; padding: 0; border: 1px solid var(--border); border-radius: var(--r-sm); overflow: hidden; background: var(--bg); aspect-ratio: 4 / 3; cursor: zoom-in; }
+  .rq-img img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+  .rq-img img.broken { display: none; }
+  .rq-status { width: 100%; margin-top: .5rem; }
+  .rq-status .cal-seg-btn { flex: 1; }
+  .rq-post.done { opacity: .72; }
+  .rq-post.new { border-color: color-mix(in srgb, var(--primary) 35%, var(--edge)); }
   /* Daily review: billboard บนหน้าแรก + ฟีด */
   .rb-head { display: flex; align-items: center; gap: .5rem; margin: 1.1rem 0 .55rem; }
   .rb-head .spacer { flex: 1; }
@@ -2068,6 +2091,7 @@ async function onCloudSignedIn(session) {
   viewTransition = true;
   render();
   setTimeout(autoCheckin, 400);
+  loadRequestCounts(true);
   if (pushSupported() && Notification.permission === "granted" && !state.meta.notifOff) pushSubscribe(true);
 }
 
@@ -2480,7 +2504,7 @@ function disconnectCloud() {
 
 // กลับมาที่แท็บ → ดึงข้อมูลล่าสุด (เผื่อแก้จากเครื่องอื่น)
 document.addEventListener("visibilitychange", () => {
-  if (!document.hidden && sb && sbUser) pullCloud().then(() => render());
+  if (!document.hidden && sb && sbUser) { pullCloud().then(() => render()); loadRequestCounts(); if (requestsView) loadRequests(requestsView.project); }
 });
 
 /* ---------- auth (mock + cloud) ---------- */
@@ -2645,6 +2669,7 @@ async function doSignOut() {
   } catch { /* ignore */ }
   greadReset();
   petFileUrls.clear();
+  reqFileUrls.clear(); reqStore.counts = {}; reqStore.byProject = {}; requestsView = null;
   localStorage.removeItem(USER_KEY);
   user = null;
   switchAccount(null); // กลับไป state ว่างของ anonymous — ไม่เห็นข้อมูลบัญชีเดิม
@@ -5659,6 +5684,7 @@ function renderHome() {
     </section>
     <div class="sheet-body">
     ${focusSwitchHtml()}
+    ${requestsBannerHtml()}
     ${reviewBillboardHtml()}
     <div class="stat-row">
       <div class="stat-card">
@@ -5840,7 +5866,7 @@ function projectSummaryHtml(cat) {
     ${total ? sections : `<div class="cat-note-body auto">ยังไม่มีบันทึกการเปลี่ยนแปลง</div>`}
   </div>`;
 
-  return latestReviewCardHtml(cat) + overviewCard + changesCard;
+  return requestsCardHtml(cat) + latestReviewCardHtml(cat) + overviewCard + changesCard;
 }
 
 function copyOverview(catId) {
@@ -5922,6 +5948,194 @@ function latestReviewCardHtml(cat) {
       ${reviews.length > 1 ? `<span class="cat-note-meta" style="margin:0">${reviews.length - 1} earlier</span>` : ""}
     </div>
   </div>`;
+}
+
+/* ---------- Requests: คนอื่นส่งเรื่องที่ต้องแก้เข้าโปรเจกต์ AI ผ่านลิงก์ ----------
+   ตาราง request_links (ลิงก์ละโปรเจกต์) + project_requests (เรื่องที่ส่งมา) + bucket "request-files" (ไฟล์แนบ)
+   ผู้ส่งใช้หน้า request.html#t=<token> (ไม่ต้อง login) ส่วนในแอปเจ้าของดู/ตั้งสถานะ/ลบ ได้เฉพาะของตัวเอง
+   ข้อมูลอยู่บน cloud โดยตรง (ไม่อยู่ใน state ที่ sync) จึงต้อง login แบบ cloud */
+let requestsView = null;          // null | { project, filter }
+const reqStore = { counts: {}, byProject: {}, loading: {}, countsAt: 0 };
+const REQ_STATUS = { new: "New", progress: "In progress", done: "Done" };
+const REQUEST_PAGE = "https://kodotodolist.netlify.app/request.html";
+function requestsReady() { return !!(sb && sbUser); }
+function requestLinkUrl(token) {
+  const base = /^https:$/.test(location.protocol) && location.host ? location.origin + "/request.html" : REQUEST_PAGE;
+  return base + "#t=" + token;
+}
+async function loadRequestCounts(force) {
+  if (!requestsReady()) return;
+  if (!force && Date.now() - reqStore.countsAt < 60000) return;
+  reqStore.countsAt = Date.now();
+  const { data, error } = await sb.from("project_requests").select("project, status").eq("owner", sbUser.id).eq("status", "new").limit(1000);
+  if (error) return;
+  const counts = {};
+  for (const r of data || []) counts[r.project] = (counts[r.project] || 0) + 1;
+  const changed = JSON.stringify(counts) !== JSON.stringify(reqStore.counts);
+  reqStore.counts = counts;
+  if (changed && (currentTab === "home" || requestsView)) render();
+}
+async function loadRequests(project) {
+  if (!requestsReady() || reqStore.loading[project]) return;
+  reqStore.loading[project] = true;
+  try {
+    const [links, reqs] = await Promise.all([
+      sb.from("request_links").select("id, token, active, created_at").eq("owner", sbUser.id).eq("project", project).order("created_at", { ascending: false }).limit(20),
+      sb.from("project_requests").select("id, author, body, attachments, status, created_at, updated_at").eq("owner", sbUser.id).eq("project", project).order("created_at", { ascending: false }).limit(300),
+    ]);
+    if (links.error || reqs.error) throw new Error((links.error || reqs.error).message);
+    reqStore.byProject[project] = { link: (links.data || []).find(l => l.active) || null, items: reqs.data || [], at: Date.now(), error: "" };
+    reqStore.counts[project] = (reqs.data || []).filter(r => r.status === "new").length;
+  } catch (e) {
+    reqStore.byProject[project] = { ...(reqStore.byProject[project] || { items: [], link: null }), error: e.message || "Couldn't load requests" };
+  } finally {
+    reqStore.loading[project] = false;
+  }
+  if (requestsView && requestsView.project === project) render();
+}
+function openRequests(project) {
+  requestsView = { project, filter: "open" };
+  viewTransition = true;
+  render();
+  loadRequests(project);
+}
+function closeRequests() { requestsView = null; viewTransition = true; render(); }
+function randomToken() {
+  return btoa(String.fromCharCode(...crypto.getRandomValues(new Uint8Array(24)))).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+}
+async function createRequestLink(project) {
+  if (!requestsReady()) return;
+  const cur = reqStore.byProject[project]?.link;
+  if (cur && !confirm("Create a new link? The current link will stop working.")) return;
+  const { error: offErr } = await sb.from("request_links").update({ active: false }).eq("owner", sbUser.id).eq("project", project).eq("active", true);
+  if (offErr) { showToast("❌ " + offErr.message); return; }
+  const token = randomToken();
+  const { error } = await sb.from("request_links").insert({ owner: sbUser.id, project, token, active: true });
+  if (error) { showToast("❌ " + error.message); return; }
+  await loadRequests(project);
+  copyText(requestLinkUrl(token), "request link");
+}
+async function closeRequestLink(project) {
+  if (!requestsReady() || !confirm("Close this link? People with the link won't be able to send requests.")) return;
+  const { error } = await sb.from("request_links").update({ active: false }).eq("owner", sbUser.id).eq("project", project).eq("active", true);
+  if (error) { showToast("❌ " + error.message); return; }
+  await loadRequests(project);
+  showToast("🔒 Request link closed");
+}
+async function setRequestStatus(project, id, status) {
+  if (!REQ_STATUS[status] || !requestsReady()) return;
+  const item = reqStore.byProject[project]?.items.find(r => r.id === id);
+  const prev = item && item.status;
+  if (item) { item.status = status; render(); }
+  const { error } = await sb.from("project_requests").update({ status, updated_at: new Date().toISOString() }).eq("id", id).eq("owner", sbUser.id);
+  if (error) { if (item) { item.status = prev; render(); } showToast("❌ " + error.message); return; }
+  reqStore.counts[project] = (reqStore.byProject[project]?.items || []).filter(r => r.status === "new").length;
+}
+async function deleteRequest(project, id) {
+  const item = reqStore.byProject[project]?.items.find(r => r.id === id);
+  if (!item || !confirm("Delete this request and its attachments?")) return;
+  const paths = (item.attachments || []).map(a => a && a.path).filter(p => typeof p === "string" && REQ_PATH_RE.test(p));
+  if (paths.length) { try { await sb.storage.from("request-files").remove(paths); } catch { /* ไฟล์ค้างไม่กระทบ */ } }
+  const { error } = await sb.from("project_requests").delete().eq("id", id).eq("owner", sbUser.id);
+  if (error) { showToast("❌ " + error.message); return; }
+  reqStore.byProject[project].items = reqStore.byProject[project].items.filter(r => r.id !== id);
+  render();
+}
+const REQ_PATH_RE = /^[A-Za-z0-9_-]{24,64}\/[A-Za-z0-9_-]{8,64}\.[a-z0-9]{1,5}$/;
+const reqFileUrls = new Map();
+async function requestFileUrl(path) {
+  const c = reqFileUrls.get(path);
+  if (c && c.exp > Date.now()) return c.url;
+  if (!requestsReady() || !REQ_PATH_RE.test(path)) return "";
+  const { data, error } = await sb.storage.from("request-files").createSignedUrl(path, 3600);
+  if (error || !data?.signedUrl) return "";
+  reqFileUrls.set(path, { url: data.signedUrl, exp: Date.now() + 50 * 60000 });
+  return data.signedUrl;
+}
+function hydrateRequestFiles() {
+  document.querySelectorAll("img[data-req-file]:not([data-loading])").forEach(img => {
+    img.setAttribute("data-loading", "1");
+    requestFileUrl(img.dataset.reqFile).then(url => { if (url && img.isConnected) img.src = url; else img.classList.add("broken"); });
+  });
+}
+async function openRequestFile(path) {
+  const w = window.open("", "_blank");
+  const url = await requestFileUrl(path);
+  if (!url) { if (w) w.close(); showToast("❌ Couldn't open the file"); return; }
+  if (w) { w.opener = null; w.location.href = url; } else location.assign(url);
+}
+/** ข้อความผู้ส่ง: ```โค้ด``` -> กล่องโค้ด, ที่เหลือเป็นย่อหน้า (escape ทั้งหมด) */
+function requestBodyHtml(body) {
+  const parts = String(body || "").split(/```[a-zA-Z0-9_+-]*\n?/);
+  return parts.map((p, i) => i % 2
+    ? `<pre class="rq-code"><code>${esc(p.replace(/\n$/, ""))}</code></pre>`
+    : (p.trim() ? `<div class="rq-text">${esc(p.replace(/^\n+|\n+$/g, ""))}</div>` : "")).join("");
+}
+function requestAttachmentsHtml(list) {
+  const items = (Array.isArray(list) ? list : []).filter(a => a && typeof a.path === "string" && REQ_PATH_RE.test(a.path));
+  if (!items.length) return "";
+  const imgs = items.filter(a => /^image\/(jpeg|png|webp|gif)$/.test(a.mime));
+  const others = items.filter(a => !imgs.includes(a));
+  return `${imgs.length ? `<div class="rq-imgs">${imgs.map(a => `<button class="rq-img" onclick="openRequestFile('${a.path}')" aria-label="Open ${esc(a.name || "image")}"><img data-req-file="${a.path}" alt="${esc(a.name || "")}"></button>`).join("")}</div>` : ""}
+    ${others.length ? `<div class="pf-attached">${others.map(a => `<button class="pf-att" onclick="openRequestFile('${a.path}')">${icon("doc", 12)} ${esc(a.name || "file")}${a.size ? ` · ${a.size > 1048576 ? (a.size / 1048576).toFixed(1) + " MB" : Math.max(1, Math.round(a.size / 1024)) + " KB"}` : ""}</button>`).join("")}</div>` : ""}`;
+}
+/** การ์ด Requests บนหน้าโปรเจกต์ AI */
+function requestsCardHtml(cat) {
+  const project = agentCatLabel(cat);
+  if (!requestsReady()) return "";
+  const n = reqStore.counts[project] || 0;
+  return `<button class="cat-note rq-card" onclick="openRequests(${esc(JSON.stringify(project))})">
+    <span class="set-ico" style="background:color-mix(in srgb, #f59e0b 16%, var(--card));color:color-mix(in srgb, #f59e0b 60%, var(--fg))">${icon("mail", 15)}</span>
+    <span class="rq-card-t"><b>Requests</b><span>${n ? `${n} new request${n > 1 ? "s" : ""} to review` : "Share a link so others can send what needs fixing"}</span></span>
+    ${n ? `<span class="rb-count">${n} new</span>` : ""}${icon("right", 14)}</button>`;
+}
+/** ป้ายบนหน้าแรก: มีเรื่องใหม่ในโปรเจกต์ไหนบ้าง */
+function requestsBannerHtml() {
+  if (focusMode === "personal" || !requestsReady()) return "";
+  const entries = Object.entries(reqStore.counts).filter(([, n]) => n > 0);
+  if (!entries.length) return "";
+  const total = entries.reduce((a, [, n]) => a + n, 0);
+  return `<div class="rq-banner">${icon("mail", 15)}<span class="rq-banner-t"><b>${total} new request${total > 1 ? "s" : ""}</b></span>
+    ${entries.map(([p, n]) => `<button class="rv-chip" onclick="openRequests(${esc(JSON.stringify(p))})">${esc(p)} · ${n}</button>`).join("")}</div>`;
+}
+function renderRequestsPage() {
+  const { project } = requestsView;
+  const f = requestsView.filter || "open";
+  const st = reqStore.byProject[project];
+  const head = `<div class="rv-feed-head"><button class="back-btn" onclick="closeRequests()">${icon("left", 15)} Back</button></div>
+    <h1 style="margin:.2rem 0 .1rem">Requests</h1><p class="hint" style="margin:0 0 .8rem">${esc(project)} · things people want fixed or changed</p>`;
+  if (!requestsReady()) return `<div class="rv-feed">${head}<p class="empty">Sign in with cloud sync to receive requests.</p></div>`;
+  if (!st) return `<div class="rv-feed">${head}<p class="empty">Loading…</p></div>`;
+  const link = st.link;
+  const linkCard = `<div class="pf-card rq-link">
+    <div class="pf-card-title">${icon("mail", 13)} Request link</div>
+    ${link ? `<div class="rq-url">${esc(requestLinkUrl(link.token))}</div>
+      <div class="rq-link-btns">
+        <button class="btn btn-primary" onclick="copyText(${esc(JSON.stringify(requestLinkUrl(link.token)))}, 'request link')">${icon("download", 13)} Copy link</button>
+        <button class="btn btn-outline" onclick="createRequestLink(${esc(JSON.stringify(project))})">New link</button>
+        <button class="btn btn-danger-outline" onclick="closeRequestLink(${esc(JSON.stringify(project))})">Close link</button>
+      </div>
+      <p class="hint" style="margin:.4rem 0 0">Anyone with this link can send text, screenshots, code and files. No sign-in needed.</p>`
+    : `<p class="hint" style="margin:0 0 .6rem">Create a link and share it — people can send text, screenshots, code and files without signing in.</p>
+      <button class="btn btn-primary" onclick="createRequestLink(${esc(JSON.stringify(project))})">Create request link</button>`}
+  </div>`;
+  const items = st.items.filter(r => f === "all" ? true : f === "open" ? r.status !== "done" : r.status === f);
+  const count = (k) => st.items.filter(r => k === "open" ? r.status !== "done" : r.status === k).length;
+  const chip = (k, l) => `<button class="rv-chip ${f === k ? "sel" : ""}" onclick="requestsView.filter='${k}';render()">${l} · ${k === "all" ? st.items.length : count(k)}</button>`;
+  const cards = items.map(r => `<article class="rv-post rq-post ${r.status}">
+      <header class="rv-post-head">${reviewAvatar(r.author ? r.author : "Anonymous", 36)}
+        <span class="rv-post-who"><b class="rv-post-app">${esc(r.author || "Anonymous")}</b><span class="rv-post-time">${esc(reviewWhen(r.created_at))}</span></span>
+        <button class="rt-del" aria-label="Delete request" onclick="deleteRequest(${esc(JSON.stringify(project))}, '${esc(r.id)}')">${icon("trash", 13)}</button>
+      </header>
+      ${requestBodyHtml(r.body)}
+      ${requestAttachmentsHtml(r.attachments)}
+      <div class="cal-seg rq-status" role="radiogroup" aria-label="Status">${Object.entries(REQ_STATUS).map(([k, l]) =>
+        `<button class="cal-seg-btn ${r.status === k ? "sel" : ""}" role="radio" aria-checked="${r.status === k}" onclick="setRequestStatus(${esc(JSON.stringify(project))}, '${esc(r.id)}', '${k}')">${l}</button>`).join("")}</div>
+    </article>`).join("");
+  return `<div class="rv-feed">${head}${linkCard}
+    ${st.error ? `<p class="hint" style="color:var(--danger-text)">${esc(st.error)}</p>` : ""}
+    <div class="rv-chips">${chip("open", "Open")}${chip("new", "New")}${chip("progress", "In progress")}${chip("done", "Done")}${chip("all", "All")}</div>
+    ${cards || `<p class="empty">${f === "open" ? "No open requests ✓" : "Nothing here"}</p>`}</div>`;
 }
 
 /* ---------- Daily review feed ----------
@@ -7058,6 +7272,12 @@ function render() {
     view.classList.remove("anim"); void view.offsetWidth; view.classList.add("anim");
     return;
   }
+  if (requestsView && !petView) {
+    view.innerHTML = renderRequestsPage();
+    fabEl.style.display = "none";
+    if (viewTransition) { viewTransition = false; view.classList.remove("anim"); void view.offsetWidth; view.classList.add("anim"); window.scrollTo(0, 0); }
+    return;
+  }
   if (reviewView && !petView) {
     view.innerHTML = renderReviewFeed();
     fabEl.style.display = "none";
@@ -7113,6 +7333,7 @@ function switchTab(id) {
   currentTab = id;
   petView = null;
   reviewView = null;
+  requestsView = null;
   viewTransition = true;
   render();
 }
@@ -7616,7 +7837,7 @@ fab.onclick = () => {
   openForm(null);
 };
 render();
-new MutationObserver(() => { hydratePets(); hydratePetFiles(); }).observe(document.body, { childList: true, subtree: true });
+new MutationObserver(() => { hydratePets(); hydratePetFiles(); hydrateRequestFiles(); }).observe(document.body, { childList: true, subtree: true });
 hydratePets();
 // กลับมาที่แท็บแล้ววิวสดหยุดอยู่ (ซ่อนแท็บ = หยุด loop ประหยัดแบต) -> เดินต่อ
 document.addEventListener("visibilitychange", () => {
