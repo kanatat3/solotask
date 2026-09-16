@@ -1725,6 +1725,12 @@ function migrate(s) {
   if (!Array.isArray(s.routines)) s.routines = [];
   if (!s.routineLog || typeof s.routineLog !== "object") s.routineLog = {};
   if (!s.meta || typeof s.meta !== "object") s.meta = {};
+  if (s.meta.gcalW !== undefined) {
+    const ok = isObj(s.meta.gcalW) ? Object.entries(s.meta.gcalW).filter(([k, v]) =>
+      /^[tc]:[A-Za-z0-9_-]{1,64}$/.test(k) && isObj(v) && typeof v.id === "string" && /^[A-Za-z0-9_@.-]{1,1024}$/.test(v.id) && typeof v.h === "string") : [];
+    s.meta.gcalW = Object.fromEntries(ok.slice(0, 2000).map(([k, v]) => [k, { id: v.id, h: String(v.h).slice(0, 2000) }]));
+  }
+  if (s.meta.gcalEmail !== undefined && typeof s.meta.gcalEmail !== "boolean") delete s.meta.gcalEmail;
   if (s.meta.reviewRead !== undefined) {
     const rr = isObj(s.meta.reviewRead) ? Object.entries(s.meta.reviewRead).filter(([k, v]) => /^[A-Za-z0-9_-]{1,64}:\d{1,3}$/.test(k) && typeof v === "string") : [];
     s.meta.reviewRead = Object.fromEntries(rr.sort((a, b) => b[1].localeCompare(a[1])).slice(0, 1000));
@@ -1773,6 +1779,7 @@ function persistLocal() {
 }
 function save() {
   persistLocal();
+  scheduleGwrite();
   scheduleNativeNotifications();
   scheduleCloudSave(); // sync ขึ้น cloud ด้วยถ้าเชื่อมอยู่ (debounced)
 }
@@ -2092,6 +2099,7 @@ async function onCloudSignedIn(session) {
   render();
   setTimeout(autoCheckin, 400);
   loadRequestCounts(true);
+  if (gwriteOn()) setTimeout(() => gwriteSync(), 1500);
   if (pushSupported() && Notification.permission === "granted" && !state.meta.notifOff) pushSubscribe(true);
 }
 
@@ -6575,14 +6583,17 @@ function loadGis() {
 }
 
 /** ขอ token — ต้องเรียกจากการกดปุ่มโดยตรง (หน้าต่าง Google เป็น popup เบราว์เซอร์จะบล็อกถ้าไม่ได้มาจากการกด) */
-function greadAuthorize(firstTime) {
+function greadAuthorize(firstTime, wantWrite) {
   if (!window.google?.accounts?.oauth2) {
     showToast("⏳ Loading Google… tap again in a moment");
     loadGis().catch(() => showToast("❌ Couldn't reach Google — check your connection"));
     return;
   }
-  if (!gread.client) {
-    gread.client = google.accounts.oauth2.initTokenClient({ client_id: GREAD_CLIENT_ID, scope: GREAD_SCOPE, callback: () => {} });
+  // ขอสิทธิ์อ่านเสมอ + สิทธิ์เพิ่ม/แก้ event เมื่อเปิดใช้ปฏิทินเตือนแทน
+  const scope = GREAD_SCOPE + ((wantWrite || gwriteOn()) ? " " + GWRITE_SCOPE : "");
+  if (!gread.client || gread.clientScope !== scope) {
+    gread.client = google.accounts.oauth2.initTokenClient({ client_id: GREAD_CLIENT_ID, scope, callback: () => {} });
+    gread.clientScope = scope;
   }
   // ผูกผลลัพธ์กับบัญชีที่กด Connect — ถ้าระหว่างรอ popup มีการเปลี่ยนบัญชี/sign out ให้ทิ้ง (และเพิกถอน) token นั้น
   const gen = gread.gen, acct = stateKey;
@@ -6595,13 +6606,20 @@ function greadAuthorize(firstTime) {
     if (!google.accounts.oauth2.hasGrantedAllScopes(resp, GREAD_SCOPE)) {
       gread.error = "Calendar access wasn't granted"; render(); return;
     }
+    const gotWrite = google.accounts.oauth2.hasGrantedAllScopes(resp, GWRITE_SCOPE);
+    if (wantWrite && !gotWrite) { gread.error = "Permission to add events wasn't granted"; render(); return; }
     gread.acct = acct;
     gread.token = resp.access_token;
     gread.exp = Date.now() + (Number(resp.expires_in || 3600) - 60) * 1000;
     try { sessionStorage.setItem(greadTokenKey(), JSON.stringify({ token: gread.token, exp: gread.exp })); } catch { /* ignore */ }
     try { localStorage.setItem(greadOnKey(), "1"); } catch { /* ignore */ }
     gread.error = ""; gread.cache.clear();
-    if (firstTime) showToast("📅 Google Calendar connected");
+    if (wantWrite && gotWrite) {
+      try { localStorage.setItem(gwriteOnKey(), "1"); } catch { /* ignore */ }
+      showToast("📅 Kodo will add your reminders to Google Calendar");
+      gwrite.error = "";
+      gwriteSync(true);
+    } else if (firstTime) showToast("📅 Google Calendar connected");
     render();
   };
   gread.client.error_callback = (err) => {
@@ -6619,23 +6637,182 @@ function greadDisconnect() {
   const tok = greadToken();
   if (tok && window.google?.accounts?.oauth2) google.accounts.oauth2.revoke(tok, () => {});
   greadReset();   // ทิ้งงานที่ค้างอยู่ด้วย ไม่ให้ fetch ที่ยังไม่เสร็จเอา event กลับมาใส่หลังตัดการเชื่อม
-  try { sessionStorage.removeItem(greadTokenKey()); localStorage.removeItem(greadOnKey()); } catch { /* ignore */ }
+  try { sessionStorage.removeItem(greadTokenKey()); localStorage.removeItem(greadOnKey()); localStorage.removeItem(gwriteOnKey()); } catch { /* ignore */ }
   showToast("Google Calendar disconnected");
   render();
 }
 
 /** เรียก Calendar API ด้วย token ที่ระบุ (ของรอบที่เริ่มงาน ไม่ใช่ token ปัจจุบัน — กันใช้ token บัญชีใหม่กับงานของบัญชีเดิม) */
-async function greadApi(path, tok) {
-  const r = await fetch("https://www.googleapis.com/calendar/v3" + path, { headers: { Authorization: "Bearer " + tok } });
+async function gcalApi(path, tok, opts) {
+  const o = opts || {};
+  const r = await fetch("https://www.googleapis.com/calendar/v3" + path, {
+    method: o.method || "GET",
+    headers: Object.assign({ Authorization: "Bearer " + tok }, o.body ? { "Content-Type": "application/json" } : {}),
+    body: o.body ? JSON.stringify(o.body) : undefined,
+  });
   if (r.status === 401) {
     // ล้างเฉพาะถ้า token ที่หมดอายุยังเป็นตัวปัจจุบันอยู่
     if (gread.token === tok) { gread.token = ""; gread.exp = 0; try { sessionStorage.removeItem(greadTokenKey()); } catch {} }
     throw new Error("expired");
   }
   if (!r.ok) throw new Error("HTTP " + r.status);
+  if (r.status === 204 || (o.method === "DELETE")) return null;
   return r.json();
 }
+const greadApi = (path, tok) => gcalApi(path, tok);
 const greadColor = (c) => typeof c === "string" && /^#[0-9a-f]{3,8}$/i.test(c) ? c : "#4285f4";
+
+/* ---------- Google Calendar: ให้ Google เตือนแทน (ป๊อปอัป + อีเมล) ----------
+   งานที่ตั้ง Reminder และ checklist ที่ตั้งเวลา จะถูกสร้างเป็น event ในปฏิทินหลักของบัญชี Google
+   พร้อม reminder แบบ email -> Google ส่งอีเมลให้เอง แม้ไม่ได้เปิด Kodo และไม่ต้องใช้บริการอีเมลอื่น
+   แผนที่ event ที่สร้างไว้เก็บใน state.meta.gcalW (sync ข้ามเครื่อง) จึงไม่สร้างซ้ำเมื่อเปิดอีกเครื่อง */
+const GWRITE_SCOPE = "https://www.googleapis.com/auth/calendar.events";
+const gwriteOnKey = () => "kodo-gcal-write:" + stateKey;
+const gwrite = { busy: false, error: "", at: 0, timer: null, seq: 0 };
+function gwriteOn() { try { return localStorage.getItem(gwriteOnKey()) === "1"; } catch { return false; } }
+function gwriteEmailOn() { return state.meta.gcalEmail !== false; }
+function gcalMap() {
+  if (!state.meta.gcalW || typeof state.meta.gcalW !== "object") state.meta.gcalW = {};
+  return state.meta.gcalW;
+}
+/** ตั้งเวลา sync หลังแก้ข้อมูล (หน่วงรวบยอด) */
+function scheduleGwrite() {
+  if (!gwriteOn() || IS_NATIVE) return;
+  clearTimeout(gwrite.timer);
+  gwrite.timer = setTimeout(() => gwriteSync(), 2500);
+}
+function gwriteEnable() {
+  if (IS_NATIVE) { showToast("📅 Turn this on in the web version (kodotodolist.netlify.app)"); return; }
+  greadAuthorize(true, true);
+}
+/** ปิด แล้วถามว่าจะลบ event ที่ Kodo สร้างไว้ใน Google ด้วยไหม */
+async function gwriteTurnOff() {
+  const map = gcalMap();
+  const n = Object.keys(map).length;
+  try { localStorage.removeItem(gwriteOnKey()); } catch { /* ignore */ }
+  if (n && confirm("Also remove the " + n + " Kodo event" + (n > 1 ? "s" : "") + " from your Google Calendar?")) {
+    const tok = greadToken();
+    for (const [k, v] of Object.entries(map)) {
+      if (tok) { try { await gcalApi("/calendars/primary/events/" + encodeURIComponent(v.id), tok, { method: "DELETE" }); } catch { /* ลบไม่ได้ก็ข้าม */ } }
+      delete map[k];
+    }
+    save();
+  }
+  showToast("📅 Calendar reminders off");
+  render();
+}
+/** เวลาแบบ RFC3339 พร้อม offset ของเครื่อง */
+function gcalTime(d) {
+  const p = (n) => String(n).padStart(2, "0");
+  const off = -d.getTimezoneOffset(), sign = off >= 0 ? "+" : "-", ab = Math.abs(off);
+  return d.getFullYear() + "-" + p(d.getMonth() + 1) + "-" + p(d.getDate()) + "T" + p(d.getHours()) + ":" + p(d.getMinutes()) + ":00" + sign + p(Math.floor(ab / 60)) + ":" + p(ab % 60);
+}
+const GCAL_DAYS = ["SU", "MO", "TU", "WE", "TH", "FR", "SA"];
+/** event ที่ควรมีใน Google ตอนนี้ (key -> { body, hash }) */
+function gwriteDesired() {
+  const out = new Map();
+  const email = gwriteEmailOn();
+  const remind = (min) => ({ useDefault: false, overrides: [{ method: "popup", minutes: min }].concat(email ? [{ method: "email", minutes: min }] : []) });
+  const now = Date.now();
+  for (const t of state.tasks) {
+    if (t.status !== "open" || !t.dueAt || typeof t.reminderMin !== "number") continue;
+    const due = new Date(t.dueAt);
+    if (isNaN(due) || due.getTime() < now - 2 * 86400000 || due.getTime() > now + 400 * 86400000) continue;
+    const timed = due.getHours() !== 0 || due.getMinutes() !== 0;
+    const cat = catById(t.categoryId);
+    const endAllDay = t.endDate ? new Date(new Date(t.endDate + "T00:00:00").getTime() + 86400000) : new Date(due.getTime() + 86400000);
+    const body = {
+      summary: String(t.title || "Task").slice(0, 200),
+      description: [t.note, cat ? "Category: " + cat.name : "", "— from Kodo"].filter(Boolean).join("\n\n").slice(0, 4000),
+      start: timed ? { dateTime: gcalTime(due) } : { date: dateKey(due) },
+      end: timed ? { dateTime: gcalTime(new Date(due.getTime() + 30 * 60000)) } : { date: dateKey(endAllDay) },
+      reminders: remind(Math.max(0, Math.min(40320, t.reminderMin))),
+      extendedProperties: { private: { kodo: "task", kodoId: t.id } },
+    };
+    out.set("t:" + t.id, { body, hash: JSON.stringify([body.summary, body.description, body.start, body.end, body.reminders]) });
+  }
+  for (const cl of state.checklists) {
+    const r = cl.reminder;
+    if (!r || !Array.isArray(r.days) || !r.days.length || !/^\d{2}:\d{2}$/.test(r.time || "")) continue;
+    const parts = r.time.split(":").map(Number);
+    const start = new Date(); start.setHours(parts[0], parts[1], 0, 0);
+    for (let i = 0; i < 7 && !r.days.includes(start.getDay()); i++) start.setDate(start.getDate() + 1);
+    const body = {
+      summary: "✅ " + String(cl.title || "Checklist").slice(0, 190),
+      description: ((cl.items || []).map(i => "• " + i.text).join("\n") + "\n\n— from Kodo").slice(0, 4000),
+      start: { dateTime: gcalTime(start) },
+      end: { dateTime: gcalTime(new Date(start.getTime() + 15 * 60000)) },
+      recurrence: ["RRULE:FREQ=WEEKLY;BYDAY=" + [...r.days].sort().map(d => GCAL_DAYS[d]).join(",")],
+      reminders: remind(0),
+      extendedProperties: { private: { kodo: "checklist", kodoId: cl.id } },
+    };
+    out.set("c:" + cl.id, { body, hash: JSON.stringify([body.summary, body.description, body.recurrence, body.start, body.reminders]) });
+  }
+  return out;
+}
+/** สร้าง/แก้/ลบ event ให้ตรงกับงานปัจจุบัน */
+async function gwriteSync(manual) {
+  if (!gwriteOn() || IS_NATIVE || gwrite.busy) return 0;
+  const tok = greadToken();
+  if (!tok) { gwrite.error = "reconnect"; if (manual) render(); return 0; }
+  const gen = gread.gen, acct = stateKey, seq = ++gwrite.seq;
+  gwrite.busy = true; gwrite.error = "";
+  if (manual) render();
+  const map = gcalMap();
+  let changed = false, sent = 0;
+  try {
+    const want = gwriteDesired();
+    for (const [key, item] of want) {
+      if (!greadStill(gen, acct) || seq !== gwrite.seq) return sent;
+      const cur = map[key];
+      if (cur && cur.h === item.hash) continue;
+      if (cur) {
+        let patched = true;
+        try {
+          await gcalApi("/calendars/primary/events/" + encodeURIComponent(cur.id), tok, { method: "PATCH", body: item.body });
+        } catch (e) {
+          if (e.message !== "HTTP 404" && e.message !== "HTTP 410") throw e;   // event ถูกลบใน Google -> สร้างใหม่
+          patched = false;
+        }
+        if (patched) { map[key] = { id: cur.id, h: item.hash }; changed = true; sent++; continue; }
+      }
+      const ev = await gcalApi("/calendars/primary/events", tok, { method: "POST", body: item.body });
+      if (ev && ev.id) { map[key] = { id: String(ev.id), h: item.hash }; changed = true; sent++; }
+    }
+    for (const key of Object.keys(map)) {
+      if (want.has(key)) continue;
+      if (!greadStill(gen, acct) || seq !== gwrite.seq) return sent;
+      try { await gcalApi("/calendars/primary/events/" + encodeURIComponent(map[key].id), tok, { method: "DELETE" }); }
+      catch (e) { if (e.message !== "HTTP 404" && e.message !== "HTTP 410") throw e; }
+      delete map[key]; changed = true; sent++;
+    }
+    gwrite.at = Date.now();
+  } catch (e) {
+    console.warn("gcal sync:", e);
+    gwrite.error = e.message === "expired" ? "reconnect" : e.message === "HTTP 403" ? "noscope" : "failed";
+    if (manual) showToast(gwrite.error === "reconnect" ? "⚠️ Google sign-in expired — connect again"
+      : gwrite.error === "noscope" ? "⚠️ Kodo needs permission to add events — connect again" : "⚠️ Couldn't update Google Calendar");
+  } finally {
+    gwrite.busy = false;
+  }
+  if (changed) { persistLocal(); scheduleCloudSave(); }
+  if (manual || changed) render();
+  return sent;
+}
+function gwriteStatus() {
+  if (gwrite.busy) return "Updating Google Calendar…";
+  if (gwrite.error === "reconnect") return "Google sign-in expired — connect again";
+  if (gwrite.error === "noscope") return "Permission to add events is missing — connect again";
+  if (gwrite.error) return "Last update failed — Kodo will try again";
+  const n = Object.keys(gcalMap()).length;
+  return n + " reminder" + (n === 1 ? "" : "s") + " in your Google Calendar" + (gwriteEmailOn() ? " · email + popup" : " · popup only");
+}
+function toggleGcalEmail() {
+  state.meta.gcalEmail = !gwriteEmailOn();
+  for (const k of Object.keys(gcalMap())) gcalMap()[k].h = "";   // เปลี่ยนวิธีเตือน = ทุก event ต้องอัปเดต
+  save(); render();
+  gwriteSync(true);
+}
 
 /** ดึง event ของช่วง [start, end) — cache ต่อช่วง แล้ว render ใหม่เมื่อได้ข้อมูล */
 async function greadEnsure(start, end) {
@@ -7088,6 +7265,31 @@ function renderSettings() {
           ? `<button class="link-danger" onclick="greadDisconnect()">Disconnect</button>`
           : `<button class="link-primary" onclick="greadConnect()" ${window.google?.accounts?.oauth2 ? "" : "disabled"}>${window.google?.accounts?.oauth2 ? "Connect" : "Loading…"}</button>`}
       </div>
+      <div class="set-row static">
+        <span class="set-ico" style="background:color-mix(in srgb, #ea4335 16%, var(--card));color:color-mix(in srgb, #ea4335 60%, var(--fg))">${icon("mail", 14)}</span>
+        <span class="set-label">Email + calendar reminders
+          <span class="set-sub">${gwriteOn()
+            ? esc(gwriteStatus())
+            : "Put every task reminder and timed checklist in your Google Calendar — Google then emails you, even when Kodo is closed"}</span>
+        </span>
+        ${gwriteOn()
+          ? `<button class="link-danger" onclick="gwriteTurnOff()">Turn off</button>`
+          : `<button class="link-primary" onclick="gwriteEnable()" ${window.google?.accounts?.oauth2 ? "" : "disabled"}>${window.google?.accounts?.oauth2 ? "Turn on" : "Loading…"}</button>`}
+      </div>
+      ${gwriteOn() ? `<div class="set-row static">
+        <span class="set-ico" style="background:color-mix(in srgb, #6366f1 16%, var(--card));color:color-mix(in srgb, #6366f1 60%, var(--fg))">${icon("bell", 14)}</span>
+        <span class="set-label">Send the reminder by email
+          <span class="set-sub">Google emails you at the reminder time${gwriteEmailOn() ? "" : " — off, popup only"}</span>
+        </span>
+        <button class="switch" role="switch" aria-checked="${gwriteEmailOn()}" aria-label="Email reminders" onclick="toggleGcalEmail()"></button>
+      </div>
+      <div class="set-row static">
+        <span class="set-ico" style="background:color-mix(in srgb, #10b981 16%, var(--card));color:color-mix(in srgb, #10b981 60%, var(--fg))">${icon("refresh", 14)}</span>
+        <span class="set-label">Update now
+          <span class="set-sub">Kodo updates Google a few seconds after you change a task</span>
+        </span>
+        <button class="link-primary" onclick="gwriteSync(true)" ${gwrite.busy ? "disabled" : ""}>${gwrite.busy ? "Updating…" : "Update"}</button>
+      </div>` : ""}
     </div>
 
     <h2 class="section-title">Data</h2>
