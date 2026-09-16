@@ -221,6 +221,33 @@
   }
   .hero-title b { font-weight: 800; }
   .hero-title .soft { font-weight: 600; color: rgba(255, 255, 255, .8); }
+  /* ช่องค้นหาในหัวหน้าแรก */
+  .home-search { position: relative; display: flex; align-items: center; margin: 0 0 1.15rem; }
+  .home-search .hs-ico { position: absolute; left: .85rem; display: flex; color: var(--muted); pointer-events: none; }
+  .home-search input {
+    width: 100%; margin: 0; padding: .8rem 2.6rem; border: none; border-radius: 999px;
+    background: var(--card); color: var(--fg); font: inherit; font-size: .9rem; box-shadow: 0 8px 20px -14px rgba(20, 25, 60, .6);
+  }
+  .home-search input::-webkit-search-cancel-button { display: none; }
+  .home-search input:focus { outline: 2px solid var(--hero-fg); outline-offset: 2px; }
+  .home-search .hs-clear {
+    position: absolute; right: .55rem; width: 1.9rem; height: 1.9rem; display: grid; place-items: center;
+    border: none; border-radius: 50%; background: var(--bg); color: var(--muted); cursor: pointer;
+  }
+  .home-res-count { font-size: .78rem; font-weight: 700; color: var(--muted); margin: .9rem 0 .5rem; }
+  /* หมวดบนหน้าแรกแบบแถว 2 คอลัมน์ */
+  .cat-rows { display: grid; grid-template-columns: 1fr 1fr; gap: .55rem; }
+  .cat-row {
+    display: flex; align-items: center; gap: .55rem; padding: .7rem .65rem; text-align: left; cursor: pointer;
+    background: var(--card); border: 1px solid var(--edge); border-radius: var(--r-md); box-shadow: var(--shadow);
+    font: inherit; color: var(--fg); min-width: 0;
+  }
+  .cat-row .cat-ico { flex-shrink: 0; }
+  .cat-row-text { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+  .cat-row-name { font-size: .86rem; font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .cat-row-sub { font-size: .72rem; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .cat-row-go { flex-shrink: 0; color: var(--muted); display: flex; }
+  @media (max-width: 24rem) { .cat-rows { grid-template-columns: 1fr; } }
   /* 7 วัน check-in เป็นวงกลมใหญ่ (แบบ Habitual) */
   .hero-week { display: flex; justify-content: space-between; gap: .3rem; }
   .hw-day { flex: 1; display: flex; flex-direction: column; align-items: center; gap: .4rem; }
@@ -5442,6 +5469,51 @@ function heroActionsHtml() {
 }
 
 /** 7 วันล่าสุดเป็นวงกลมใหญ่ใน hero — วันที่เข้าแอพเป็นวงขาวมี ✓ */
+/* ---------- ค้นหางานจากหัวหน้าแรก (ต่อ session ไม่เก็บลงข้อมูล) ---------- */
+let homeQuery = "";
+function homeSearchHtml() {
+  return `<div class="home-search">
+    <span class="hs-ico" aria-hidden="true">${icon("list", 16)}</span>
+    <input id="homeSearch" type="text" inputmode="search" enterkeyhint="search" autocomplete="off" placeholder="Search your tasks…"
+      aria-label="Search your tasks" value="${esc(homeQuery)}" oninput="homeSearchInput(this.value)">
+    ${homeQuery ? `<button class="hs-clear" aria-label="Clear search" onclick="homeSearchInput('')">${icon("x", 14)}</button>` : ""}
+  </div>`;
+}
+/** งานที่ตรงคำค้น (ชื่อ / โน้ต / ชื่อหมวด / ชื่อโปรเจกต์) */
+function homeSearchResults(q) {
+  const needle = q.trim().toLowerCase();
+  if (!needle) return [];
+  const words = needle.split(/\s+/).filter(Boolean);
+  const when = (t) => t.doneAt || t.dueAt || t.createdAt || "";
+  return state.tasks.filter(t => {
+    if (!taskInFocus(t)) return false;
+    const cat = catById(t.categoryId), proj = projectOf(t);
+    const hay = [t.title, t.note, cat && cat.name, proj && proj.name].filter(Boolean).join(" ").toLowerCase();
+    return words.every(w => hay.includes(w));
+  }).sort((a, b) => (a.status === b.status ? when(b).localeCompare(when(a)) : a.status === "open" ? -1 : 1)).slice(0, 60);
+}
+function homeResultsHtml() {
+  const list = homeSearchResults(homeQuery);
+  if (!homeQuery.trim()) return "";
+  return `<div class="home-res-count">${list.length ? `${list.length} task${list.length > 1 ? "s" : ""} found` : "No tasks match"}</div>`
+    + (list.length ? list.map(t => taskHtml(t)).join("") : `<p class="empty-sm">Try another word, or add it as a new task with +</p>`);
+}
+/** อัปเดตเฉพาะส่วนผลลัพธ์ ไม่ render ใหม่ทั้งหน้า (โฟกัส/เคอร์เซอร์ในช่องค้นหาจึงไม่หลุด) */
+function homeSearchInput(v) {
+  homeQuery = String(v || "");
+  const res = document.getElementById("homeResults"), sections = document.getElementById("homeSections");
+  if (!res || !sections) { render(); return; }
+  const on = !!homeQuery.trim();
+  res.innerHTML = on ? homeResultsHtml() : "";
+  res.hidden = !on;
+  sections.hidden = on;
+  const clear = document.querySelector(".home-search .hs-clear");
+  if (on && !clear) document.querySelector(".home-search")?.insertAdjacentHTML("beforeend",
+    `<button class="hs-clear" aria-label="Clear search" onclick="homeSearchInput('')">${icon("x", 14)}</button>`);
+  if (!on && clear) clear.remove();
+  const el = document.getElementById("homeSearch");
+  if (el && el.value !== homeQuery) el.value = homeQuery;
+}
 function heroWeekHtml() {
   const { active } = streakInfo();
   const cells = [];
@@ -5544,9 +5616,19 @@ function renderHome() {
   const activeCat = activeCategories().filter(inFocus).find(scheduleActive);
   const featuredGroup = activeCat ? groups.find(g => g.key === activeCat.id) : null;
   const featuredHtml = featuredGroup ? buildCard(featuredGroup, true) : "";
+  function buildRow(g) {
+    const tasks = todayTasksOf(g.key);
+    const done = tasks.filter(t => t.status === "done").length;
+    const sub = tasks.length ? `${done}/${tasks.length} done${done === tasks.length ? " ✓" : ""}` : "No tasks today";
+    return `<button class="cat-row" onclick="goCat('${g.key}')" aria-label="Open ${esc(g.name)}">
+      <span class="cat-ico" style="background:color-mix(in srgb, ${g.color} 16%, var(--card));color:color-mix(in srgb, ${g.color} 55%, var(--fg))">${icon(g.icon, 15)}</span>
+      <span class="cat-row-text"><span class="cat-row-name">${esc(g.name)}</span><span class="cat-row-sub">${sub}</span></span>
+      <span class="cat-row-go">${icon("right", 14)}</span>
+    </button>`;
+  }
   const cards = groups
     .filter(g => !featuredGroup || g.key !== featuredGroup.key)
-    .map(g => buildCard(g, false)).join("");
+    .map(buildRow).join("");
 
   // การ์ดรวมงาน AI ใบเดียว — กดแล้วเข้าไปเลือกโปรเจกต์ที่หน้า AI hub
   const aiCats = focusMode === "personal" ? [] : agentCategories();
@@ -5688,9 +5770,12 @@ function renderHome() {
         ${heroActionsHtml()}
       </div>
       <h1 class="hero-title"><span class="soft">${g.text},</span><br>${firstName ? `${firstName}, ` : ""}you're doing <b>great!</b></h1>
+      ${homeSearchHtml()}
       ${heroWeekHtml()}
     </section>
     <div class="sheet-body">
+    <div id="homeResults" ${homeQuery.trim() ? "" : "hidden"}>${homeResultsHtml()}</div>
+    <div id="homeSections" ${homeQuery.trim() ? "hidden" : ""}>
     ${focusSwitchHtml()}
     ${requestsBannerHtml()}
     ${reviewBillboardHtml()}
@@ -5714,10 +5799,11 @@ function renderHome() {
     <h2 class="section-title">Checklists</h2>
     <div class="ov-grid">${checklistCards}${newChecklistBtn}</div>`}
     <h2 class="section-title">${featuredHtml ? "Other categories" : "By category"}</h2>
-    <div class="ov-grid">${cards}${aiCardHtml}</div>
+    <div class="cat-rows">${cards}</div>${aiCardHtml}
     ${tomorrowCard ? `<h2 class="section-title">Tomorrow</h2><div class="ov-grid">${tomorrowCard}</div>` : ""}
     <h2 class="section-title">Completed — last 7 days</h2>
     <div class="card"><div class="week-chart">${weekChart}</div></div>
+    </div>
     </div>`;
 }
 
@@ -7501,8 +7587,15 @@ function render() {
     }
     return;
   }
+  // กำลังพิมพ์ในช่องค้นหาแล้วมีอะไรสั่งวาดหน้าใหม่ (check-in / sync) -> คืนโฟกัสและตำแหน่งเคอร์เซอร์
+  const sEl = document.getElementById("homeSearch");
+  const keepSearch = sEl && document.activeElement === sEl ? { pos: sEl.selectionStart } : null;
   const tab = TABS.find(t => t[0] === currentTab);
   view.innerHTML = tab[3]();
+  if (keepSearch) {
+    const again = document.getElementById("homeSearch");
+    if (again) { again.focus(); try { again.setSelectionRange(keepSearch.pos, keepSearch.pos); } catch { /* ไม่รองรับก็ข้าม */ } }
+  }
   // เล่น view transition เฉพาะตอนเปลี่ยนหน้า ไม่ใช่ทุกการติ๊ก
   if (viewTransition) {
     viewTransition = false;
@@ -7533,6 +7626,7 @@ function switchTab(id) {
     clearInterval(focusTimer); focusTimer = null; focusEndsAt = null;
   }
   currentTab = id;
+  homeQuery = "";
   petView = null;
   reviewView = null;
   requestsView = null;
