@@ -210,9 +210,14 @@
     font: inherit; font-weight: 800; font-size: .82rem; border-radius: 999px; min-height: 2.5rem;
     backdrop-filter: blur(6px); transition: background .15s ease-out, transform .15s cubic-bezier(.22, 1, .36, 1);
   }
-  .hero-streak { padding: 0 .8rem 0 .6rem; }
+  /* ชิปไฟ + รูปสัตว์เลี้ยง: พื้นสีชัด ไม่กลืนกับหัว (ทั้งกลางวัน/กลางคืน) */
+  .hero-streak { padding: 0 .8rem 0 .6rem; background: linear-gradient(135deg, #fff7ed, #ffedd5); color: #c2410c;
+    box-shadow: 0 0 0 2px rgba(255, 255, 255, .55), 0 6px 14px -8px rgba(154, 52, 18, .6); backdrop-filter: none; }
+  .hero-pet { box-shadow: 0 0 0 2px rgba(255, 255, 255, .85), 0 6px 14px -8px rgba(30, 40, 90, .6); }
+  .hero-pet, .hero-pet.sp-puff, .hero-pet.sp-parrotlet { background: radial-gradient(circle at 35% 30%, #f0f9ff, #bae6fd 70%, #7dd3fc); }
+  .hero-pet.sp-cockatiel { background: radial-gradient(circle at 35% 30%, #fffbeb, #fde68a 70%, #fcd34d); }
   .hero-streak:active, .hero-pet:active { transform: scale(.94); }
-  .hero-pet { width: 2.5rem; padding: .2rem; line-height: 0; background: var(--card); }
+  .hero-pet { width: 2.5rem; padding: .2rem; line-height: 0; }
   .hero-pet svg { width: 100%; height: 100%; overflow: visible; }
   .hero-pet.bounce { animation: petBounce .9s cubic-bezier(.22, 1.4, .36, 1); }
   .hero-title {
@@ -236,18 +241,23 @@
   }
   .home-res-count { font-size: .78rem; font-weight: 700; color: var(--muted); margin: .9rem 0 .5rem; }
   /* หมวดบนหน้าแรกแบบแถว 2 คอลัมน์ */
-  .cat-rows { display: grid; grid-template-columns: 1fr 1fr; gap: .55rem; }
+  .cat-rows { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .6rem; }
+  .cat-row-name, .cat-row-sub { display: block; width: 100%; min-width: 0; max-width: 100%; }
+  .cat-row { overflow: hidden; }
   .cat-row {
-    display: flex; align-items: center; gap: .55rem; padding: .7rem .65rem; text-align: left; cursor: pointer;
-    background: var(--card); border: 1px solid var(--edge); border-radius: var(--r-md); box-shadow: var(--shadow);
-    font: inherit; color: var(--fg); min-width: 0;
+    display: flex; flex-direction: column; align-items: stretch; gap: .2rem; min-height: 7.2rem; padding: .85rem .9rem .8rem;
+    text-align: left; cursor: pointer; min-width: 0; font: inherit; color: var(--fg);
+    background: var(--card); border: 1px solid var(--edge); border-radius: var(--r-lg); box-shadow: var(--shadow);
+    transition: transform .15s cubic-bezier(.22, 1, .36, 1);
   }
-  .cat-row .cat-ico { flex-shrink: 0; }
-  .cat-row-text { flex: 1; min-width: 0; display: flex; flex-direction: column; }
-  .cat-row-name { font-size: .86rem; font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .cat-row-sub { font-size: .72rem; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .cat-row-go { flex-shrink: 0; color: var(--muted); display: flex; }
-  @media (max-width: 24rem) { .cat-rows { grid-template-columns: 1fr; } }
+  .cat-row:active { transform: scale(.97); }
+  .cat-row-top { display: flex; width: 100%; align-items: center; justify-content: space-between; margin-bottom: .35rem; }
+  .cat-row .cat-ico { width: 2.4rem; height: 2.4rem; border-radius: .8rem; flex-shrink: 0; }
+  .cat-row-name { font-size: .95rem; font-weight: 800; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .cat-row-sub { font-size: .74rem; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .cat-row-go { width: 1.8rem; height: 1.8rem; border-radius: 50%; display: grid; place-items: center; background: var(--bg); color: var(--muted); }
+  .cat-row-bar { display: block; width: 100%; margin-top: auto; height: .35rem; border-radius: 999px; background: var(--bg); overflow: hidden; }
+  .cat-row-bar > span { display: block; height: 100%; border-radius: inherit; background: var(--cc); }
   /* 7 วัน check-in เป็นวงกลมใหญ่ (แบบ Habitual) */
   .hero-week { display: flex; justify-content: space-between; gap: .3rem; }
   .hw-day { flex: 1; display: flex; flex-direction: column; align-items: center; gap: .4rem; }
@@ -1277,7 +1287,6 @@
     .nav-btn.active { flex-grow: 0; }
     .ov-grid { grid-template-columns: repeat(3, 1fr); gap: .8rem; }
     .fab { right: 2.5rem; bottom: 2.5rem; }
-    .stat-row { max-width: 32rem; }
   }
 
   /* ===== สถานะการโต้ตอบ (V6.0): ทุกอย่างที่กดได้มี hover / focus / กดค้าง =====
@@ -1336,7 +1345,8 @@
     .btn-danger-outline:hover { background-color: color-mix(in srgb, var(--danger) 8%, transparent); border-color: var(--danger); }
     .cal-today-btn:hover { background-color: color-mix(in srgb, var(--primary) 20%, var(--card)); }
     .fab:hover { box-shadow: 0 14px 28px -12px color-mix(in srgb, var(--primary) 85%, transparent); transform: translateY(-1px); }
-    .hero-streak:hover, .hero-pet:hover { background-color: rgba(255, 255, 255, .3); }
+    .hero-streak:hover { background: linear-gradient(135deg, #fff1dc, #fed7aa); }
+    .hero-pet:hover { filter: brightness(1.05); }
     /* ตัวเลือก */
     .fp-pill:not(.sel):hover, .setup-chip:not(.sel):hover, .day-pill:not(.sel):hover, .icon-opt:not(.sel):hover {
       border-color: color-mix(in srgb, var(--primary) 50%, var(--border)); color: var(--fg);
@@ -5464,7 +5474,7 @@ function heroActionsHtml() {
   const streak = currentStreak();
   return `<div class="hero-actions">
     <button class="hero-streak" onclick="openPet()" aria-label="${streak} day streak — open ${esc(pet.name)}">${flameSvg(16, streak > 0, streak > 0)} ${streak}</button>
-    <button class="hero-pet ${justCheckedIn || justLeveled ? "bounce" : ""}" onclick="openPet()" aria-label="Open ${esc(pet.name)} · Lv ${level}">${petSvg(level)}</button>
+    <button class="hero-pet sp-${petSpecies()} ${justCheckedIn || justLeveled ? "bounce" : ""}" onclick="openPet()" aria-label="Open ${esc(pet.name)} · Lv ${level}">${petSvg(level)}</button>
   </div>`;
 }
 
@@ -5616,15 +5626,22 @@ function renderHome() {
   const activeCat = activeCategories().filter(inFocus).find(scheduleActive);
   const featuredGroup = activeCat ? groups.find(g => g.key === activeCat.id) : null;
   const featuredHtml = featuredGroup ? buildCard(featuredGroup, true) : "";
+  function catCardHtml(o) {
+    return `<button class="cat-row" onclick="${o.onclick}" aria-label="Open ${esc(o.name)}" style="--cc:${o.color}">
+      <span class="cat-row-top">
+        <span class="cat-ico" style="background:color-mix(in srgb, ${o.color} 16%, var(--card));color:color-mix(in srgb, ${o.color} 55%, var(--fg))">${icon(o.icon, 18)}</span>
+        <span class="cat-row-go">${icon("right", 15)}</span>
+      </span>
+      <span class="cat-row-name">${esc(o.name)}</span>
+      <span class="cat-row-sub">${esc(o.sub)}</span>
+      <span class="cat-row-bar"><span style="width:${Math.round((o.pct || 0) * 100)}%"></span></span>
+    </button>`;
+  }
   function buildRow(g) {
     const tasks = todayTasksOf(g.key);
     const done = tasks.filter(t => t.status === "done").length;
     const sub = tasks.length ? `${done}/${tasks.length} done${done === tasks.length ? " ✓" : ""}` : "No tasks today";
-    return `<button class="cat-row" onclick="goCat('${g.key}')" aria-label="Open ${esc(g.name)}">
-      <span class="cat-ico" style="background:color-mix(in srgb, ${g.color} 16%, var(--card));color:color-mix(in srgb, ${g.color} 55%, var(--fg))">${icon(g.icon, 15)}</span>
-      <span class="cat-row-text"><span class="cat-row-name">${esc(g.name)}</span><span class="cat-row-sub">${sub}</span></span>
-      <span class="cat-row-go">${icon("right", 14)}</span>
-    </button>`;
+    return catCardHtml({ name: g.name, color: g.color, icon: g.icon, sub, pct: tasks.length ? done / tasks.length : 0, onclick: `goCat('${g.key}')` });
   }
   const cards = groups
     .filter(g => !featuredGroup || g.key !== featuredGroup.key)
@@ -5643,15 +5660,7 @@ function renderHome() {
       aiOpen ? `${aiOpen} open` : "",
     ].filter(Boolean).join(" · ");
     const pct = aiTasks.length ? Math.round(aiTasks.filter(t => t.status === "done").length / aiTasks.length * 100) : 0;
-    aiCardHtml = `<div class="ov-card is-link" onclick="if(!event.target.closest('button,a,input,select,textarea,label')&&!textSelected())goCat('${AI_HUB}')">
-      <div class="ov-head">
-        <span class="cat-ring">${ringSvg(pct, AI_HUB_COLOR)}<span class="cat-ico" style="background:color-mix(in srgb, ${AI_HUB_COLOR} 16%, var(--card));color:color-mix(in srgb, ${AI_HUB_COLOR} 55%, var(--fg))">${icon(AGENT_CAT_ICON, 14)}</span></span>
-        <span class="name">AI Work
-          <span class="ov-sub" style="display:block;font-weight:600">${sub}</span>
-        </span>
-        <button class="ov-more" aria-label="Open AI Work" onclick="goCat('${AI_HUB}')">${icon("right", 14)}</button>
-      </div>
-    </div>`;
+    aiCardHtml = catCardHtml({ name: "AI Work", color: AI_HUB_COLOR, icon: AGENT_CAT_ICON, sub, pct: pct / 100, onclick: `goCat('${AI_HUB}')` });
   }
 
   // กราฟ done 7 วันล่าสุด
@@ -5799,7 +5808,7 @@ function renderHome() {
     <h2 class="section-title">Checklists</h2>
     <div class="ov-grid">${checklistCards}${newChecklistBtn}</div>`}
     <h2 class="section-title">${featuredHtml ? "Other categories" : "By category"}</h2>
-    <div class="cat-rows">${cards}</div>${aiCardHtml}
+    <div class="cat-rows">${cards}${aiCardHtml}</div>
     ${tomorrowCard ? `<h2 class="section-title">Tomorrow</h2><div class="ov-grid">${tomorrowCard}</div>` : ""}
     <h2 class="section-title">Completed — last 7 days</h2>
     <div class="card"><div class="week-chart">${weekChart}</div></div>
