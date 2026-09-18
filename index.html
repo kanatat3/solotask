@@ -5347,6 +5347,7 @@ function saveProject(e, catId, pid) {
   save(); closeForm(); render();
 }
 
+/** ลบโปรเจกต์ AI ทั้งงาน — ไม่มีปุ่มบนหน้าจอ (ผู้ใช้ขอเอาออก 2026-09-18) เหลือไว้ให้เรียกเองเมื่อจำเป็น */
 function deleteAgentProject(catId) {
   const cat = catById(catId);
   if (!cat || !isAgentCategory(cat)) return;
@@ -6689,8 +6690,8 @@ function renderTodayDetail() {
     ? `<span class="head-actions"><button class="edit-btn" aria-label="Rename project" onclick="openProjectForm('${cat.id}', '${proj.id}')">${icon("edit", 15)}</button>
         <button class="edit-btn" aria-label="Delete project" onclick="deleteProject('${cat.id}', '${proj.id}')">${icon("trash", 15)}</button></span>`
     : fromAi
-      ? `<span class="head-actions">${requestsIconHtml(cat)}
-        <button class="edit-btn" aria-label="Delete project" onclick="deleteAgentProject('${cat.id}')">${icon("trash", 15)}</button></span>`
+      // ไม่มีปุ่มลบบนหน้าโปรเจกต์ AI แล้ว — กดพลาดครั้งเดียวงานหายถาวร (ลบได้ที่ Settings ซึ่งเก็บงานไว้)
+      ? `<span class="head-actions">${requestsIconHtml(cat)}</span>`
     : (!isNone && !fromAi && !projects.length
         ? `<button class="link-primary" style="font-size:.8rem" onclick="openProjectForm('${cat.id}')">+ Project</button>` : "");
   // การ์ดโปรเจกต์ (แบบเดียวกับหน้ารวม AI) — นับจากงานทั้งหมดของโปรเจกต์ ไม่ขึ้นกับปุ่ม Today/All
