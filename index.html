@@ -904,6 +904,20 @@
   .cat-note-body.auto { color: var(--muted); }
   .cat-note-meta { font-size: .7rem; color: var(--muted); margin-top: .45rem; }
   /* หน้าสรุปโปรเจกต์: ภาพรวม + ความเปลี่ยนแปลง */
+  /* link cards on a project page */
+  .lk-row { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: .45rem; margin: 0 0 .6rem; }
+  .lk-card {
+    display: flex; align-items: center; gap: .5rem; min-width: 0;
+    padding: .5rem .6rem; border: 1px solid var(--edge); border-radius: .7rem;
+    background: var(--card); color: inherit; text-decoration: none;
+  }
+  .lk-card:hover { border-color: color-mix(in srgb, var(--primary) 35%, var(--edge)); }
+  .lk-fav { width: 20px; height: 20px; border-radius: .3rem; flex: 0 0 auto; object-fit: contain; background: var(--bg); }
+  .lk-fallback { display: grid; place-items: center; font-size: .62rem; font-weight: 700; color: var(--muted); }
+  .lk-text { min-width: 0; }
+  .lk-title { display: block; font-size: .78rem; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .lk-host { display: block; font-size: .68rem; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .lk-inline { color: var(--primary); overflow-wrap: anywhere; }
   .ps-list { margin: 0; padding-left: 1.1rem; font-size: .84rem; line-height: 1.55; }
   .ps-list li { margin: .1rem 0; overflow-wrap: anywhere; }
   .ps-mynote {
@@ -2240,12 +2254,49 @@ const CHANGE_KINDS = [
   { key: "fixed",   label: "Fixed",    color: "#f97316" },
 ];
 
+/** ลิงก์ในข้อความจาก agent: ทำให้กดได้ (escape ทุกส่วนเหมือนเดิม รับเฉพาะ http/https) */
+const LINK_RE = /https?:\/\/[^\s<>"'\)\]]+/g;
+const trimUrl = (u) => String(u).replace(/[.,;:!?]+$/, "");
+function linkifyHtml(text) {
+  const str = String(text || "");
+  let out = "", last = 0, m;
+  LINK_RE.lastIndex = 0;
+  while ((m = LINK_RE.exec(str))) {
+    const url = trimUrl(m[0]);
+    out += esc(str.slice(last, m.index)) +
+      `<a class="lk-inline" href="${esc(url)}" target="_blank" rel="noopener noreferrer">${esc(url.length > 48 ? url.slice(0, 45) + "…" : url)}</a>`;
+    last = m.index + url.length;
+  }
+  return out + esc(str.slice(last));
+}
+
+/** แถวภาพรวมที่มีลิงก์ -> การ์ดลิงก์ (ชื่อ + โดเมน + ไอคอนเว็บ) */
+function parseLinkItem(text) {
+  const str = String(text || "");
+  LINK_RE.lastIndex = 0;
+  const m = LINK_RE.exec(str);
+  if (!m) return null;
+  const url = trimUrl(m[0]);
+  let host = "";
+  try { host = new URL(url).host.replace(/^www\./, ""); } catch { return null; }
+  const title = str.slice(0, m.index).trim().replace(/[—–-]+$/, "").trim();
+  return { url, host, title: title || host };
+}
+function linkCardsHtml(links) {
+  if (!links.length) return "";
+  return `<div class="lk-row">${links.map(l => `<a class="lk-card" href="${esc(l.url)}" target="_blank" rel="noopener noreferrer" title="${esc(l.url)}">
+    <img class="lk-fav" src="https://www.google.com/s2/favicons?domain=${encodeURIComponent(l.host)}&sz=64" alt="" loading="lazy"
+         onerror="this.replaceWith(Object.assign(document.createElement('span'),{className:'lk-fav lk-fallback',textContent:this.alt||'↗'}))">
+    <span class="lk-text"><span class="lk-title">${esc(l.title)}</span><span class="lk-host">${esc(l.host)}</span></span>
+  </a>`).join("")}</div>`;
+}
+
 /** รายการรูปแบบ "English topic — คำอธิบายภาษาไทย" (ที่ log-task ใช้) -> หัวข้อตัวหนา + คำอธิบายสีจาง
  *  แยกเฉพาะเมื่อหัวไม่มีอักษรไทยและท้ายมีอักษรไทย ข้อความรูปแบบอื่นแสดงตามเดิม */
 function topicHtml(text) {
   const s = String(text || "");
   const m = /^([^\u0E00-\u0E7F]{2,90}?)\s+[—–-]\s+(.*[\u0E00-\u0E7F][\s\S]*)$/.exec(s);
-  return m ? `<b class="ps-topic">${esc(m[1])}</b> <span class="ps-desc">${esc(m[2])}</span>` : esc(s);
+  return m ? `<b class="ps-topic">${esc(m[1])}</b> <span class="ps-desc">${linkifyHtml(m[2])}</span>` : linkifyHtml(s);
 }
 
 function parseAgentNote(note) {
@@ -5927,8 +5978,10 @@ function projectSummaryHtml(cat) {
   // ---- 1) ภาพรวม: แอปนี้มีอะไรบ้าง ----
   const ov = Array.isArray(cat.overview) ? cat.overview.filter(Boolean) : [];
   const manual = String(cat.note || "").trim();
+  const ovLinks = [], ovFeatures = [];
+  for (const item of ov) { const link = parseLinkItem(item); if (link) ovLinks.push(link); else ovFeatures.push(item); }
   const ovBody = ov.length
-    ? `<ul class="ps-list">${ov.map(x => `<li>${topicHtml(x)}</li>`).join("")}</ul>`
+    ? linkCardsHtml(ovLinks) + (ovFeatures.length ? `<ul class="ps-list">${ovFeatures.map(x => `<li>${topicHtml(x)}</li>`).join("")}</ul>` : "")
     : `<div class="cat-note-body auto">ยังไม่มีภาพรวม — Claude จะเติมให้ตอนบันทึกงานครั้งถัดไป</div>`;
   const overviewCard = `<div class="cat-note">
     <div class="cat-note-head">${icon("doc", 13)} What's in this app<span class="spacer"></span>
@@ -5936,7 +5989,7 @@ function projectSummaryHtml(cat) {
       <button class="link-primary" style="font-size:.78rem" onclick="openCatNote('${cat.id}')">${manual ? "Edit note" : "+ Note"}</button>
     </div>
     ${ovBody}
-    ${manual ? `<div class="ps-mynote"><b>My note</b>${esc(manual)}</div>` : ""}
+    ${manual ? `<div class="ps-mynote"><b>My note</b>${linkifyHtml(manual)}</div>` : ""}
     ${cat.overviewAt ? `<div class="cat-note-meta">Overview updated ${fmtDate(new Date(cat.overviewAt))}</div>` : ""}
   </div>`;
 
