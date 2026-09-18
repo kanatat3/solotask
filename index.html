@@ -912,8 +912,17 @@
     background: var(--card); color: inherit; text-decoration: none;
   }
   .lk-card:hover { border-color: color-mix(in srgb, var(--primary) 35%, var(--edge)); }
-  .lk-fav { width: 20px; height: 20px; border-radius: .3rem; flex: 0 0 auto; object-fit: contain; background: var(--bg); }
-  .lk-fallback { display: grid; place-items: center; font-size: .62rem; font-weight: 700; color: var(--muted); }
+  .lk-card:active { transform: scale(.98); }
+  /* ตัวอย่างเล็กๆ: อักษรย่อบนพื้นสีประจำโดเมน + ไอคอนเว็บซ้อนมุมล่างขวา */
+  .lk-tile {
+    position: relative; width: 2.1rem; height: 2.1rem; flex: 0 0 auto; border-radius: .6rem;
+    display: grid; place-items: center; font-size: .72rem; font-weight: 800; letter-spacing: .02em;
+  }
+  .lk-fav {
+    position: absolute; right: -2px; bottom: -2px; width: 14px; height: 14px; border-radius: .25rem;
+    object-fit: contain; background: var(--card); box-shadow: 0 0 0 2px var(--card);
+  }
+  .lk-folder .lk-row { margin: 0; }
   .lk-text { min-width: 0; }
   .lk-title { display: block; font-size: .78rem; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .lk-host { display: block; font-size: .68rem; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -976,6 +985,12 @@
   .rv-mini-t { flex: 1; min-width: 0; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .rv-foot { display: flex; align-items: center; gap: .7rem; flex-wrap: wrap; margin-top: .4rem; }
   /* Requests */
+  .rq-icon { position: relative; }
+  .rq-dot {
+    position: absolute; top: -2px; right: -2px; min-width: 1rem; height: 1rem; padding: 0 .2rem;
+    display: grid; place-items: center; border-radius: 999px; background: var(--primary); color: #fff;
+    font-size: .6rem; font-weight: 800; box-shadow: 0 0 0 2px var(--card);
+  }
   .rq-card { width: 100%; display: flex; align-items: center; gap: .65rem; text-align: left; font: inherit; color: var(--fg); cursor: pointer; }
   .rq-card-t { flex: 1; min-width: 0; display: flex; flex-direction: column; font-size: .88rem; }
   .rq-card-t span { font-size: .76rem; color: var(--muted); }
@@ -2282,13 +2297,48 @@ function parseLinkItem(text) {
   const title = str.slice(0, m.index).trim().replace(/[—–-]+$/, "").trim();
   return { url, host, title: title || host };
 }
+/** ตัวอย่างเล็กๆ ของลิงก์: ตัวอักษรแรกบนพื้นสีประจำโดเมน + ไอคอนเว็บมุมล่าง + โดเมน/เส้นทางย่อ */
+const LK_TILE_COLORS = ["#6366f1", "#0ea5e9", "#10b981", "#f59e0b", "#ec4899", "#8b5cf6", "#ef4444", "#14b8a6"];
+function linkTileColor(host) {
+  let h = 0;
+  for (let i = 0; i < host.length; i++) h = (h * 31 + host.charCodeAt(i)) >>> 0;
+  return LK_TILE_COLORS[h % LK_TILE_COLORS.length];
+}
+function linkInitials(title) {
+  const words = String(title || "").trim().split(/\s+/).filter(Boolean);
+  const letters = words.slice(0, 2).map(w => [...w][0]).join("");
+  return (letters || "↗").toUpperCase().slice(0, 2);
+}
+/** บรรทัดรอง: ปกติใช้โดเมน — แต่ถ้าลิงก์หลายอันโดเมนเดียวกัน ให้โชว์ส่วนท้ายแทน จะได้แยกออกว่าอันไหนคืออันไหน */
+function linkSubText(l, sameHost) {
+  let tail = "";
+  try {
+    const u = new URL(l.url);
+    tail = (u.pathname === "/" ? "" : u.pathname) + (u.search || "");
+  } catch { tail = ""; }
+  return sameHost && tail ? tail : l.host;   // ยาวเกินการ์ด CSS ตัดท้ายให้เอง
+}
 function linkCardsHtml(links) {
   if (!links.length) return "";
+  const hostCount = {};
+  for (const l of links) hostCount[l.host] = (hostCount[l.host] || 0) + 1;
   return `<div class="lk-row">${links.map(l => `<a class="lk-card" href="${esc(l.url)}" target="_blank" rel="noopener noreferrer" title="${esc(l.url)}">
-    <img class="lk-fav" src="https://www.google.com/s2/favicons?domain=${encodeURIComponent(l.host)}&sz=64" alt="" loading="lazy"
-         onerror="this.replaceWith(Object.assign(document.createElement('span'),{className:'lk-fav lk-fallback',textContent:this.alt||'↗'}))">
-    <span class="lk-text"><span class="lk-title">${esc(l.title)}</span><span class="lk-host">${esc(l.host)}</span></span>
+    <span class="lk-tile" style="background:color-mix(in srgb, ${linkTileColor(l.host)} 18%, var(--card));color:color-mix(in srgb, ${linkTileColor(l.host)} 70%, var(--fg))" aria-hidden="true">${esc(linkInitials(l.title))}
+      <img class="lk-fav" src="https://www.google.com/s2/favicons?domain=${encodeURIComponent(l.host)}&sz=64" alt="" loading="lazy"
+           onerror="this.remove()">
+    </span>
+    <span class="lk-text"><span class="lk-title">${esc(l.title)}</span><span class="lk-host">${esc(linkSubText(l, hostCount[l.host] > 1))}</span></span>
   </a>`).join("")}</div>`;
+}
+/** การ์ดรวมลิงก์/ไฟล์ของโปรเจกต์ — อยู่บนสุดของหน้า แยกจาก "What's in this app" */
+function linksCardHtml(links) {
+  if (!links.length) return "";
+  return `<div class="cat-note lk-folder">
+    <div class="cat-note-head">${icon("folder", 13)} Links &amp; files<span class="spacer"></span>
+      <span class="cat-note-meta" style="margin:0">${links.length} link${links.length > 1 ? "s" : ""}</span>
+    </div>
+    ${linkCardsHtml(links)}
+  </div>`;
 }
 
 /** รายการรูปแบบ "English topic — คำอธิบายภาษาไทย" (ที่ log-task ใช้) -> หัวข้อตัวหนา + คำอธิบายสีจาง
@@ -5980,8 +6030,9 @@ function projectSummaryHtml(cat) {
   const manual = String(cat.note || "").trim();
   const ovLinks = [], ovFeatures = [];
   for (const item of ov) { const link = parseLinkItem(item); if (link) ovLinks.push(link); else ovFeatures.push(item); }
-  const ovBody = ov.length
-    ? linkCardsHtml(ovLinks) + (ovFeatures.length ? `<ul class="ps-list">${ovFeatures.map(x => `<li>${topicHtml(x)}</li>`).join("")}</ul>` : "")
+  // ลิงก์ย้ายออกไปอยู่การ์ด "Links & files" บนสุด — ในภาพรวมเหลือเฉพาะรายการฟีเจอร์
+  const ovBody = ovFeatures.length
+    ? `<ul class="ps-list">${ovFeatures.map(x => `<li>${topicHtml(x)}</li>`).join("")}</ul>`
     : `<div class="cat-note-body auto">ยังไม่มีภาพรวม — Claude จะเติมให้ตอนบันทึกงานครั้งถัดไป</div>`;
   const overviewCard = `<div class="cat-note">
     <div class="cat-note-head">${icon("doc", 13)} What's in this app<span class="spacer"></span>
@@ -6022,7 +6073,7 @@ function projectSummaryHtml(cat) {
     ${total ? sections : `<div class="cat-note-body auto">ยังไม่มีบันทึกการเปลี่ยนแปลง</div>`}
   </div>`;
 
-  return requestsCardHtml(cat) + latestReviewCardHtml(cat) + overviewCard + changesCard;
+  return linksCardHtml(ovLinks) + latestReviewCardHtml(cat) + overviewCard + changesCard;
 }
 
 function copyOverview(catId) {
@@ -6235,15 +6286,13 @@ function requestAttachmentsHtml(list) {
   return `${imgs.length ? `<div class="rq-imgs">${imgs.map(a => `<button class="rq-img" onclick="openRequestFile('${a.path}')" aria-label="Open ${esc(a.name || "image")}"><img data-req-file="${a.path}" alt="${esc(a.name || "")}"></button>`).join("")}</div>` : ""}
     ${others.length ? `<div class="pf-attached">${others.map(a => `<button class="pf-att" onclick="openRequestFile('${a.path}')">${icon("doc", 12)} ${esc(a.name || "file")}${a.size ? ` · ${a.size > 1048576 ? (a.size / 1048576).toFixed(1) + " MB" : Math.max(1, Math.round(a.size / 1024)) + " KB"}` : ""}</button>`).join("")}</div>` : ""}`;
 }
-/** การ์ด Requests บนหน้าโปรเจกต์ AI */
-function requestsCardHtml(cat) {
+/** Requests บนหน้าโปรเจกต์ AI — ไอคอนเล็กมุมขวาบน (มีจุดแดงเมื่อมีเรื่องใหม่) */
+function requestsIconHtml(cat) {
   const project = agentCatLabel(cat);
   if (!requestsReady()) return "";
   const n = reqStore.counts[project] || 0;
-  return `<button class="cat-note rq-card" onclick="openRequests(${esc(JSON.stringify(project))})">
-    <span class="set-ico" style="background:color-mix(in srgb, #f59e0b 16%, var(--card));color:color-mix(in srgb, #f59e0b 60%, var(--fg))">${icon("mail", 15)}</span>
-    <span class="rq-card-t"><b>Requests</b><span>${n ? `${n} new request${n > 1 ? "s" : ""} to review` : "Share a link so others can send what needs fixing"}</span></span>
-    ${n ? `<span class="rb-count">${n} new</span>` : ""}${icon("right", 14)}</button>`;
+  return `<button class="edit-btn rq-icon" aria-label="${n ? `Requests — ${n} new` : "Requests"}" title="${n ? `${n} new request${n > 1 ? "s" : ""}` : "Requests"}"
+    onclick="openRequests(${esc(JSON.stringify(project))})">${icon("mail", 15)}${n ? `<span class="rq-dot">${n > 9 ? "9+" : n}</span>` : ""}</button>`;
 }
 /** ป้ายบนหน้าแรก: มีเรื่องใหม่ในโปรเจกต์ไหนบ้าง */
 function requestsBannerHtml() {
@@ -6640,7 +6689,8 @@ function renderTodayDetail() {
     ? `<span class="head-actions"><button class="edit-btn" aria-label="Rename project" onclick="openProjectForm('${cat.id}', '${proj.id}')">${icon("edit", 15)}</button>
         <button class="edit-btn" aria-label="Delete project" onclick="deleteProject('${cat.id}', '${proj.id}')">${icon("trash", 15)}</button></span>`
     : fromAi
-      ? `<button class="edit-btn" aria-label="Delete project" onclick="deleteAgentProject('${cat.id}')">${icon("trash", 15)}</button>`
+      ? `<span class="head-actions">${requestsIconHtml(cat)}
+        <button class="edit-btn" aria-label="Delete project" onclick="deleteAgentProject('${cat.id}')">${icon("trash", 15)}</button></span>`
     : (!isNone && !fromAi && !projects.length
         ? `<button class="link-primary" style="font-size:.8rem" onclick="openProjectForm('${cat.id}')">+ Project</button>` : "");
   // การ์ดโปรเจกต์ (แบบเดียวกับหน้ารวม AI) — นับจากงานทั้งหมดของโปรเจกต์ ไม่ขึ้นกับปุ่ม Today/All
