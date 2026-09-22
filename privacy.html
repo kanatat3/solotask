@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Kodo — Privacy Policy</title>
+<meta name="description" content="How Kodo collects, uses, stores and deletes your data, including data from Google Calendar.">
+<link rel="icon" href="kodo-list-32.png">
+<style>
+  :root { --bg: #f5f5fb; --card: #fff; --fg: #1d1b33; --muted: #6b6a80; --edge: #e6e5f0; --primary: #6366f1; }
+  @media (prefers-color-scheme: dark) { :root { --bg: #14131f; --card: #1d1c2b; --fg: #ecebf5; --muted: #a3a2b8; --edge: #2c2b3d; --primary: #8b8cf7; } }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--fg); font: 16px/1.65 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+  main { max-width: 46rem; margin: 0 auto; padding: 2rem 1rem 4rem; }
+  .card { background: var(--card); border: 1px solid var(--edge); border-radius: 1rem; padding: 1.5rem 1.4rem; }
+  h1 { font-size: 1.7rem; margin: 0 0 .2rem; }
+  h2 { font-size: 1.1rem; margin: 1.8rem 0 .4rem; }
+  p, li { color: var(--fg); }
+  .meta { color: var(--muted); font-size: .9rem; margin: 0 0 1.2rem; }
+  ul { padding-left: 1.2rem; }
+  li { margin: .25rem 0; }
+  a { color: var(--primary); }
+  .back { display: inline-block; margin-bottom: 1rem; text-decoration: none; font-weight: 600; }
+  .note { background: color-mix(in srgb, var(--primary) 10%, var(--card)); border-radius: .7rem; padding: .8rem 1rem; }
+</style>
+</head>
+<body>
+<main>
+  <a class="back" href="./">← Back to Kodo</a>
+  <div class="card">
+    <h1>Privacy Policy</h1>
+    <p class="meta">Kodo — kodotodolist.netlify.app · Effective 22 September 2026</p>
+
+    <p>Kodo is a personal task, routine and project tracker that runs in your web browser. This policy explains what data Kodo handles, why, where it is stored, and how you can delete it. Kodo is a small independent app. It has no ads, and your data is never sold.</p>
+
+    <h2>1. Data you put into Kodo</h2>
+    <ul>
+      <li><b>Account:</b> your name and email address, from email sign-up or from “Continue with Google” (name, email and profile picture only).</li>
+      <li><b>Your content:</b> tasks, notes, categories, projects, routines, checklists, journal entries, pet profiles and records, and app settings.</li>
+      <li><b>Files you attach</b> (for example pet documents or photos). These are stored privately. Only you can open them, through short-lived links.</li>
+      <li><b>Project request links:</b> if you create one, anyone who has the link can send you a message and files for that project. What they send is stored in your account. It is visible only to you.</li>
+      <li><b>Notifications:</b> if you turn them on, Kodo stores your browser’s push-notification address so it can send you reminders.</li>
+    </ul>
+    <p>Kodo uses your content only to provide its features to you. Examples are showing your tasks, syncing them between your devices and sending your reminders.</p>
+
+    <h2>2. Google Calendar (optional)</h2>
+    <p>You can choose to connect Google Calendar in Settings. Kodo asks only for the access that each feature needs:</p>
+    <ul>
+      <li><b>See your calendar events</b> (<code>calendar.readonly</code>) — to show your Google events inside Kodo’s Calendar view. The events are loaded live in your browser each time. They are <b>not stored</b> on Kodo’s servers.</li>
+      <li><b>Create and change events</b> (<code>calendar.events</code>) — only if you turn on “Email + calendar reminders”. Kodo then adds an event to your primary calendar for each task reminder and timed checklist, so Google can remind you by popup and email. Kodo updates or removes those events when you change or finish the task. Kodo saves only the IDs of the events it created, so it doesn’t make duplicates. It does not read or change your other events.</li>
+    </ul>
+    <p>The Google access token is kept only in your browser tab’s session storage. It is never sent to Kodo’s servers. You can disconnect at any time in Kodo Settings, or at <a href="https://myaccount.google.com/permissions" rel="noopener">myaccount.google.com/permissions</a>.</p>
+    <p class="note">Kodo’s use and transfer of information received from Google APIs to any other app will adhere to the <a href="https://developers.google.com/terms/api-services-user-data-policy" rel="noopener">Google API Services User Data Policy</a>, including the Limited Use requirements. Google user data is not used for advertising. It is not sold, and it is not used to train AI models. People cannot read it, except with your permission, for security reasons, or when the law requires it.</p>
+
+    <h2>3. Where data is stored and who processes it</h2>
+    <ul>
+      <li><b>Supabase</b> — database, sign-in, private file storage and the notification service that sends your reminders.</li>
+      <li><b>Netlify</b> — hosts the Kodo web app.</li>
+      <li><b>Google</b> — sign-in with Google, the Calendar API (if you connect it), web fonts, and small website icons on project link cards. For those icons, only the website’s domain name is sent.</li>
+      <li><b>Browser push services</b> (for example Apple, Google or Mozilla) — deliver notifications. They do this only if you turn notifications on.</li>
+      <li><b>cdnjs / jsDelivr</b> — deliver open-source code libraries that the app loads.</li>
+    </ul>
+    <p>Data sent between your browser and these services is encrypted in transit (HTTPS). Each account can reach only its own data: this is enforced by database access rules.</p>
+
+    <h2>4. Data kept on your device</h2>
+    <p>Kodo keeps a copy of your data in your browser’s local storage, so it works offline and opens quickly. It also stores some settings for each device there, such as theme and notification preferences. After you sign out, this copy stays in the browser until you clear the site’s data. On a shared computer, clear the site data after you use Kodo.</p>
+
+    <h2>5. How long data is kept, and deleting it</h2>
+    <ul>
+      <li>Your data is kept while your account exists. You can edit or delete any item in the app at any time.</li>
+      <li>You can download a full copy with <b>Settings → Export data</b>.</li>
+      <li>To delete your account and all of its data, email <a href="mailto:kanatat.putter3@gmail.com">kanatat.putter3@gmail.com</a> from the address you signed up with. Everything will be deleted within 30 days, including attached files and request messages.</li>
+    </ul>
+
+    <h2>6. Children</h2>
+    <p>Kodo is not directed at children under 13, and it does not knowingly collect their data.</p>
+
+    <h2>7. Changes</h2>
+    <p>If this policy changes, the new version will be posted on this page with a new effective date.</p>
+
+    <h2>8. Contact</h2>
+    <p>Questions or requests: <a href="mailto:kanatat.putter3@gmail.com">kanatat.putter3@gmail.com</a></p>
+    <p class="meta" style="margin-top:1.5rem">See also the <a href="terms.html">Terms of Service</a>.</p>
+  </div>
+</main>
+</body>
+</html>

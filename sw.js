@@ -1,4 +1,4 @@
-const CACHE_NAME = "kodo-v5";
+const CACHE_NAME = "kodo-v6";
 // ไลบรารีจาก CDN ที่แอปใช้ (three.js สำหรับสัตว์เลี้ยง 3D) — เก็บ cache ครั้งแรกที่โหลด แล้วใช้ออฟไลน์ได้
 const RUNTIME_CACHE_PREFIXES = ["https://cdnjs.cloudflare.com/ajax/libs/three.js/"];
 const APP_SHELL = ["/", "/index.html", "/manifest.json"];
@@ -26,9 +26,12 @@ self.addEventListener("fetch", (e) => {
         .then((res) => {
           // เก็บเฉพาะหน้าที่โหลดสำเร็จ (ไม่เก็บหน้า error) และอัปเดตสำเนา /index.html ด้วย
           // ไม่งั้นตอนออฟไลน์จะได้แอปเวอร์ชันตอนติดตั้ง service worker ครั้งแรก ซึ่งอาจเก่ามาก
+          // สำเนา /index.html อัปเดตเฉพาะตอนเปิดตัวแอปเอง — ไม่งั้นเปิด privacy.html / request.html แล้วออฟไลน์ จะได้หน้านั้นแทนแอป
           if (res.ok && res.type === "basic") {
-            const copy = res.clone(), shell = res.clone();
-            e.waitUntil(caches.open(CACHE_NAME).then((c) => Promise.all([c.put(e.request, copy), c.put("/index.html", shell)])));
+            const path = new URL(e.request.url).pathname;
+            const isShell = path === "/" || path === "/index.html";
+            const copy = res.clone(), shell = isShell ? res.clone() : null;
+            e.waitUntil(caches.open(CACHE_NAME).then((c) => Promise.all([c.put(e.request, copy), shell && c.put("/index.html", shell)])));
           }
           return res;
         })
