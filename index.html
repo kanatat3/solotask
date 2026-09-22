@@ -1011,6 +1011,9 @@
   .rq-img { position: relative; padding: 0; border: 1px solid var(--border); border-radius: var(--r-sm); overflow: hidden; background: var(--bg); aspect-ratio: 4 / 3; cursor: zoom-in; }
   .rq-img img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
   .rq-img img.broken { display: none; }
+  .rq-copy { display: inline-flex; align-items: center; gap: .3rem; flex-shrink: 0; padding: .3rem .6rem; border: 1px solid var(--border); border-radius: 999px;
+    background: var(--bg); color: var(--fg); font: inherit; font-size: .74rem; font-weight: 600; cursor: pointer; }
+  .rq-copy:hover { color: var(--primary); border-color: color-mix(in srgb, var(--primary) 40%, var(--border)); }
   .rq-status { width: 100%; margin-top: .5rem; }
   .rq-status .cal-seg-btn { flex: 1; }
   .rq-post.done { opacity: .72; }
@@ -1533,6 +1536,7 @@ const ICONS = {
   sunset: '<path d="M17 18a5 5 0 0 0-10 0"/><line x1="12" y1="9" x2="12" y2="2"/><line x1="4.22" y1="10.22" x2="5.64" y2="11.64"/><line x1="1" y1="18" x2="3" y2="18"/><line x1="21" y1="18" x2="23" y2="18"/><line x1="18.36" y1="11.64" x2="19.78" y2="10.22"/><line x1="23" y1="22" x2="1" y2="22"/><polyline points="16 5 12 9 8 5"/>',
   moon: '<path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>',
   bell: '<path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/>',
+  copy: '<rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>',
   mail: '<path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22 6 12 13 2 6"/>',
   lock: '<rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>',
   eye: '<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>',
@@ -6289,6 +6293,19 @@ function requestAttachmentsHtml(list) {
   return `${imgs.length ? `<div class="rq-imgs">${imgs.map(a => `<button class="rq-img" onclick="openRequestFile('${a.path}')" aria-label="Open ${esc(a.name || "image")}"><img data-req-file="${a.path}" alt="${esc(a.name || "")}"></button>`).join("")}</div>` : ""}
     ${others.length ? `<div class="pf-attached">${others.map(a => `<button class="pf-att" onclick="openRequestFile('${a.path}')">${icon("doc", 12)} ${esc(a.name || "file")}${a.size ? ` · ${a.size > 1048576 ? (a.size / 1048576).toFixed(1) + " MB" : Math.max(1, Math.round(a.size / 1024)) + " KB"}` : ""}</button>`).join("")}</div>` : ""}`;
 }
+/** ข้อความของ request 1 เรื่อง สำหรับปุ่ม Copy (วางให้ Claude แก้ต่อได้ทันที) */
+function requestCopyText(project, r) {
+  const files = (Array.isArray(r.attachments) ? r.attachments : []).filter(a => a && typeof a.path === "string" && REQ_PATH_RE.test(a.path));
+  const d = new Date(r.created_at);
+  return [`Request for ${project} (id: ${r.id})`,
+    `From: ${r.author || "Anonymous"}${isNaN(d) ? "" : " · " + d.toLocaleString()} · Status: ${REQ_STATUS[r.status] || r.status}`,
+    "", String(r.body || "").trim(),
+    ...(files.length ? ["", "Attachments: " + files.map(a => a.name || "file").join(", ")] : [])].join("\n");
+}
+function copyRequest(project, id) {
+  const r = ((reqStore.byProject[project] || {}).items || []).find(x => x.id === id);
+  if (r) copyText(requestCopyText(project, r), "request");
+}
 /** Requests บนหน้าโปรเจกต์ AI — ไอคอนเล็กมุมขวาบน (มีจุดแดงเมื่อมีเรื่องใหม่) */
 function requestsIconHtml(cat) {
   const project = agentCatLabel(cat);
@@ -6333,6 +6350,7 @@ function renderRequestsPage() {
   const cards = items.map(r => `<article class="rv-post rq-post ${r.status}">
       <header class="rv-post-head">${reviewAvatar(r.author ? r.author : "Anonymous", 36)}
         <span class="rv-post-who"><b class="rv-post-app">${esc(r.author || "Anonymous")}</b><span class="rv-post-time">${esc(reviewWhen(r.created_at))}</span></span>
+        <button class="rq-copy" aria-label="Copy this request" title="Copy this request" onclick="copyRequest(${esc(JSON.stringify(project))}, '${esc(r.id)}')">${icon("copy", 13)} Copy</button>
         <button class="rt-del" aria-label="Delete request" onclick="deleteRequest(${esc(JSON.stringify(project))}, '${esc(r.id)}')">${icon("trash", 13)}</button>
       </header>
       ${requestBodyHtml(r.body)}
