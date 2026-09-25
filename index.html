@@ -123,6 +123,11 @@
   .cat-ring svg.ring .ring-track { stroke: var(--border); }
   .cat-ring svg.ring .ring-fill { stroke-linecap: round; transition: stroke-dashoffset .45s cubic-bezier(.22, 1, .36, 1); }
   .cat-ring .cat-ico { width: 1.7rem; height: 1.7rem; border-radius: 50%; }
+  /* ไอคอนแอปจริงของโปรเจกต์ AI แทนไอคอนเส้น */
+  .cat-ico.app-ico { background: var(--card) !important; overflow: hidden; box-shadow: inset 0 0 0 1px var(--border); }
+  .cat-ico.app-ico img, .rv-avatar img { width: 100%; height: 100%; object-fit: contain; display: block; }
+  .cat-ring .cat-ico.app-ico { border-radius: .5rem; }
+  .rv-avatar.app-ico { background: var(--card) !important; overflow: hidden; box-shadow: inset 0 0 0 1px var(--border); border-radius: 28%; }
   .ov-more {
     flex-shrink: 0; background: none; border: none; color: var(--muted); cursor: pointer;
     width: 2.75rem; height: 2.75rem; margin: -.65rem -.65rem -.65rem 0;
@@ -1013,6 +1018,7 @@
   .rq-img img.broken { display: none; }
   .rq-copy { display: inline-flex; align-items: center; gap: .3rem; flex-shrink: 0; padding: .3rem .6rem; border: 1px solid var(--border); border-radius: 999px;
     background: var(--bg); color: var(--fg); font: inherit; font-size: .74rem; font-weight: 600; cursor: pointer; }
+  .rq-copy-all { margin: 0 0 .6rem; padding: .45rem .8rem; font-size: .8rem; }
   .rq-copy:hover { color: var(--primary); border-color: color-mix(in srgb, var(--primary) 40%, var(--border)); }
   .rq-status { width: 100%; margin-top: .5rem; }
   .rq-status .cal-seg-btn { flex: 1; }
@@ -1695,6 +1701,10 @@ function migrate(s) {
   });
   s.categories.forEach(c => {
     if (typeof c.icon !== "string" || !/^[a-z0-9-]{1,30}$/.test(c.icon)) c.icon = "";
+    // ไอคอนแอปของโปรเจกต์ AI (log-task.ps1 -Icon) — รับเฉพาะ data URL รูปแบบ base64 ขนาดจำกัด
+    if (c.appIcon !== undefined && !(typeof c.appIcon === "string" && c.appIcon.length <= 60000
+        && /^data:image\/(png|jpeg|webp);base64,[A-Za-z0-9+/]+=*$/.test(c.appIcon))) { delete c.appIcon; delete c.appIconAt; }
+    if (c.appIconAt !== undefined) c.appIconAt = iso(c.appIconAt);
     if (c.note !== undefined) c.note = text(c.note);
     if (c.noteAt !== undefined) c.noteAt = iso(c.noteAt);
     if (c.overview !== undefined) c.overview = Array.isArray(c.overview) ? c.overview.filter(x => typeof x === "string") : [];
@@ -2269,6 +2279,13 @@ const AGENT_LIST_SECTIONS = ["overview", "added", "changed", "fixed", "suggest",
 // รายงาน review จาก agent: [summary] ข้อความสั้น, [tests] ผลเทสต์บรรทัดเดียว, [suggest] ข้อเสนอเรียงตามลำดับความสำคัญ
 // ("- [S|M|L] English title — คำอธิบายไทย"), [waiting] สิ่งที่รอผู้ใช้ทำ
 const AGENT_TEXT_SECTIONS = ["summary", "tests"];
+// [icon] = ไอคอนแอปของโปรเจกต์ (data URL บรรทัดเดียว จาก log-task.ps1 -Icon) -> เก็บที่หมวด ไม่เก็บใน note ของ task
+const AGENT_ICON_RE = /^data:image\/(png|jpeg|webp);base64,[A-Za-z0-9+/]+=*$/;
+const AGENT_ICON_MAX = 60000;
+/** ตัดหัวข้อ [icon] (และ data URL ใต้มัน) ออกจากโน้ต — ข้อมูลรูปยาวมาก ไม่ควรไปอยู่ในรายละเอียดงาน */
+function stripAgentIcon(note) {
+  return String(note || "").replace(/(^|\n)[ \t]*\[icon\][ \t]*(\r?\n[^\n]*)?/g, "");
+}
 const CHANGE_KINDS = [
   { key: "added",   label: "Added",    color: "#10b981" },
   { key: "changed", label: "Improved", color: "#6366f1" },
@@ -2357,7 +2374,7 @@ function topicHtml(text) {
 
 function parseAgentNote(note) {
   const out = { structured: false, overviewOnly: false, time: "",
-                overview: [], added: [], changed: [], fixed: [], suggest: [], waiting: [], summary: "", tests: "", details: "" };
+                overview: [], added: [], changed: [], fixed: [], suggest: [], waiting: [], summary: "", tests: "", details: "", icon: "" };
   const textSec = { summary: [], tests: [] };
   const lines = String(note || "").replace(/\r/g, "").split("\n");
   let sec = null;                 // null = ก่อนเจอหัวข้อแรก
@@ -2365,6 +2382,12 @@ function parseAgentNote(note) {
   for (const raw of lines) {
     const line = raw.trim();
     const m = /^\[([a-z-]+)\]$/.exec(line);
+    if (m && m[1] === "icon") { out.structured = true; sec = "icon"; continue; }
+    if (sec === "icon") {
+      if (line && !out.icon && line.length <= AGENT_ICON_MAX && AGENT_ICON_RE.test(line)) out.icon = line;
+      if (line) sec = null;   // data URL มีบรรทัดเดียว — บรรทัดถัดไปที่ไม่มีหัวข้อไม่ใช่ส่วนของไอคอน
+      continue;
+    }
     if (m && (m[1] === "overview-only" || m[1] === "details" || AGENT_LIST_SECTIONS.includes(m[1]) || AGENT_TEXT_SECTIONS.includes(m[1]))) {
       out.structured = true;
       if (m[1] === "overview-only") out.overviewOnly = true;
@@ -2391,6 +2414,17 @@ function parseAgentNote(note) {
 /** เก็บกวาด task ที่จริงๆ เป็นแถว "อัปเดตภาพรวมอย่างเดียว" ([overview-only])
  *  เกิดได้ถ้าแท็บที่เปิดค้างไว้ยังเป็นแอปเวอร์ชันเก่า (ไม่รู้จักหัวข้อนี้) แล้ว import ไปเป็น task ธรรมดา
  *  -> ย้ายภาพรวมไปไว้ที่หมวด (ถ้าใหม่กว่า) แล้วลบ task นั้นทิ้ง; ปลอดภัยที่จะรันทุกครั้งที่ sync */
+/** ตั้งไอคอนแอปให้หมวดโปรเจกต์ AI — เอาอันที่ใหม่กว่าเท่านั้น (แถวเก่าที่ import ช้าไม่ทับอันใหม่) */
+function applyAgentIcon(cat, dataUrl, at) {
+  if (!cat || !dataUrl || dataUrl.length > AGENT_ICON_MAX || !AGENT_ICON_RE.test(dataUrl)) return false;
+  const when = at || new Date().toISOString();
+  if (cat.appIconAt && new Date(when) < new Date(cat.appIconAt)) return false;
+  if (cat.appIcon === dataUrl) return false;
+  cat.appIcon = dataUrl;
+  cat.appIconAt = when;
+  return true;
+}
+
 function absorbOverviewTasks() {
   let changed = false;
   const keep = [];
@@ -2410,6 +2444,7 @@ function absorbOverviewTasks() {
           cat.overview = p.overview.slice(0, 40);
           cat.overviewAt = at;
         }
+        if (cat && p.icon) applyAgentIcon(cat, p.icon, at);
         changed = true;
         continue;
       }
@@ -2526,6 +2561,7 @@ async function importAgentLog() {
           touched = true;
         }
       }
+      if (parsed.icon && applyAgentIcon(agentCategoryFor((r.project || "").trim()), parsed.icon, r.done_at)) touched = true;
       // แถวที่อัปเดตภาพรวมอย่างเดียว ไม่ใช่งาน -> ไม่สร้าง task
       if (parsed.overviewOnly) { overviewOnlyIds.push(r.id); continue; }
       // กันซ้ำ: ถ้าเคย import แถวนี้แล้ว (เช่น mark imported ไม่สำเร็จรอบก่อน) ข้ามไป
@@ -2533,7 +2569,7 @@ async function importAgentLog() {
       const doneAt = r.done_at || new Date().toISOString();
       const startedAt = r.started_at || null;
       // ใส่ช่วงเวลาทำงานไว้ใน note: "⏱ 14:00–16:30 (2h 30m)" — คร่อมวันก็ระบุวันด้วย
-      let note = r.note || "";
+      let note = stripAgentIcon(r.note).trim();
       if (startedAt) {
         const s = new Date(startedAt), d = new Date(doneAt);
         const fmtT = x => x.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", hour12: false });
@@ -5536,6 +5572,12 @@ function isAgentCategory(c) {
 const DAILY_REVIEW_CAT = "AI · Daily Review";   // รายงานรีวิวรายวันอ่านในหน้า Daily review (ไม่แยกเป็นโปรเจกต์)
 function agentCategories() { return activeCategories().filter(c => isAgentCategory(c) && c.name !== DAILY_REVIEW_CAT); }
 /** ชื่อโปรเจกต์ล้วนๆ (ตัด "AI · " ออก) */
+/** ไอคอนหมวดในกล่อง .cat-ico — หมวดที่มีไอคอนแอป (appIcon) ใช้รูปนั้นแทนไอคอนเส้น */
+function catIcoHtml(cat, color, iconName, size) {
+  const src = cat && cat.appIcon && AGENT_ICON_RE.test(cat.appIcon) ? cat.appIcon : "";
+  if (src) return `<span class="cat-ico app-ico"><img src="${esc(src)}" alt="" draggable="false"></span>`;
+  return `<span class="cat-ico" style="background:color-mix(in srgb, ${color} 16%, var(--card));color:color-mix(in srgb, ${color} 55%, var(--fg))">${icon(iconName, size)}</span>`;
+}
 function agentCatLabel(c) {
   return c.name.startsWith(AGENT_CAT_PREFIX) ? c.name.slice(AGENT_CAT_PREFIX.length) : c.name;
 }
@@ -5718,7 +5760,7 @@ function renderHome() {
     const schedText = featured && cat ? `<span class="ov-sub" style="margin-left:auto">${scheduleSummary(cat)}</span>` : "";
     return `<div class="ov-card is-link ${featured ? "featured" : ""}" ${featured ? `style="border-color:${g.color}"` : ""} onclick="if(!event.target.closest('button,a,input,select,textarea,label')&&!textSelected())goCat('${g.key}')">
       <div class="ov-head">
-        <span class="cat-ring">${ringSvg(pct, g.color)}<span class="cat-ico" style="background:color-mix(in srgb, ${g.color} 16%, var(--card));color:color-mix(in srgb, ${g.color} 55%, var(--fg))">${icon(g.icon, 14)}</span></span>
+        <span class="cat-ring">${ringSvg(pct, g.color)}${catIcoHtml(g.key !== "none" ? catById(g.key) : null, g.color, g.icon, 14)}</span>
         <span class="name">${esc(g.name)}
           <span class="ov-sub" style="display:block;font-weight:600">${total ? `${done.length}/${total} done${pct === 100 ? " ✓" : ""}` : "No tasks today"}</span>
         </span>
@@ -6306,6 +6348,14 @@ function copyRequest(project, id) {
   const r = ((reqStore.byProject[project] || {}).items || []).find(x => x.id === id);
   if (r) copyText(requestCopyText(project, r), "request");
 }
+/** Copy all: ทุกเรื่องที่ยังเปิด (New + In progress) เรียงเก่า -> ใหม่ คั่นด้วยเส้น */
+function copyOpenRequests(project) {
+  const open = ((reqStore.byProject[project] || {}).items || []).filter(r => r.status !== "done").slice().reverse();
+  if (!open.length) return;
+  copyText([`${open.length} open request${open.length > 1 ? "s" : ""} for ${project}`,
+    ...open.map((r, i) => `----- ${i + 1}/${open.length} -----\n` + requestCopyText(project, r))].join("\n\n"),
+    `${open.length} open request${open.length > 1 ? "s" : ""}`);
+}
 /** Requests บนหน้าโปรเจกต์ AI — ไอคอนเล็กมุมขวาบน (มีจุดแดงเมื่อมีเรื่องใหม่) */
 function requestsIconHtml(cat) {
   const project = agentCatLabel(cat);
@@ -6360,6 +6410,7 @@ function renderRequestsPage() {
     </article>`).join("");
   return `<div class="rv-feed">${head}${linkCard}
     ${st.error ? `<p class="hint" style="color:var(--danger-text)">${esc(st.error)}</p>` : ""}
+    ${count("open") ? `<button class="rq-copy rq-copy-all" onclick="copyOpenRequests(${esc(JSON.stringify(project))})">${icon("copy", 13)} Copy all open · ${count("open")}</button>` : ""}
     <div class="rv-chips">${chip("open", "Open")}${chip("new", "New")}${chip("progress", "In progress")}${chip("done", "Done")}${chip("all", "All")}</div>
     ${cards || `<p class="empty">${f === "open" ? "No open requests ✓" : "Nothing here"}</p>`}</div>`;
 }
@@ -6446,6 +6497,10 @@ function reviewAppColor(app) {
   return COLORS[h % COLORS.length];
 }
 function reviewAvatar(app, size) {
+  const appCat = app === "Overview" ? null : state.categories.find(c => c.name.toLowerCase() === (AGENT_CAT_PREFIX + app).toLowerCase());
+  if (appCat && appCat.appIcon && AGENT_ICON_RE.test(appCat.appIcon)) {
+    return `<span class="rv-avatar app-ico" style="width:${size}px;height:${size}px"><img src="${esc(appCat.appIcon)}" alt="" draggable="false"></span>`;
+  }
   const col = reviewAppColor(app);
   const letters = app === "Overview" ? icon("checksquare", Math.round(size * 0.5)) : esc(app.split(/\s+/).map(w => w[0]).join("").slice(0, 2).toUpperCase());
   return `<span class="rv-avatar" style="width:${size}px;height:${size}px;background:linear-gradient(135deg, color-mix(in srgb, ${col} 70%, #fff), ${col})">${letters}</span>`;
@@ -6641,7 +6696,7 @@ function renderAiHub() {
     ].filter(Boolean).join(" · ");
     return `<div class="ov-card is-link" onclick="if(!event.target.closest('button,a,input,select,textarea,label')&&!textSelected())goCat('${r.cat.id}')">
       <div class="ov-head">
-        <span class="cat-ring">${ringSvg(pct, r.cat.color)}<span class="cat-ico" style="background:color-mix(in srgb, ${r.cat.color} 16%, var(--card));color:color-mix(in srgb, ${r.cat.color} 55%, var(--fg))">${icon(r.cat.icon || AGENT_CAT_ICON, 14)}</span></span>
+        <span class="cat-ring">${ringSvg(pct, r.cat.color)}${catIcoHtml(r.cat, r.cat.color, r.cat.icon || AGENT_CAT_ICON, 14)}</span>
         <span class="name">${esc(agentCatLabel(r.cat))}
           <span class="ov-sub" style="display:block;font-weight:600">${sub}</span>
         </span>
@@ -6739,7 +6794,7 @@ function renderTodayDetail() {
   return `${backBtn}
     <div class="page-head" style="margin-bottom:.5rem">
       <h1 class="cat-head" style="font-size:1.25rem">
-        <span class="cat-ico" style="background:color-mix(in srgb, ${headColor} 16%, var(--card));color:color-mix(in srgb, ${headColor} 55%, var(--fg))">${icon(proj ? "folder" : catIcon, 15)}</span>
+        ${catIcoHtml(proj ? null : cat, headColor, proj ? "folder" : catIcon, 15)}
         ${esc(proj ? proj.name : fromAi ? agentCatLabel(cat) : name)}</h1>
       ${headAction}
     </div>
