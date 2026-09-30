@@ -2243,10 +2243,12 @@ const AGENT_CAT_LEGACY_COLOR = "#ec4899";   // สีที่ V4.9 ใช้ต
 const AI_HUB_COLOR = "#6366f1";             // สีการ์ด/หัวข้อของหน้ารวมงาน AI
 const AGENT_CAT_MAX = 20;               // กันหมวดงอกไม่สิ้นสุดถ้า project เพี้ยน
 // ชื่อเก่า/ชื่อโฟลเดอร์ของโปรเจกต์ -> ชื่อปัจจุบัน (แอปนี้เปลี่ยนชื่อจาก Solo Task / Task Studio เป็น Kodo;
-// BI Studio เปลี่ยนชื่อเป็น FastVizz 2026-09-30 — โฟลเดอร์ยังชื่อ AI_BI_Studio)
+// BI Studio เปลี่ยนชื่อเป็น FastVizz 2026-09-30 — โฟลเดอร์ยังชื่อ AI_BI_Studio;
+// KPort เปลี่ยนชื่อเป็น Porturbo 2026-09-30 — โฟลเดอร์/repo ยังชื่อ KPort)
 // hook อัตโนมัติตั้งชื่อโปรเจกต์จากชื่อโฟลเดอร์ ("Task_Studio") จึงต้องรวมเข้าหมวดเดียวกันด้วย
 const PROJECT_ALIASES = { "solo task": "Kodo", "task studio": "Kodo", "task_studio": "Kodo",
-  "bi studio": "FastVizz", "ai_bi_studio": "FastVizz" };
+  "bi studio": "FastVizz", "ai_bi_studio": "FastVizz",
+  "kport": "Porturbo" };
 
 function canonicalProject(project) {
   const p = String(project || "").trim();
