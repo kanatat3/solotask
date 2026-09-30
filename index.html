@@ -2221,7 +2221,7 @@ async function pullCloud() {
   }
   scheduleNativeNotifications();   // แอป iOS: ข้อมูลอาจเปลี่ยนจากเครื่องอื่น -> ตั้งแจ้งเตือนใหม่
   migrateAgentCategories();   // ย้ายงาน AI ที่ import ไว้ด้วยเวอร์ชันเก่าเข้าหมวดตามโปรเจกต์ (ทำครั้งเดียว)
-  mergeProjectAliases();      // หมวด "AI · Solo Task" / "AI · Task_Studio" -> "AI · Kodo"
+  mergeProjectAliases();      // หมวด "AI · Solo Task" / "AI · Task_Studio" -> "AI · Kodo", "AI · BI Studio" -> "AI · FastVizz"
   absorbOverviewTasks();      // แถวภาพรวมที่แอปเวอร์ชันเก่าเผลอ import เป็น task -> ดูดกลับเป็นภาพรวม
   await importAgentLog();
 }
@@ -2242,9 +2242,11 @@ const AGENT_CAT_ICON = "chart";
 const AGENT_CAT_LEGACY_COLOR = "#ec4899";   // สีที่ V4.9 ใช้ตอนสร้างหมวด "AI Work" อัตโนมัติ
 const AI_HUB_COLOR = "#6366f1";             // สีการ์ด/หัวข้อของหน้ารวมงาน AI
 const AGENT_CAT_MAX = 20;               // กันหมวดงอกไม่สิ้นสุดถ้า project เพี้ยน
-// ชื่อเก่า/ชื่อโฟลเดอร์ของโปรเจกต์ -> ชื่อปัจจุบัน (แอปนี้เปลี่ยนชื่อจาก Solo Task / Task Studio เป็น Kodo)
+// ชื่อเก่า/ชื่อโฟลเดอร์ของโปรเจกต์ -> ชื่อปัจจุบัน (แอปนี้เปลี่ยนชื่อจาก Solo Task / Task Studio เป็น Kodo;
+// BI Studio เปลี่ยนชื่อเป็น FastVizz 2026-09-30 — โฟลเดอร์ยังชื่อ AI_BI_Studio)
 // hook อัตโนมัติตั้งชื่อโปรเจกต์จากชื่อโฟลเดอร์ ("Task_Studio") จึงต้องรวมเข้าหมวดเดียวกันด้วย
-const PROJECT_ALIASES = { "solo task": "Kodo", "task studio": "Kodo", "task_studio": "Kodo" };
+const PROJECT_ALIASES = { "solo task": "Kodo", "task studio": "Kodo", "task_studio": "Kodo",
+  "bi studio": "FastVizz", "ai_bi_studio": "FastVizz" };
 
 function canonicalProject(project) {
   const p = String(project || "").trim();
