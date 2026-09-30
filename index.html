@@ -128,6 +128,9 @@
   .cat-ico.app-ico img, .rv-avatar img { width: 100%; height: 100%; object-fit: contain; display: block; }
   .cat-ring .cat-ico.app-ico { border-radius: .5rem; }
   .rv-avatar.app-ico { background: var(--card) !important; overflow: hidden; box-shadow: inset 0 0 0 1px var(--border); border-radius: 28%; }
+  /* ในวงแหวน: ไอคอนเต็มวง ไม่มีพื้นขาว/เส้นขอบ (ตัดขอบใสออกด้วย trimAppIcon) */
+  .cat-ring .cat-ico.app-ico { width: 1.9rem; height: 1.9rem; border-radius: 50%; background: transparent !important; box-shadow: none; }
+  .cat-ring .cat-ico.app-ico img { object-fit: cover; }
   .ov-more {
     flex-shrink: 0; background: none; border: none; color: var(--muted); cursor: pointer;
     width: 2.75rem; height: 2.75rem; margin: -.65rem -.65rem -.65rem 0;
@@ -5572,10 +5575,43 @@ function isAgentCategory(c) {
 const DAILY_REVIEW_CAT = "AI · Daily Review";   // รายงานรีวิวรายวันอ่านในหน้า Daily review (ไม่แยกเป็นโปรเจกต์)
 function agentCategories() { return activeCategories().filter(c => isAgentCategory(c) && c.name !== DAILY_REVIEW_CAT); }
 /** ชื่อโปรเจกต์ล้วนๆ (ตัด "AI · " ออก) */
+/** ไอคอนแอปที่ตัดขอบโปร่งใสแล้ว (ต้นฉบับ -> PNG สี่เหลี่ยมจัตุรัสที่ชิดเนื้อรูป) ให้ไอคอนเต็มกรอบ/เต็มวง */
+const APP_ICON_TRIM = new Map();
+function appIconSrc(src) { return APP_ICON_TRIM.get(src) || src; }
+function trimAppIcon(img) {
+  const src = img.getAttribute("src");
+  if (!src || img.dataset.trim) return;
+  img.dataset.trim = "1";
+  if (APP_ICON_TRIM.has(src)) { if (APP_ICON_TRIM.get(src) !== src) img.src = APP_ICON_TRIM.get(src); return; }
+  try {
+    const w = img.naturalWidth, h = img.naturalHeight;
+    if (!w || !h) return;
+    const cv = document.createElement("canvas");
+    cv.width = w; cv.height = h;
+    const cx = cv.getContext("2d");
+    cx.drawImage(img, 0, 0);
+    const d = cx.getImageData(0, 0, w, h).data;
+    let x0 = w, y0 = h, x1 = -1, y1 = -1;
+    for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+      if (d[(y * w + x) * 4 + 3] > 16) { if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y; }
+    }
+    if (x1 < 0 || (x0 === 0 && y0 === 0 && x1 === w - 1 && y1 === h - 1)) { APP_ICON_TRIM.set(src, src); return; }
+    const side = Math.max(x1 - x0 + 1, y1 - y0 + 1);
+    const out = document.createElement("canvas");
+    out.width = out.height = side;
+    out.getContext("2d").drawImage(cv, x0, y0, x1 - x0 + 1, y1 - y0 + 1,
+      Math.floor((side - (x1 - x0 + 1)) / 2), Math.floor((side - (y1 - y0 + 1)) / 2), x1 - x0 + 1, y1 - y0 + 1);
+    const url = out.toDataURL("image/png");
+    APP_ICON_TRIM.set(src, url);
+    APP_ICON_TRIM.set(url, url);
+    img.src = url;
+  } catch (e) { APP_ICON_TRIM.set(src, src); }
+}
+
 /** ไอคอนหมวดในกล่อง .cat-ico — หมวดที่มีไอคอนแอป (appIcon) ใช้รูปนั้นแทนไอคอนเส้น */
 function catIcoHtml(cat, color, iconName, size) {
   const src = cat && cat.appIcon && AGENT_ICON_RE.test(cat.appIcon) ? cat.appIcon : "";
-  if (src) return `<span class="cat-ico app-ico"><img src="${esc(src)}" alt="" draggable="false"></span>`;
+  if (src) return `<span class="cat-ico app-ico"><img src="${esc(appIconSrc(src))}" alt="" draggable="false" onload="trimAppIcon(this)"></span>`;
   return `<span class="cat-ico" style="background:color-mix(in srgb, ${color} 16%, var(--card));color:color-mix(in srgb, ${color} 55%, var(--fg))">${icon(iconName, size)}</span>`;
 }
 function agentCatLabel(c) {
@@ -6499,7 +6535,7 @@ function reviewAppColor(app) {
 function reviewAvatar(app, size) {
   const appCat = app === "Overview" ? null : state.categories.find(c => c.name.toLowerCase() === (AGENT_CAT_PREFIX + app).toLowerCase());
   if (appCat && appCat.appIcon && AGENT_ICON_RE.test(appCat.appIcon)) {
-    return `<span class="rv-avatar app-ico" style="width:${size}px;height:${size}px"><img src="${esc(appCat.appIcon)}" alt="" draggable="false"></span>`;
+    return `<span class="rv-avatar app-ico" style="width:${size}px;height:${size}px"><img src="${esc(appIconSrc(appCat.appIcon))}" alt="" draggable="false" onload="trimAppIcon(this)"></span>`;
   }
   const col = reviewAppColor(app);
   const letters = app === "Overview" ? icon("checksquare", Math.round(size * 0.5)) : esc(app.split(/\s+/).map(w => w[0]).join("").slice(0, 2).toUpperCase());
