@@ -293,21 +293,24 @@
     border-top: 1px solid var(--border); padding-top: .6rem; margin-top: .1rem;
   }
   .pw-cell {
-    flex: 1; display: flex; flex-direction: column; align-items: center; gap: .15rem;
-    border-radius: .5rem; padding: .25rem 0;
+    flex: 1; min-width: 0; display: flex; flex-direction: column; align-items: center; gap: .3rem;
   }
-  .pw-cell.today { background: var(--primary-soft); }
-  .pw-dow { font-size: .62rem; font-weight: 700; color: var(--muted); }
+  .pw-dow { font-size: .66rem; font-weight: 700; color: var(--muted); }
+  .pw-cell.lit .pw-dow { color: #ea580c; }
+  .pw-cell.today .pw-dow { font-weight: 800; }
+  /* ช่องมนของแต่ละวัน: มีไฟ + เลขวันของ streak อยู่ข้างใน */
   .pw-dot {
-    width: 1.35rem; height: 1.35rem; line-height: 0;
+    width: 100%; max-width: 2.3rem; height: 2.7rem; line-height: 0;
     display: flex; align-items: center; justify-content: center;
+    background: var(--bg); border: 1px solid var(--border); border-radius: .75rem;
   }
-  .pw-dot svg { filter: none; }
-  .pw-dot.ice svg { filter: drop-shadow(0 1px 3px rgba(14, 165, 233, .35)); }
-  .pw-dot.in svg { filter: drop-shadow(0 1px 3px rgba(255, 100, 20, .45)); }
-  .pw-num { font-size: .62rem; color: var(--muted); }
-  .pet-streak b { color: var(--fg); font-weight: 700; }
-  .pet-streak { display: flex; align-items: center; gap: .3rem; }
+  .pw-dot.in { background: rgba(249, 115, 22, .1); border-color: rgba(249, 115, 22, .32); }
+  .pw-dot.ice { background: rgba(14, 165, 233, .1); border-color: rgba(14, 165, 233, .3); }
+  .pw-cell.today .pw-dot { box-shadow: 0 0 0 2px var(--primary-soft); }
+  .pw-dot.in svg { filter: drop-shadow(0 2px 3px rgba(234, 88, 12, .3)); }
+  .pet-streak b { color: #ea580c; font-weight: 800; font-size: 1.5rem; line-height: 1; }
+  .pet-streak { display: flex; align-items: center; gap: .35rem; }
+  .pet-streak-label { color: #ea580c; font-weight: 700; }
   .flame-anim { animation: flameFlick 1.7s ease-in-out infinite; transform-origin: 50% 90%; }
   .pet-emoji {
     width: 4.6rem; height: 4.6rem; flex-shrink: 0; background: none; border: none;
@@ -3164,30 +3167,32 @@ function petCustomName() {
   return n.slice(0, 24);
 }
 
-/** ไฟ streak — เปลวทรงหยดน้ำโค้งเรียบ ไล่สีเหลือง→ส้ม→แดง + ไส้ในสว่าง (lit=false = เทาซีด) */
-function flameSvg(size, lit, flick) {
-  const outer = "M12.963 2.286a.75.75 0 0 0-1.071-.136 9.742 9.742 0 0 0-3.539 6.176 7.547 7.547 0 0 1-1.705-1.715.75.75 0 0 0-1.152-.082A9 9 0 1 0 15.68 4.534a7.46 7.46 0 0 1-2.717-2.248z";
-  const inner = "M15.75 14.25a3.75 3.75 0 1 1-7.313-1.172c.628.465 1.35.81 2.133 1a5.99 5.99 0 0 1 1.925-3.546 3.75 3.75 0 0 1 3.255 3.718z";
+/** ไฟ streak — ตัวไฟสีส้มอ้วนกลม มีสะเก็ดไฟลอยด้านบน + ไส้ในทรงหยดน้ำสีขาว (lit=false = เทาซีด)
+ *  - ขนาด 20px ขึ้นไปมีตา 2 จุด (เล็กกว่านั้นตาจะเลอะ)
+ *  - num = เลขวันของ streak เขียนทับในตัวไฟ (ใช้ในแถว 7 วัน) — แบบนี้ไม่มีตา/สะเก็ดไฟ */
+function flameSvg(size, lit, flick, num) {
+  const outer = "M14.8 2.4C15.4 5.2 20.6 8 20.6 13.4A8.6 8.6 0 0 1 3.4 13.4C3.4 11.5 3.8 9.9 4.5 8.7C5 7.9 6.1 7.9 6.7 8.6C7.3 9.3 8 9.8 8.8 10C8.8 6.9 10.8 4.1 13.5 2.1C14 1.7 14.7 1.9 14.8 2.4Z";
+  const inner = "M12 8.6C13.8 11 16.3 12.8 16.3 15.6A4.3 4.3 0 0 1 7.7 15.6C7.7 12.8 10.2 11 12 8.6Z";
   if (!lit) {
     return `<svg width="${size}" height="${size}" viewBox="0 0 24 24" aria-hidden="true">
       <path d="${outer}" fill="var(--border)"/>
       <path d="${inner}" fill="var(--card)" opacity=".65"/>
     </svg>`;
   }
+  const hasNum = num != null;
+  const digits = hasNum ? String(num).length : 0;
   return `<svg width="${size}" height="${size}" viewBox="0 0 24 24" aria-hidden="true" ${flick ? 'class="flame-anim"' : ""} style="overflow:visible">
     <defs>
       <linearGradient id="tkFlame" x1="0" y1="0" x2="0" y2="1">
-        <stop offset="0" stop-color="#ffd93b"/>
-        <stop offset=".45" stop-color="#ff9500"/>
-        <stop offset="1" stop-color="#ff3d1f"/>
-      </linearGradient>
-      <linearGradient id="tkFlameIn" x1="0" y1="0" x2="0" y2="1">
-        <stop offset="0" stop-color="#fff8d6"/>
-        <stop offset="1" stop-color="#ffc93b"/>
+        <stop offset="0" stop-color="#fb923c"/>
+        <stop offset="1" stop-color="#f97316"/>
       </linearGradient>
     </defs>
+    ${hasNum ? "" : '<circle cx="6.2" cy="3.8" r="1.25" fill="#fb923c"/>'}
     <path d="${outer}" fill="url(#tkFlame)"/>
-    <path d="${inner}" fill="url(#tkFlameIn)"/>
+    <path d="${inner}" fill="${hasNum ? "#fdba74" : "#fff7ed"}"${hasNum ? ' opacity=".55"' : ""}/>
+    ${!hasNum && size >= 20 ? '<circle cx="10.4" cy="15.7" r=".9" fill="#ea580c"/><circle cx="13.6" cy="15.7" r=".9" fill="#ea580c"/>' : ""}
+    ${hasNum ? `<text x="12" y="${digits > 2 ? 17.8 : 18.8}" text-anchor="middle" font-size="${digits > 2 ? 6.2 : digits > 1 ? 8 : 9.4}" font-weight="800" fill="#fff">${num}</text>` : ""}
   </svg>`;
 }
 
@@ -5072,7 +5077,7 @@ function renderPetPage() {
       </div>
       </div>
       <div class="pp-card pp-streak">
-        <div class="pet-streak">${flameSvg(16, streak > 0, streak > 0)} <b>${streak}</b>&nbsp;day${streak === 1 ? "" : "s"} streak${state.game.best > 1 ? ` · best ${state.game.best}` : ""}
+        <div class="pet-streak">${flameSvg(34, streak > 0, streak > 0)} <b>${streak}</b> <span><span class="pet-streak-label">day${streak === 1 ? "" : "s"} streak</span>${state.game.best > 1 ? ` · best ${state.game.best}` : ""}</span>
           <span class="pet-xp-num" style="margin-left:auto">${prog}/${need} XP</span>
         </div>
         <span class="ov-bar"><span style="width:${Math.round(prog / need * 100)}%;background:var(--primary)"></span></span>
@@ -5639,7 +5644,15 @@ function todayTasksOf(catKey) {
 
 /** ตาราง 7 วันล่าสุด (จบที่วันนี้) — โชว์ว่าวันไหนเข้าแอพบ้าง */
 function petWeekHtml() {
-  const { active, ice } = streakInfo();
+  const { active, ice, count } = streakInfo();
+  // เลขวันของ streak ปัจจุบัน (วันล่าสุด = count) — ไล่ย้อนจากวันนี้ ข้ามวันน้ำแข็ง และวันนี้ที่ยังไม่ได้ทำอะไร
+  const dayNo = {};
+  const b = new Date();
+  for (let i = 0, n = count; i < 7 && n > 0; i++, b.setDate(b.getDate() - 1)) {
+    const k = dateKey(b);
+    if (active.has(k)) dayNo[k] = n--;
+    else if (i > 0 && !ice.has(k)) break;
+  }
   const cells = [];
   const d = new Date();
   d.setDate(d.getDate() - 6);
@@ -5647,10 +5660,9 @@ function petWeekHtml() {
     const k = dateKey(d);
     const inDay = active.has(k), isIce = !inDay && ice.has(k);
     const today = isToday(d);
-    cells.push(`<span class="pw-cell ${today ? "today" : ""}" title="${k}${isIce ? " — missed, streak kept" : ""}">
-      <span class="pw-dow">${DOW[d.getDay()][0]}</span>
-      <span class="pw-dot ${inDay ? "in" : isIce ? "ice" : ""}">${isIce ? iceSvg(16) : flameSvg(inDay ? 17 : 14, inDay)}</span>
-      <span class="pw-num">${d.getDate()}</span>
+    cells.push(`<span class="pw-cell ${today ? "today" : ""} ${inDay ? "lit" : ""}" title="${k}${isIce ? " — missed, streak kept" : ""}">
+      <span class="pw-dow">${DOW[d.getDay()].slice(0, 2)}</span>
+      <span class="pw-dot ${inDay ? "in" : isIce ? "ice" : ""}">${isIce ? iceSvg(22) : flameSvg(30, inDay, false, dayNo[k])}</span>
     </span>`);
     d.setDate(d.getDate() + 1);
   }
@@ -5663,7 +5675,7 @@ function heroActionsHtml() {
   const pet = petForLevel(level);
   const streak = currentStreak();
   return `<div class="hero-actions">
-    <button class="hero-streak" onclick="openPet()" aria-label="${streak} day streak — open ${esc(pet.name)}">${flameSvg(16, streak > 0, streak > 0)} ${streak}</button>
+    <button class="hero-streak" onclick="openPet()" aria-label="${streak} day streak — open ${esc(pet.name)}">${flameSvg(20, streak > 0, streak > 0)} ${streak}</button>
     <button class="hero-pet sp-${petSpecies()} ${justCheckedIn || justLeveled ? "bounce" : ""}" onclick="openPet()" aria-label="Open ${esc(pet.name)} · Lv ${level}">${petSvg(level)}</button>
   </div>`;
 }
