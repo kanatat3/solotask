@@ -3152,9 +3152,9 @@ const PET_STAGE_COUNT = 7;   // Lv 1..7 (ลูกนกตัวเล็ก ->
 const PET_SPECIES = {
   puff: { label: "Puff", note: "ตัวกลมสีฟ้า ตาโต หูเล็ก ขี้อ้อน",
     stages: ["Tiny Puff", "Little Puff", "Puff", "Bouncy Puff", "Big Puff", "Star Puff", "Cosmic Puff"] },
-  parrotlet: { label: "Parrotlet", note: "นกแก้วจิ๋วสีฟ้า ปีกน้ำเงิน",
+  parrotlet: { label: "Parrotlet", note: "Forpus ตัวกลมสีฟ้า ปีกน้ำเงิน หน้าบึ้ง",
     stages: ["Chick", "Fledgling", "Baby Parrotlet", "Young Parrotlet", "Parrotlet", "Cobalt Parrotlet", "Sky Parrotlet"] },
-  cockatiel: { label: "Cockatiel", note: "ตัวเหลืองอ่อน หน้าเหลือง แก้มส้ม มีหงอน",
+  cockatiel: { label: "Cockatiel", note: "ตัวกลมสีเทา หน้าเหลือง แก้มส้ม มีหงอน หน้าบึ้ง",
     stages: ["Chick", "Fledgling", "Baby Tiel", "Young Tiel", "Cockatiel", "Pearl Tiel", "Golden Tiel"] },
 };
 function petSpecies() { const sp = state.game && state.game.petSpecies; return sp && PET_SPECIES[sp] ? sp : "parrotlet"; }
@@ -3196,149 +3196,39 @@ function flameSvg(size, lit, flick, num) {
   </svg>`;
 }
 
-/** สัตว์เลี้ยงแบบ SVG — ค็อกคาเทล 7 ช่วงวัย วาดใหม่ (flat vector + ตาแบบ plush) — อนิเมชันอยู่ใน CSS ผ่าน class p-* */
-/* นก Pacific parrotlet สีฟ้า (มุมหน้าตรง) — ร่าง 3..7 ของสัตว์เลี้ยง
+/* ภาพวาดสำรองของนก (ระหว่างโหลด 3D / ไม่มี WebGL) — ตัวกลมหน้าบึ้งแบบเดียวกับโมเดล 3D
    คืนค่า "inner" ของ <svg viewBox="0 0 100 100"> ; id(k) ต้องสร้าง id ไม่ซ้ำต่ออินสแตนซ์ */
 function parrotletInner(stage, id, species) {
   const tiel = species === "cockatiel";
-  const f = (v) => String(Math.round(v * 100) / 100);
-  const SW = 'stroke-linecap="round" stroke-linejoin="round"';
-
-  // สี: ฟ้าหัว/หลัง, ครีมหน้าอก, ปีกโคบอลต์, ปาก/เท้าชมพูอ่อน, ตาน้ำตาลเข้ม (ตาม reference)
-  const PAL = {
-    baby:  { b0: "#d9f0fa", b1: "#b4dcf0", b2: "#8cc3e2", edge: "#6fa9cf", w0: "#a9cdef", w1: "#86aee6", w2: "#6c93d6", wLine: "#5b7fc6", tail: "#7fb2dc" },
-    young: { b0: "#c6e9f7", b1: "#98d0ec", b2: "#6bb2dc", edge: "#4f93c4", w0: "#86c0ea", w1: "#5b8ddc", w2: "#3f68c4", wLine: "#35599f", tail: "#3c86c0" },
-    adult: { b0: "#bfe7f7", b1: "#8ccbea", b2: "#5ea8d6", edge: "#4488bd", w0: "#79bde8", w1: "#4f86d8", w2: "#3560c2", wLine: "#223f95", tail: "#2c7fb6" },
-    cobalt:{ b0: "#b3e0f6", b1: "#7cc0e8", b2: "#4b98cf", edge: "#3776b0", w0: "#5fa6e6", w1: "#3563cf", w2: "#1f3fa6", wLine: "#172f7c", tail: "#1f64a8" },
-  };
-  const S = {
-    3: { hx: 50, hy: 40, hr: 22, by: 66, brx: 23.5, bry: 19, eyeY: 39, eyeDx: 11.5, eyeR: 4.2, beak: 0.9, beakY: 42.5, pal: "baby", tail: 0, wingLen: 0.78, fuzz: true },
-    4: { hx: 50, hy: 35.5, hr: 19.8, by: 64, brx: 26.5, bry: 22, eyeY: 34, eyeDx: 10.8, eyeR: 3.8, beak: 1.05, beakY: 38, pal: "young", tail: 2.5, wingLen: 0.92 },
-    5: { hx: 50, hy: 33, hr: 18.6, by: 63, brx: 28.5, bry: 25, eyeY: 31.5, eyeDx: 10.2, eyeR: 3.4, beak: 1.15, beakY: 35, pal: "adult", tail: 4, wingLen: 1 },
-    6: { hx: 50, hy: 33, hr: 18.6, by: 63, brx: 28.5, bry: 25, eyeY: 31.5, eyeDx: 10.2, eyeR: 3.4, beak: 1.15, beakY: 35, pal: "cobalt", tail: 4, wingLen: 1 },
-    7: { hx: 50, hy: 33, hr: 18.6, by: 63, brx: 28.5, bry: 25, eyeY: 31.5, eyeDx: 10.2, eyeR: 3.4, beak: 1.15, beakY: 35, pal: "adult", tail: 4, wingLen: 1, halo: true },
-  }[stage];
-  const TIEL = stage === 6
-    ? { b0: "#fff6d8", b1: "#f6e3a6", b2: "#e6c97a", edge: "#caa955", w0: "#fbeec2", w1: "#f2da92", w2: "#d9ba62", wLine: "#b08f3c", tail: "#e3c676" }
-    : { b0: "#fffbee", b1: "#f8eecb", b2: "#e9d9a4", edge: "#cdb87a", w0: "#fcf3d6", w1: "#f3e4b2", w2: "#dfc88a", wLine: "#b89c56", tail: "#e9d7a2" };
-  const C = tiel ? TIEL : PAL[S.pal];
-  const { hx, hy, hr, by, brx, bry } = S;
-
-  // โครงหัว+ตัวเป็นก้อนเดียวแบบลูกแพร์ (parrotlet ไม่มีคอให้เห็น)
-  const side = (m) => {   // m = +1 ขวา, -1 ซ้าย (วาดจากยอดหัวลงไปก้น)
-    const X = (dx) => f(hx + m * dx);
-    return `C${X(hr * 0.6)} ${f(hy - hr)} ${X(hr)} ${f(hy - hr * 0.58)} ${X(hr)} ${f(hy)} ` +
-      `C${X(hr)} ${f(hy + hr * 0.5)} ${X(brx * 0.84)} ${f(by - bry * 0.66)} ${X(brx * 0.97)} ${f(by - bry * 0.12)} ` +
-      `C${X(brx * 1.03)} ${f(by + bry * 0.38)} ${X(brx * 0.78)} ${f(by + bry * 0.96)} ${f(hx)} ${f(by + bry)}`;
-  };
-  const right = side(1);
-  const leftBack = (() => {  // ด้านซ้ายย้อนจากก้นขึ้นหัว
-    const X = (dx) => f(hx - dx);
-    return `C${X(brx * 0.78)} ${f(by + bry * 0.96)} ${X(brx * 1.03)} ${f(by + bry * 0.38)} ${X(brx * 0.97)} ${f(by - bry * 0.12)} ` +
-      `C${X(brx * 0.84)} ${f(by - bry * 0.66)} ${X(hr)} ${f(hy + hr * 0.5)} ${X(hr)} ${f(hy)} ` +
-      `C${X(hr)} ${f(hy - hr * 0.58)} ${X(hr * 0.6)} ${f(hy - hr)} ${f(hx)} ${f(hy - hr)}z`;
-  })();
-  const bodyD = `M${f(hx)} ${f(hy - hr)} ${right} ${leftBack}`;
-
-  // หน้าอก/ท้องสีครีม ไล่ขึ้นไปถึงคอ (ขอบจางด้วย gradient)
-  const bellyD = (() => {
-    const t = hy + hr * 0.36;
-    const R = `C${f(hx + brx * 0.55)} ${f(t)} ${f(hx + brx * 0.74)} ${f(by - bry * 0.42)} ${f(hx + brx * 0.72)} ${f(by + bry * 0.12)} ` +
-      `C${f(hx + brx * 0.7)} ${f(by + bry * 0.72)} ${f(hx + brx * 0.36)} ${f(by + bry * 0.97)} ${f(hx)} ${f(by + bry * 0.98)} `;
-    const L = `C${f(hx - brx * 0.36)} ${f(by + bry * 0.97)} ${f(hx - brx * 0.7)} ${f(by + bry * 0.72)} ${f(hx - brx * 0.72)} ${f(by + bry * 0.12)} ` +
-      `C${f(hx - brx * 0.74)} ${f(by - bry * 0.42)} ${f(hx - brx * 0.55)} ${f(t)} ${f(hx)} ${f(t)}z`;
-    return `M${f(hx)} ${f(t)} ${R}${L}`;
-  })();
-
-  // ปีกพับข้างตัว: ขนคลุมไหล่ฟ้าอ่อน -> โคบอลต์ -> ขนปลายปีกเข้ม
-  const wl = S.wingLen;
-  const P = (ax, ay) => `${f(hx - brx * ax)} ${f(by + bry * ay)}`;
-  const wingD = `M${P(0.8, -0.62)} C${P(0.99, -0.38)} ${P(1.05, 0.25 * wl)} ${P(0.96, 0.6 * wl)} ` +
-    `C${P(0.88, 0.86 * wl)} ${P(0.74, 1.0 * wl)} ${P(0.52, 1.07 * wl)} ` +
-    `C${P(0.46, 0.62 * wl)} ${P(0.5, 0)} ${P(0.62, -0.4)} C${P(0.67, -0.53)} ${P(0.73, -0.61)} ${P(0.8, -0.62)}z`;
-  const wingLines = stage === 3 ? "" : [
-    `M${P(1.0, 0.3 * wl)} C${P(0.92, 0.62 * wl)} ${P(0.78, 0.88 * wl)} ${P(0.56, 1.05 * wl)}`,
-    `M${P(0.93, 0.08 * wl)} C${P(0.84, 0.44 * wl)} ${P(0.7, 0.72 * wl)} ${P(0.52, 0.88 * wl)}`,
-    `M${P(0.84, -0.1)} C${P(0.76, 0.2 * wl)} ${P(0.64, 0.46 * wl)} ${P(0.52, 0.6 * wl)}`,
-  ].map(d => `<path d="${d}" fill="none" stroke="${C.wLine}" stroke-width=".75" opacity=".55" ${SW}/>`).join("") +
-    // เกล็ดขนคลุมไหล่
-    [[0.86, -0.36], [0.74, -0.3], [0.9, -0.2], [0.78, -0.14], [0.66, -0.2]].map(([ax, ay]) =>
-      `<path d="M${P(ax + 0.07, ay)} q${f(brx * 0.07)} ${f(bry * 0.07)} ${f(brx * 0.14)} 0" fill="none" stroke="#d4eefa" stroke-width=".6" opacity=".7" ${SW}/>`).join("");
-  const wingInner = `<path d="${wingD}" fill="url(#${id("wg")})" stroke="${C.wLine}" stroke-width=".5" stroke-opacity=".45"/>${wingLines}`;
-  const wings = `<g class="p-wing p-wing-l">${wingInner}</g><g class="p-wing p-wing-r"><g transform="matrix(-1 0 0 1 100 0)">${wingInner}</g></g>`;
-
-  // หางสั้นโผล่ใต้ท้อง (อยู่หลังตัว)
-  const tail = S.tail ? `<g class="p-tail"><path d="M${f(hx - 4.4)} ${f(by + bry - 3)} L${f(hx + 4.4)} ${f(by + bry - 3)} L${f(hx + 3.2)} ${f(by + bry + S.tail)} Q${f(hx)} ${f(by + bry + S.tail + 2.2)} ${f(hx - 3.2)} ${f(by + bry + S.tail)}z" fill="${C.tail}"/></g>` : "";
-
-  // เท้าชมพู 3 นิ้วเกาะพื้น
-  const fy = by + bry - 1.8, fdx = brx * 0.36;
-  const foot = (x) => {
-    const toes = `M${f(x)} ${f(fy)} l${f(-2.8)} ${f(3.4)} M${f(x)} ${f(fy)} l0 ${f(4)} M${f(x)} ${f(fy)} l${f(2.8)} ${f(3.4)}`;
-    return `<path d="${toes}" stroke="#d9999b" stroke-width="2.6" fill="none" ${SW}/><path d="${toes}" stroke="#f3c3c2" stroke-width="1.5" fill="none" ${SW}/>`;
-  };
-  const feet = `<g class="p-feet">${foot(hx - fdx)}${foot(hx + fdx)}</g>`;
-
-  // ตาน้ำตาลเข้มกลม มีขอบเปลือกตาจางๆ + แสงสะท้อน
-  const eye = (cx) => {
-    const r = S.eyeR, cy = S.eyeY;
-    return `<g class="p-eye"><circle cx="${f(cx)}" cy="${f(cy)}" r="${f(r + 0.7)}" fill="#e9f7fc" opacity=".85"/>` +
-      `<circle cx="${f(cx)}" cy="${f(cy)}" r="${f(r)}" fill="#2a1a12"/>` +
-      `<circle cx="${f(cx)}" cy="${f(cy + r * 0.25)}" r="${f(r * 0.62)}" fill="#4a2e20" opacity=".8"/>` +
-      `<circle cx="${f(cx - r * 0.34)}" cy="${f(cy - r * 0.36)}" r="${f(r * 0.34)}" fill="#fff"/>` +
-      `<circle cx="${f(cx + r * 0.36)}" cy="${f(cy + r * 0.34)}" r="${f(r * 0.14)}" fill="#fff" opacity=".85"/></g>`;
-  };
-
-  // ปากงุ้มสีชมพูอ่อน
-  const bs = S.beak, bY = S.beakY;
-  const B = (x, y) => `${f(hx + x * bs)} ${f(bY + y * bs)}`;
-  const beak = `<path d="M${B(-5.4, 0.6)} C${B(-5.2, -2.8)} ${B(5.2, -2.8)} ${B(5.4, 0.6)} C${B(5.8, 4.6)} ${B(3.2, 8.6)} ${B(0, 11.4)} C${B(-3.2, 8.6)} ${B(-5.8, 4.6)} ${B(-5.4, 0.6)}z" fill="url(#${id("bk")})"/>` +
-    `<path d="M${B(-3.2, 5.6)} C${B(-1.4, 7.6)} ${B(1.4, 7.6)} ${B(3.2, 5.6)} C${B(2.4, 8.4)} ${B(1.2, 10.4)} ${B(0, 11.8)} C${B(-1.2, 10.4)} ${B(-2.4, 8.4)} ${B(-3.2, 5.6)}z" fill="#cf8c89" opacity=".45"/>` +
-    `<ellipse cx="${f(hx - 1.7 * bs)}" cy="${f(bY + 0.6 * bs)}" rx="${f(1.5 * bs)}" ry="${f(0.9 * bs)}" fill="#fff" opacity=".6"/>` +
-    `<circle cx="${f(hx - 1.6 * bs)}" cy="${f(bY - 1.1 * bs)}" r="${f(0.42 * bs)}" fill="#a97877" opacity=".55"/><circle cx="${f(hx + 1.6 * bs)}" cy="${f(bY - 1.1 * bs)}" r="${f(0.42 * bs)}" fill="#a97877" opacity=".55"/>`;
-
-  // ขนอ่อนฟูบนหัว (ร่างเด็ก)
-  const fuzz = S.fuzz ? `<path d="M${f(hx - 3)} ${f(hy - hr + 0.8)} q-1.6 -3.4 0.8 -5.2 M${f(hx + 0.6)} ${f(hy - hr + 0.2)} q0.4 -3.8 3 -4.6 M${f(hx + 3.8)} ${f(hy - hr + 1)} q2 -2.6 4.4 -2.4" stroke="${C.b1}" stroke-width="1.5" fill="none" ${SW}/>` : "";
-
-  // ขนเกล็ดบนอกจางๆ ให้ดูมีเนื้อขน
-  const chest = [[-5, 0.05], [2, 0.02], [-1.5, 0.28], [5.5, 0.26], [-6, 0.5], [1.5, 0.52]].map(([dx, ay]) =>
-    `<path d="M${f(hx + dx - 2)} ${f(by + bry * ay)} q2 1.5 4 0" fill="none" stroke="#ffffff" stroke-width=".6" opacity=".7" ${SW}/>`).join("");
-
-  const halo = S.halo ? `<circle cx="50" cy="52" r="46" fill="url(#${id("halo")})"/>` +
-    [[14, 20, 3.2], [85, 16, 2.6], [88, 58, 2.2], [11, 62, 2.4]].map(([x, y, r]) =>
-      `<path class="p-note" d="M${x} ${f(y - r)} Q${x} ${y} ${f(x + r)} ${y} Q${x} ${y} ${x} ${f(y + r)} Q${x} ${y} ${f(x - r)} ${y} Q${x} ${y} ${x} ${f(y - r)}z" fill="#fde68a"/>`).join("") : "";
-
-  const defs = `<defs>
-    <radialGradient id="${id("bd")}" cx=".38" cy=".26" r=".8"><stop offset="0" stop-color="${C.b0}"/><stop offset=".55" stop-color="${C.b1}"/><stop offset="1" stop-color="${C.b2}"/></radialGradient>
-    <radialGradient id="${id("bl")}" cx=".5" cy=".62" r=".62"><stop offset="0" stop-color="#fbf7ec"/><stop offset=".55" stop-color="#eef6f2"/><stop offset=".85" stop-color="${tiel ? "#f8efcf" : "#d8eff6"}" stop-opacity=".7"/><stop offset="1" stop-color="${C.b0}" stop-opacity="0"/></radialGradient>
-    <radialGradient id="${id("fc")}" cx=".5" cy=".5" r=".5"><stop offset="0" stop-color="#e6f7fb"/><stop offset=".7" stop-color="#d6f1f9" stop-opacity=".7"/><stop offset="1" stop-color="#d6f1f9" stop-opacity="0"/></radialGradient>
-    <linearGradient id="${id("wg")}" x1="0" y1="0" x2=".25" y2="1"><stop offset="0" stop-color="${C.w0}"/><stop offset=".22" stop-color="${C.w0}"/><stop offset=".48" stop-color="${C.w1}"/><stop offset=".78" stop-color="${C.w2}"/><stop offset="1" stop-color="${C.wLine}"/></linearGradient>
-    <linearGradient id="${id("bk")}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fbe3df"/><stop offset=".6" stop-color="#efbdb8"/><stop offset="1" stop-color="#dc9f9b"/></linearGradient>
-    ${S.halo ? `<radialGradient id="${id("halo")}"><stop offset="0" stop-color="#bfe7ff" stop-opacity=".75"/><stop offset=".7" stop-color="#dbeafe" stop-opacity=".35"/><stop offset="1" stop-color="#dbeafe" stop-opacity="0"/></radialGradient>` : ""}
-    <clipPath id="${id("cl")}"><path d="${bodyD}"/></clipPath>
-  </defs>`;
-
-  return `${defs}${halo}
-    <g class="p-body">
-      ${tail}
-      <path d="${bodyD}" fill="url(#${id("bd")})" stroke="${C.edge}" stroke-width=".8" stroke-opacity=".55"/>
-      <g clip-path="url(#${id("cl")})">
-        <path class="p-belly" d="${bellyD}" fill="url(#${id("bl")})"/>
-        ${chest}
-        <ellipse cx="${f(hx)}" cy="${f(S.beakY + 2)}" rx="${f(hr * 0.72)}" ry="${f(hr * 0.5)}" fill="url(#${id("fc")})"/>
-        ${tiel ? `<ellipse cx="${f(hx)}" cy="${f(hy - hr * 0.05)}" rx="${f(hr * 0.86)}" ry="${f(hr * 0.8)}" fill="#fde047" opacity=".92"/>
-          <circle cx="${f(hx - hr * 0.62)}" cy="${f(hy + hr * 0.3)}" r="${f(hr * 0.2)}" fill="#f59e0b"/><circle cx="${f(hx + hr * 0.62)}" cy="${f(hy + hr * 0.3)}" r="${f(hr * 0.2)}" fill="#f59e0b"/>` : ""}
-        <ellipse cx="${f(hx - hr * 0.42)}" cy="${f(hy - hr * 0.55)}" rx="${f(hr * 0.42)}" ry="${f(hr * 0.22)}" fill="#fff" opacity=".35" transform="rotate(-22 ${f(hx - hr * 0.42)} ${f(hy - hr * 0.55)})"/>
-      </g>
-      ${fuzz}
-      ${wings}
-      ${eye(hx - S.eyeDx)}${eye(hx + S.eyeDx)}
-      ${beak}
-      ${feet}
-    </g>`;
+  const C = tiel
+    ? (stage === 6 ? { top: "#bcbcc3", low: "#9a9aa3", face: "#ffea8c", wing: "#8a8a94" } : { top: "#9d9da2", low: "#7e7e84", face: "#ffe45c", wing: "#6c6c72" })
+    : (stage === 6 ? { top: "#62b6ef", low: "#2f86d8", face: "#cbe8fb", wing: "#2f5fcc" }
+      : stage <= 3 ? { top: "#aee5f9", low: "#80cff1", face: "#e6f8fe", wing: "#8db3e8" } : { top: "#78d0f6", low: "#41aee8", face: "#d6f2fd", wing: "#4a82d6" });
+  const bodyD = "M50 26C70 26 81 42 81 62C81 80 69 90 50 90C31 90 19 80 19 62C19 42 30 26 50 26Z";
+  const ink = "#17171c";
+  return `<defs>
+      <linearGradient id="${id("bd")}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${C.top}"/><stop offset="1" stop-color="${C.low}"/></linearGradient>
+      <clipPath id="${id("cb")}"><path d="${bodyD}"/></clipPath>
+    </defs>
+    <ellipse cx="50" cy="92" rx="24" ry="3.5" fill="rgba(40,50,90,.18)"/>
+    ${tiel ? `<path d="M43 30C41 18 45 9 51 4C51 11 54 15 58 12C57 18 60 21 63 20C62 25 60 28 58 31Z" fill="${C.face}"/>` : ""}
+    <ellipse cx="18.5" cy="66" rx="5" ry="11" fill="${C.wing}" transform="rotate(12 18.5 66)"/>
+    <ellipse cx="81.5" cy="66" rx="5" ry="11" fill="${C.wing}" transform="rotate(-12 81.5 66)"/>
+    <ellipse cx="41" cy="90" rx="5" ry="2.6" fill="${tiel ? "#c9a39b" : "#eab4b4"}"/><ellipse cx="59" cy="90" rx="5" ry="2.6" fill="${tiel ? "#c9a39b" : "#eab4b4"}"/>
+    <path d="${bodyD}" fill="url(#${id("bd")})"/>
+    <g clip-path="url(#${id("cb")})">${tiel
+      ? `<ellipse cx="50" cy="40" rx="36" ry="27" fill="${C.face}"/>`
+      : `<ellipse cx="50" cy="80" rx="24" ry="15" fill="${C.face}" opacity=".85"/>`}</g>
+    ${tiel ? `<circle cx="27" cy="59" r="5.2" fill="#f58220"/><circle cx="73" cy="59" r="5.2" fill="#f58220"/>`
+      : `<ellipse cx="29" cy="58" rx="4" ry="2.4" fill="#ff9fc0" opacity=".55"/><ellipse cx="71" cy="58" rx="4" ry="2.4" fill="#ff9fc0" opacity=".55"/>`}
+    <g class="p-eye"><circle cx="38" cy="50" r="4.2" fill="${ink}"/><circle cx="62" cy="50" r="4.2" fill="${ink}"/>
+      <circle cx="36.8" cy="48.6" r="1.2" fill="#fff"/><circle cx="60.8" cy="48.6" r="1.2" fill="#fff"/></g>
+    <path d="M31 41.5L43 46.5M69 41.5L57 46.5" stroke="${ink}" stroke-width="3" stroke-linecap="round" fill="none"/>
+    <path d="M50 52.5C54 52.5 55.2 56.5 53.6 59.5L50 64.5L46.4 59.5C44.8 56.5 46 52.5 50 52.5Z" fill="${tiel ? "#bdbdc2" : "#f6cdbf"}"/>`;
 }
 
 /* ---------- สัตว์เลี้ยง 3D (three.js) ----------
-   นกเป็นโมเดล 3 มิติจริงทุกร่าง (ลูกนกตัวเล็กใน Lv 1-2 แล้วโตขึ้น) — เลือกได้ 2 สายพันธุ์: parrotlet / cockatiel
+   นกเป็นโมเดล 3 มิติจริงทุกร่าง (ลูกนกตัวเล็กใน Lv 1-2 แล้วโตขึ้น) — นกตัวกลมหน้าบึ้ง 2 สายพันธุ์: parrotlet (forpus) / cockatiel + Puff
    petSvg() ห่อภาพวาดสำรองไว้ใน <span class="pet3d" data-stage data-species> ; เมื่อโหลด three.js ได้:
    - กล่อง .pp-pet[data-live] ในหน้าสัตว์เลี้ยง = วิวสด ลาก/กดลูกศรหมุนได้ + หายใจ/กะพริบตา/กระพือปีก
    - จุดเล็กอื่นๆ = ภาพนิ่งที่ render จากโมเดลเดียวกัน (cache ไว้ต่อร่าง/ขนาด)
@@ -3515,215 +3405,210 @@ function puffInner(stage, id) {
     </g>`;
 }
 
+/* ---------- นกตัวกลมหน้าบึ้ง (3D): forpus (parrotlet) / cockatiel ----------
+   ตัวเป็นก้อนกลมก้อนเดียว (ไม่มีคอ) + คิ้วเฉียงขมวด + ตาดำกลม + ปากเล็ก + ปีกสั้นแนบตัว
+   cockatiel: ตัวเทา หน้าเหลือง แก้มส้ม หงอนเหลือง แถบปีกขาว / forpus: ตัวฟ้า ปีกโคบอลต์ แก้มชมพู
+   คืนโครงเดียวกับ Puff (bird/body/wingL/wingR/tail/eyes/sparkles) — ท่าหายใจ/กระพือปีก/กะพริบตาใช้ชุดเดิม */
 function buildParrotlet3D(T, stage, species) {
   if (species === "puff") return buildPuff3D(T, stage);
   const tiel = species === "cockatiel";
   const lin = (hex) => new T.Color(hex).convertSRGBToLinear();
   const PAL = {
-    baby:   { top: "#b6e2f6", low: "#7fbfe3", w0: "#b3d4f2", w1: "#8db3e8", w2: "#6d93d8", tail: "#86b6de" },
-    young:  { top: "#93d1ef", low: "#4f9fd2", w0: "#8cc4ec", w1: "#5a8cdc", w2: "#3a62c0", tail: "#3d86c0" },
-    adult:  { top: "#86cbee", low: "#3f8fca", w0: "#7fc1ea", w1: "#4a82d6", w2: "#2448a8", tail: "#2c7fb6" },
-    cobalt: { top: "#7cc4ec", low: "#337fc0", w0: "#63a8e6", w1: "#2f5fcc", w2: "#16338f", tail: "#1f64a8" },
-    chick:  { top: "#cdeaf8", low: "#a6d3ec", w0: "#c2e0f4", w1: "#a3c9ee", w2: "#8bb3e4", tail: "#a6d3ec" },
-    // cockatiel แบบ lutino: ตัวเหลืองอ่อนเกือบขาว หน้าเหลือง แก้มส้ม (ร่าง 6 Pearl เหลืองเข้มขึ้นอีกนิด)
-    tiel:      { top: "#fdf6dc", low: "#eddfae", w0: "#fcf3d6", w1: "#f3e4b2", w2: "#dfc88a", tail: "#e9d7a2", belly: "#fffbee", face: "#fde047" },
-    tielPearl: { top: "#fdf0c6", low: "#ecd592", w0: "#fbeec2", w1: "#f2da92", w2: "#d9ba62", tail: "#e3c676", belly: "#fff8e2", face: "#fcd34d" },
-    tielChick: { top: "#fbf0c2", low: "#efd98b", w0: "#f7e7ab", w1: "#ecd488", w2: "#dcbf66", tail: "#efd98b", belly: "#fff9e3", face: "#fff2b0" },
+    chick:  { top: "#d3f0fb", low: "#aee0f4", belly: "#f1fbff", face: "#e6f8fe", w0: "#c2e0f4", w1: "#a3c9ee", w2: "#8bb3e4", tail: "#a6d3ec" },
+    baby:   { top: "#aee5f9", low: "#80cff1", belly: "#e6f8fe", face: "#d2f2fc", w0: "#b3d4f2", w1: "#8db3e8", w2: "#6d93d8", tail: "#86b6de" },
+    young:  { top: "#8bd8f7", low: "#57b9eb", belly: "#dcf4fe", face: "#c0ecfb", w0: "#8cc4ec", w1: "#5a8cdc", w2: "#3a62c0", tail: "#3d86c0" },
+    adult:  { top: "#78d0f6", low: "#41aee8", belly: "#d6f2fd", face: "#b8e9fb", w0: "#7fc1ea", w1: "#4a82d6", w2: "#2448a8", tail: "#2c7fb6" },
+    cobalt: { top: "#62b6ef", low: "#2f86d8", belly: "#cbe8fb", face: "#a4d6f7", w0: "#63a8e6", w1: "#2f5fcc", w2: "#16338f", tail: "#1f64a8" },
+    tielChick: { top: "#d4d4d8", low: "#bcbcc2", belly: "#e0e0e4", face: "#fff3a8", w0: "#c4c4ca", w1: "#b0b0b6", w2: "#9c9ca3", tail: "#b0b0b6", cheek: "#fbc58a" },
+    tiel:      { top: "#9d9da2", low: "#7e7e84", belly: "#acacb1", face: "#ffe45c", w0: "#8a8a90", w1: "#77777d", w2: "#5f5f66", tail: "#6c6c72", cheek: "#f58220" },
+    tielPearl: { top: "#bcbcc3", low: "#9a9aa3", belly: "#cdcdd3", face: "#ffea8c", w0: "#a8a8b2", w1: "#9494a0", w2: "#777782", tail: "#8a8a94", cheek: "#f58220" },
   };
   const CFG = {
-    1: { pal: "chick", headK: 1.26, bodyK: 0.84, eye: 0.15, tail: 0, wing: 0.55, fuzz: true, s: 0.6 },
-    2: { pal: "chick", headK: 1.18, bodyK: 0.87, eye: 0.14, tail: 0, wing: 0.66, fuzz: true, s: 0.74 },
-    3: { pal: "baby", headK: 1.12, bodyK: 0.9, eye: 0.13, tail: 0, wing: 0.78, fuzz: true, s: 0.92 },
-    4: { pal: "young", headK: 1.05, bodyK: 0.96, eye: 0.115, tail: 0.7, wing: 0.9, s: 0.96 },
-    5: { pal: "adult", headK: 1, bodyK: 1, eye: 0.105, tail: 1, wing: 1, s: 1 },
-    6: { pal: "cobalt", headK: 1, bodyK: 1, eye: 0.105, tail: 1, wing: 1, s: 1 },
-    7: { pal: "adult", headK: 1, bodyK: 1, eye: 0.105, tail: 1, wing: 1, s: 1, halo: true },
+    1: { pal: "chick", s: 0.6, eye: 0.15, tail: 0, wing: 0.6, crest: 0, fuzz: true },
+    2: { pal: "chick", s: 0.74, eye: 0.14, tail: 0, wing: 0.72, crest: 0, fuzz: true },
+    3: { pal: "baby", s: 0.9, eye: 0.13, tail: 0.5, wing: 0.86, crest: 0.5, fuzz: true },
+    4: { pal: "young", s: 0.96, eye: 0.125, tail: 0.8, wing: 0.95, crest: 0.75 },
+    5: { pal: "adult", s: 1, eye: 0.12, tail: 1, wing: 1, crest: 1 },
+    6: { pal: "cobalt", s: 1, eye: 0.12, tail: 1, wing: 1, crest: 1 },
+    7: { pal: "adult", s: 1, eye: 0.12, tail: 1, wing: 1, crest: 1, halo: true },
   }[stage];
-  const palKey = !tiel ? CFG.pal
-    : stage <= 2 ? "tielChick" : stage === 6 ? "tielPearl" : "tiel";
-  const P = PAL[palKey];
-  const bellyHex = P.belly || "#f7f3e6", faceHex = P.face || "#dcf2f9";
+  const P = PAL[!tiel ? CFG.pal : stage <= 2 ? "tielChick" : stage === 6 ? "tielPearl" : "tiel"];
   const root = new T.Group();
   const bird = new T.Group(); root.add(bird);
-  const std = (o) => new T.MeshStandardMaterial(Object.assign({ roughness: 0.78, metalness: 0 }, o));
-
-  // ---- ตัว+หัว: lathe รูปลูกแพร์ ระบายสีต่อ vertex (ฟ้าด้านบน/หลัง, ครีมหน้าอก, หน้าฟ้าอ่อน) ----
-  const hk = CFG.headK, bk = CFG.bodyK;
-  const prof = [[0, -1.0], [0.42 * bk, -0.97], [0.7 * bk, -0.82], [0.85 * bk, -0.52], [0.86 * bk, -0.18], [0.77 * bk, 0.12],
-    [0.64 * hk, 0.36], [0.66 * hk, 0.6], [0.64 * hk, 0.86], [0.53 * hk, 1.08], [0.31 * hk, 1.24], [0, 1.3]]
-    .map(([r, y]) => new T.Vector2(r, y));
-  const spline = new T.SplineCurve(prof).getPoints(60);
-  const bodyGeo = new T.LatheGeometry(spline, 64);
-  bodyGeo.scale(1, 1, 0.9);
-  const pos = bodyGeo.attributes.position, cols = [];
-  const cTop = lin(P.top), cLow = lin(P.low), cCream = lin(bellyHex), cFace = lin(faceHex), tmp = new T.Color();
+  const body = new T.Group(); bird.add(body);
+  const std = (o) => new T.MeshStandardMaterial(Object.assign({ roughness: 0.6, metalness: 0 }, o));
+  const tmp = new T.Color();
   const smooth = (a, b, x) => { const t = Math.min(1, Math.max(0, (x - a) / (b - a))); return t * t * (3 - 2 * t); };
+
+  // ---- ตัว: lathe ก้อนกลมก้นกว้าง ระบายสีต่อ vertex (หลังเข้ม, ท้องอ่อน, หน้าสีของสายพันธุ์) ----
+  const ZS = 0.92;   // บีบหน้า-หลังนิดหนึ่ง
+  const pts = new T.SplineCurve([[0, -1.0], [0.5, -0.98], [0.86, -0.84], [1.03, -0.5], [1.05, -0.08], [0.97, 0.36], [0.79, 0.76], [0.47, 1.04], [0, 1.13]]
+    .map(([r, y]) => new T.Vector2(r, y))).getPoints(60);
+  const bodyGeo = new T.LatheGeometry(pts, 72);
+  bodyGeo.scale(1, 1, ZS);
+  const pos = bodyGeo.attributes.position, cols = [];
+  const cTop = lin(P.top), cLow = lin(P.low), cBelly = lin(P.belly), cFace = lin(P.face);
   for (let i = 0; i < pos.count; i++) {
     const x = pos.getX(i), y = pos.getY(i), z = pos.getZ(i);
-    const r = Math.hypot(x, z) || 1e-6;
-    const front = z / r;                                   // 1 = หน้าตรง, -1 = หลัง
-    tmp.copy(cLow).lerp(cTop, smooth(-0.9, 1.1, y));       // ฟ้าไล่จากล่างเข้มขึ้นไปบนอ่อน
-    const belly = smooth(0.3, 0.85, front) * smooth(0.5, 0.12, y) * smooth(-1.02, -0.72, y);
-    tmp.lerp(cCream, belly * 0.95);
-    const face = tiel
-      ? smooth(-0.15, 0.55, front) * smooth(0.3, 0.52, y)
-      : smooth(0.45, 0.95, front) * smooth(0.36, 0.58, y) * smooth(0.98, 0.74, y);
-    tmp.lerp(cFace, face * (tiel ? 0.95 : 0.6));
+    const front = z / (Math.hypot(x, z) || 1e-6);          // 1 = หน้าตรง, -1 = หลัง
+    tmp.copy(cLow).lerp(cTop, smooth(-0.9, 1, y));
+    tmp.lerp(cBelly, smooth(0.25, 0.85, front) * smooth(0.15, -0.3, y) * smooth(-1.02, -0.78, y) * (tiel ? 0.7 : 0.9));
+    // cockatiel: หน้ากากเหลืองคลุมหัว ขอบโค้งลงมาด้านหน้า / forpus: หน้าสว่างขึ้นเฉพาะด้านหน้า
+    const face = tiel ? smooth(0.1, 0.24, y + 0.42 * front) : smooth(0.3, 0.9, front) * smooth(-0.05, 0.35, y) * 0.75;
+    tmp.lerp(cFace, face);
     cols.push(tmp.r, tmp.g, tmp.b);
   }
   bodyGeo.setAttribute("color", new T.Float32BufferAttribute(cols, 3));
   bodyGeo.computeVertexNormals();
-  const body = new T.Mesh(bodyGeo, std({ vertexColors: true, roughness: 0.82 }));
-  bird.add(body);
+  body.add(new T.Mesh(bodyGeo, std({ vertexColors: true })));
 
-  // จุดบนผิวหัว (ใช้วางตา/ปาก): ศูนย์กลางหัวราว y 0.72 รัศมี ~0.66*hk (บีบ z 0.9)
-  const headC = new T.Vector3(0, 0.72, 0), headR = 0.655 * hk;
-  const onHead = (dx, dy, dz, k = 1) => {
-    const d = new T.Vector3(dx, dy, dz).normalize();
-    return new T.Vector3(headC.x + d.x * headR * k, headC.y + d.y * headR * k, headC.z + d.z * headR * 0.9 * k);
+  // จุดบนผิวตัวที่มุม a (0 = หน้าตรง, + = ไปทาง +x) สูง y — ใช้วางตา/คิ้ว/ปาก/แก้ม ให้หันออกตามผิว
+  const rAt = (y) => {
+    for (let i = 1; i < pts.length; i++) {
+      if (pts[i].y >= y) { const a = pts[i - 1], b = pts[i]; return a.x + (b.x - a.x) * ((y - a.y) / ((b.y - a.y) || 1e-6)); }
+    }
+    return 0;
+  };
+  const place = (obj, a, y, k = 1) => {
+    const r = rAt(y), dr = (rAt(y + 0.02) - rAt(y - 0.02)) / 0.04;
+    obj.position.set(Math.sin(a) * r * k, y, Math.cos(a) * r * ZS * k);
+    obj.lookAt(obj.position.clone().add(new T.Vector3(Math.sin(a), -dr, Math.cos(a) / ZS)));
+    body.add(obj);
+    return obj;
   };
 
-  // ---- ปีกพับข้างตัว: ขนคลุมไหล่ฟ้าอ่อน -> โคบอลต์ -> ขนปลายปีกเข้ม (หมุนรอบหัวไหล่ได้) ----
-  const wingGeo = (() => {
-    const g = new T.SphereGeometry(1, 36, 28);
-    const p = g.attributes.position, c = [];
+  // ---- ตาดำกลมมันวาว + คิ้วเฉียงขมวด (หัวคิ้วกดลงทับขอบตาบน) ----
+  const eyes = [];
+  const e = CFG.eye;
+  const ink = new T.MeshStandardMaterial({ color: lin("#17171c"), roughness: 0.15, metalness: 0.05 });
+  const browMat = std({ color: lin("#17171c"), roughness: 0.5 });
+  for (const side of [-1, 1]) {
+    const eg = place(new T.Group(), side * 0.4, 0.4, 0.985);
+    const ball = new T.Mesh(new T.SphereGeometry(e, 24, 18), ink);
+    ball.scale.set(1, 1.08, 0.45);
+    const glint = new T.Mesh(new T.SphereGeometry(e * 0.26, 12, 10), new T.MeshBasicMaterial({ color: 0xffffff }));
+    glint.position.set(-e * 0.3, e * 0.38, e * 0.42);
+    eg.add(ball, glint);
+    eyes.push(eg);
+    const brow = place(new T.Group(), side * 0.4, 0.4 + e * 1.1, 0.99);
+    const bar = new T.Mesh(new T.CylinderGeometry(e * 0.24, e * 0.24, e * 2.3, 12), browMat);
+    bar.rotation.z = Math.PI / 2;
+    brow.add(bar);
+    for (const end of [-1, 1]) {
+      const cap = new T.Mesh(new T.SphereGeometry(e * 0.24, 12, 10), browMat);
+      cap.position.x = end * e * 1.15;
+      brow.add(cap);
+    }
+    brow.children.forEach(c => { c.position.z = e * 0.42; });
+    brow.rotateZ(side * 0.42);
+  }
+
+  // ---- ปากเล็กงุ้มลง (cockatiel เทา / forpus ชมพูอ่อน) ----
+  const beakMat = std({ color: lin(tiel ? (stage <= 2 ? "#d9cfc8" : "#bdbdc2") : "#f6cdbf"), roughness: 0.4 });
+  const beak = place(new T.Group(), 0, 0.2, 0.98);
+  const dome = new T.Mesh(new T.SphereGeometry(0.13, 24, 18), beakMat);
+  dome.scale.set(1, 1.1, 0.9);
+  const hookGeo = new T.ConeGeometry(0.09, 0.17, 24, 1);
+  hookGeo.translate(0, 0.085, 0);
+  const hook = new T.Mesh(hookGeo, beakMat);
+  hook.position.set(0, -0.07, 0.03);
+  hook.rotation.x = Math.PI - 0.15;
+  beak.add(dome, hook);
+
+  // ---- แก้ม: cockatiel วงส้ม / forpus ชมพูจางๆ ----
+  for (const side of [-1, 1]) {
+    if (tiel) {
+      const ck = place(new T.Mesh(new T.SphereGeometry(0.2, 24, 16), std({ color: lin(P.cheek), roughness: 0.7 })), side * 0.98, 0.14, 0.985);
+      ck.scale.set(1, 1, 0.22);
+    } else {
+      const blush = new T.MeshBasicMaterial({ color: lin("#ff9fc0"), transparent: true, opacity: 0.5, depthWrite: false });
+      place(new T.Mesh(new T.CircleGeometry(0.1, 20), blush), side * 0.82, 0.2, 1.006).scale.set(1.25, 0.8, 1);
+    }
+  }
+
+  // ---- ปีกสั้นแนบข้างตัว (หมุนรอบหัวไหล่ได้) ----
+  const wingGeo = new T.SphereGeometry(1, 32, 24);
+  {
+    const p = wingGeo.attributes.position, c = [];
     const w0 = lin(P.w0), w1 = lin(P.w1), w2 = lin(P.w2);
     for (let i = 0; i < p.count; i++) {
-      const y = p.getY(i);                                 // -1 ล่าง .. 1 บน
-      const t = smooth(0.75, -0.95, y);
+      const t = smooth(0.75, -0.95, p.getY(i));
       tmp.copy(w0).lerp(w1, smooth(0, 0.45, t)).lerp(w2, smooth(0.45, 1, t));
       c.push(tmp.r, tmp.g, tmp.b);
     }
-    g.setAttribute("color", new T.Float32BufferAttribute(c, 3));
-    return g;
-  })();
+    wingGeo.setAttribute("color", new T.Float32BufferAttribute(c, 3));
+  }
   const makeWing = (side) => {
     const pivot = new T.Group();
-    pivot.position.set(side * 0.66 * bk, 0.28, -0.02);
     const wl = CFG.wing;
-    const cover = new T.Mesh(wingGeo, std({ vertexColors: true, roughness: 0.7 }));
-    cover.scale.set(0.15, 0.62 * wl, 0.36);
-    cover.position.set(side * 0.13, -0.5 * wl, -0.12);
-    cover.rotation.set(-0.42, 0, side * 0.1);
-    // ขนปลายปีก (primaries) ซ้อนด้านล่างหลัง
-    const prim = new T.Mesh(new T.SphereGeometry(1, 28, 20), std({ color: lin(P.w2), roughness: 0.6 }));
-    prim.scale.set(0.1, 0.5 * wl, 0.17);
-    prim.position.set(side * 0.1, -0.98 * wl, -0.42);
-    prim.rotation.set(-0.72, 0, side * 0.06);
-    pivot.add(cover, prim);
+    pivot.position.set(side * rAt(0.1) * 0.94, 0.1, -0.06);
+    const cover = new T.Mesh(wingGeo, std({ vertexColors: true }));
+    cover.scale.set(0.13, 0.5 * wl, 0.4);
+    cover.position.set(side * 0.08, -0.36 * wl, -0.1);
+    cover.rotation.set(-0.35, 0, side * 0.14);
+    pivot.add(cover);
     if (tiel && stage >= 3) {
-      const bar = new T.Mesh(new T.SphereGeometry(1, 20, 14), std({ color: lin("#ffffff"), roughness: 0.85 }));
-      bar.scale.set(0.06, 0.36 * wl, 0.15);
-      bar.position.set(side * 0.22, -0.4 * wl, -0.01);
-      bar.rotation.set(-0.42, 0, side * 0.1);
+      const bar = new T.Mesh(new T.SphereGeometry(1, 20, 14), std({ color: lin("#ffffff"), roughness: 0.8 }));
+      bar.scale.set(0.1, 0.36 * wl, 0.07);
+      bar.position.set(side * 0.09, -0.33 * wl, 0.2);
+      bar.rotation.set(-0.35, 0, side * 0.14);
       pivot.add(bar);
     }
+    bird.add(pivot);
     return pivot;
   };
   const wingL = makeWing(-1), wingR = makeWing(1);
-  bird.add(wingL, wingR);
 
-  // ---- หาง: ขนแบนสั้นชี้ลงด้านหลัง ----
+  // ---- หาง: ขนแบนชี้ลงด้านหลัง (cockatiel ยาว, forpus สั้น) ----
   let tail = null;
   if (CFG.tail) {
-    tail = new T.Mesh(new T.SphereGeometry(1, 24, 16), std({ color: lin(P.tail), roughness: 0.6 }));
-    tail.scale.set(tiel ? 0.16 : 0.2, (tiel ? 0.82 : 0.46) * CFG.tail, 0.06);
-    tail.position.set(0, tiel ? -1.18 : -1.02, tiel ? -0.78 : -0.62);
-    tail.rotation.set(-0.75, 0, 0);
+    const len = (tiel ? 0.45 : 0.28) * CFG.tail, rot = 0.95;   // len = ครึ่งความยาว
+    tail = new T.Mesh(new T.SphereGeometry(1, 24, 16), std({ color: lin(P.tail) }));
+    tail.scale.set(tiel ? 0.19 : 0.22, len, 0.09);
+    tail.position.set(0, -0.45 - Math.cos(rot) * len, -0.88 - Math.sin(rot) * len);
+    tail.rotation.x = rot;
     bird.add(tail);
   }
 
-  // ---- ตา: ลูกตาน้ำตาลเข้มมันวาว + ขอบเปลือกตาจาง + จุดสะท้อนแสง ----
-  const eyes = [];
-  for (const side of [-1, 1]) {
-    const eg = new T.Group();
-    const p = onHead(side * 0.62, 0.14, 0.78, 0.97);
-    eg.position.copy(p);
-    eg.lookAt(p.clone().add(new T.Vector3(side * 0.62, 0.14, 0.78)));
-    const ball = new T.Mesh(new T.SphereGeometry(CFG.eye, 24, 18), new T.MeshStandardMaterial({ color: lin("#24160f"), roughness: 0.12, metalness: 0.1 }));
-    ball.scale.set(1, 1, 0.55);
-    const ring = new T.Mesh(new T.TorusGeometry(CFG.eye * 1.02, CFG.eye * 0.2, 10, 28), std({ color: lin("#e8f6fb"), roughness: 0.9 }));
-    const glint = new T.Mesh(new T.SphereGeometry(CFG.eye * 0.28, 12, 10), new T.MeshBasicMaterial({ color: 0xffffff }));
-    glint.position.set(-CFG.eye * 0.32, CFG.eye * 0.36, CFG.eye * 0.5);
-    eg.add(ball, ring, glint);
-    bird.add(eg);
-    eyes.push(eg);
-  }
-
-  // ---- ปากงุ้มชมพูอ่อน: โดมโคนปาก + ปลายแหลมโค้งลง ----
-  const beakMat = std({ color: lin(tiel && stage >= 3 ? "#efd0bb" : "#f3c8c3"), roughness: 0.42 });   // lutino: ปากสีงาอมชมพู
-  const beak = new T.Group();
-  const bp = onHead(0, -0.22, 1, 0.93);
-  beak.position.copy(bp);
-  const dome = new T.Mesh(new T.SphereGeometry(0.2 * hk, 28, 20), beakMat);
-  dome.scale.set(1.0, 0.95, 1.05);
-  const hookGeo = new T.ConeGeometry(0.155 * hk, 0.27 * hk, 28, 1);
-  hookGeo.translate(0, 0.135 * hk, 0);          // ฐานกรวยอยู่ที่จุดหมุน ปลายแหลมยื่นออกไป
-  const hook = new T.Mesh(hookGeo, beakMat);
-  hook.position.set(0, -0.05, 0.08);
-  hook.rotation.set(Math.PI - 0.22, 0, 0);           // ชี้ลงและเยื้องไปข้างหน้า (ปากงุ้ม)
-  hook.scale.set(1, 1, 0.85);
-  const lower = new T.Mesh(new T.SphereGeometry(0.08 * hk, 16, 12), std({ color: lin(tiel && stage >= 3 ? "#d6ab95" : "#d99c98"), roughness: 0.5 }));
-  lower.position.set(0, -0.2, -0.02);
-  beak.add(dome, hook, lower);
-  bird.add(beak);
-
-  // ---- cockatiel: หงอนเหลืองปลายเทา + แก้มส้ม ----
-  if (tiel) {
-    const cheekMat = std({ color: lin(stage <= 2 ? "#fbc58a" : "#f59e0b"), roughness: 0.7 });
-    for (const side of [-1, 1]) {
-      const p = onHead(side * 0.86, -0.2, 0.5, 0.99);
-      const ck = new T.Mesh(new T.SphereGeometry(0.15 * hk, 20, 14), cheekMat);
-      ck.position.copy(p);
-      ck.lookAt(p.clone().add(new T.Vector3(side * 0.86, -0.2, 0.5)));
-      ck.scale.set(1, 1, 0.3);
-      bird.add(ck);
-    }
-    if (stage >= 3) {
-      const crestLen = stage === 3 ? 0.4 : stage === 4 ? 0.55 : 0.72;
-      const cGeo = new T.ConeGeometry(0.06, crestLen, 12, 6);
-      cGeo.translate(0, crestLen / 2, 0);
-      const cp = cGeo.attributes.position, cc = [];
-      const cBase = lin(P.face), cTip = lin(stage === 6 ? "#f6e3a4" : "#f8edc4");   // หงอนเหลือง ปลายซีดลง
-      for (let i = 0; i < cp.count; i++) { tmp.copy(cBase).lerp(cTip, smooth(0.35, 1, cp.getY(i) / crestLen)); cc.push(tmp.r, tmp.g, tmp.b); }
-      cGeo.setAttribute("color", new T.Float32BufferAttribute(cc, 3));
-      const crestMat = std({ vertexColors: true, roughness: 0.7 });
-      [[-0.07, 0.2, -0.35], [0.0, 0.26, -0.2], [0.07, 0.22, -0.3], [0.0, 0.12, -0.55]].forEach(([x, z, tilt], i) => {
-        const fth = new T.Mesh(cGeo, crestMat);
-        fth.position.set(x, 1.2 * hk, z * hk);
-        fth.rotation.set(tilt, 0, x * 1.4);
-        fth.scale.setScalar(1 - i * 0.08);
-        bird.add(fth);
-      });
-    }
+  // ---- cockatiel: หงอนเหลือง 3 แฉกเอนไปข้างหลัง ----
+  if (tiel && CFG.crest) {
+    const crestMat = std({ vertexColors: true });
+    const cBase = lin(P.face), cTip = lin("#fff6c9");
+    [[0.8, 0.19, -0.2, 0.04], [0.6, 0.17, -0.62, -0.14], [0.42, 0.14, -1.0, -0.32]].forEach(([len, rad, tilt, z]) => {
+      const L = len * CFG.crest;
+      const g = new T.ConeGeometry(rad, L, 16, 6);
+      g.translate(0, L / 2, 0);
+      const cp = g.attributes.position, cc = [];
+      for (let i = 0; i < cp.count; i++) { tmp.copy(cBase).lerp(cTip, smooth(0.5, 1, cp.getY(i) / L)); cc.push(tmp.r, tmp.g, tmp.b); }
+      g.setAttribute("color", new T.Float32BufferAttribute(cc, 3));
+      const f = new T.Mesh(g, crestMat);
+      f.position.set(0, 1.0, z);
+      f.scale.x = 0.7;
+      f.rotation.x = tilt;
+      body.add(f);
+    });
   }
 
   // ---- ขนฟูบนหัว (ร่างเด็ก) ----
-  if (CFG.fuzz) {
-    for (const [x, rz] of [[-0.08, 0.5], [0.02, -0.1], [0.1, -0.6]]) {
-      const tuft = new T.Mesh(new T.ConeGeometry(0.035, 0.2, 8), std({ color: lin(P.top) }));
-      tuft.position.set(x, 1.24 * hk + 0.06, 0.02);
+  if (CFG.fuzz && !(tiel && CFG.crest)) {
+    for (const [x, rz] of [[-0.09, 0.5], [0.01, -0.1], [0.1, -0.6]]) {
+      const tuft = new T.Mesh(new T.ConeGeometry(0.04, 0.22, 8), std({ color: lin(tiel ? P.face : P.top) }));
+      tuft.position.set(x, 1.18, 0.02);
       tuft.rotation.z = rz;
-      bird.add(tuft);
+      body.add(tuft);
     }
   }
 
-  // ---- เท้าชมพู: 3 นิ้วหน้า 1 นิ้วหลัง ----
-  const toeMat = std({ color: lin("#eab4b4"), roughness: 0.55 });
+  // ---- เท้าเล็กๆ โผล่ใต้ตัว ----
+  const footMat = std({ color: lin(tiel ? "#c9a39b" : "#eab4b4"), roughness: 0.55 });
   for (const side of [-1, 1]) {
-    const foot = new T.Group();
-    foot.position.set(side * 0.3, -0.98, 0.18);
-    for (const a of [-0.45, 0, 0.45, Math.PI]) {
-      const toe = new T.Mesh(new T.CylinderGeometry(0.04, 0.05, 0.3, 10), toeMat);
-      toe.geometry.translate(0, 0.15, 0);
-      toe.rotation.set(Math.PI / 2 - 0.25, 0, 0);
-      const holder = new T.Group(); holder.rotation.y = a + side * 0.12; holder.add(toe);
-      foot.add(holder);
-    }
+    const foot = new T.Mesh(new T.SphereGeometry(0.17, 20, 14), footMat);
+    foot.scale.set(1, 0.45, 1.35);
+    foot.position.set(side * 0.32, -1.0, 0.32);
     bird.add(foot);
   }
 
-  // ---- เงาใต้เท้า ----
+  // ---- เงาใต้ตัว ----
   const shadowTex = (() => {
     const c = document.createElement("canvas"); c.width = c.height = 128;
     const g = c.getContext("2d"); const gr = g.createRadialGradient(64, 64, 4, 64, 64, 62);
@@ -3731,12 +3616,13 @@ function buildParrotlet3D(T, stage, species) {
     g.fillStyle = gr; g.fillRect(0, 0, 128, 128);
     return new T.CanvasTexture(c);
   })();
-  const shadow = new T.Mesh(new T.PlaneGeometry(2, 1.1), new T.MeshBasicMaterial({ map: shadowTex, transparent: true, depthWrite: false }));
+  const shadow = new T.Mesh(new T.PlaneGeometry(2.3, 1.2), new T.MeshBasicMaterial({ map: shadowTex, transparent: true, depthWrite: false }));
   shadow.rotation.x = -Math.PI / 2; shadow.position.y = -1.06 * CFG.s;
   shadow.scale.setScalar(0.35 + CFG.s * 0.65);
+  shadow.userData.s0 = shadow.scale.x;
   root.add(shadow);
 
-  // ---- ร่างสุดท้าย: รัศมีฟ้าด้านหลัง + ประกายลอยรอบตัว ----
+  // ---- ร่างสุดท้าย: รัศมีด้านหลัง + ประกายลอยรอบตัว ----
   const sparkles = [];
   if (CFG.halo) {
     const c = document.createElement("canvas"); c.width = c.height = 256;
@@ -3750,14 +3636,14 @@ function buildParrotlet3D(T, stage, species) {
     const sm = new T.MeshBasicMaterial({ color: lin("#fde68a") });
     for (let i = 0; i < 5; i++) {
       const sp = new T.Mesh(new T.OctahedronGeometry(0.07), sm);
-      sp.userData = { a: (i / 5) * Math.PI * 2 + 0.6, r: 1.35 + (i % 2) * 0.2, y: 0.2 + ((i * 37) % 10) / 10 };
+      sp.userData = { a: (i / 5) * Math.PI * 2 + 0.6, r: 1.45 + (i % 2) * 0.2, y: 0.2 + ((i * 37) % 10) / 10 };
       sp.position.set(Math.cos(sp.userData.a) * sp.userData.r, sp.userData.y, Math.sin(sp.userData.a) * sp.userData.r);
       root.add(sp); sparkles.push(sp);
     }
   }
 
   bird.scale.setScalar(CFG.s);
-  return { root, bird, body, wingL, wingR, tail, eyes, sparkles };
+  return { root, bird, body, wingL, wingR, tail, eyes, sparkles, shadow };
 }
 
 function makePetRenderer(T, opts) {
@@ -3801,22 +3687,28 @@ function mountLivePet(T, el, stage, species) {
     const r = makePetRenderer(T);
     const canvas = r.domElement;
     canvas.className = "pet3d-canvas";
-    canvas.setAttribute("aria-label", "3D pet — drag or use arrow keys to rotate");
+    canvas.setAttribute("aria-label", "3D pet — drag or use arrow keys to rotate, tap or press Space to make it fly");
     canvas.setAttribute("role", "img");
     canvas.tabIndex = 0;
     canvas.addEventListener("keydown", (e) => {
+      if (e.key === " " || e.key === "Enter") { e.preventDefault(); petFly(); return; }
       if (e.key !== "ArrowLeft" && e.key !== "ArrowRight") return;
       e.preventDefault();
       L.vel = e.key === "ArrowLeft" ? -0.06 : 0.06; L.idle = performance.now();
     });
-    L = pet3d.live = { r, canvas, key: "", model: null, scene: null, cam: null, rotY: 0.35, vel: 0, drag: null, idle: 0, running: false };
-    canvas.addEventListener("pointerdown", (e) => { L.drag = { x: e.clientX, last: e.clientX }; L.vel = 0; canvas.setPointerCapture(e.pointerId); });
+    L = pet3d.live = { r, canvas, key: "", model: null, scene: null, cam: null, rotY: 0.35, vel: 0, drag: null, idle: 0, running: false, fly: 0, nextFly: 0 };
+    canvas.addEventListener("pointerdown", (e) => { L.drag = { x: e.clientX, last: e.clientX, at: performance.now() }; L.vel = 0; canvas.setPointerCapture(e.pointerId); });
     canvas.addEventListener("pointermove", (e) => {
       if (!L.drag) return;
       const dx = e.clientX - L.drag.last; L.drag.last = e.clientX;
       L.rotY += dx * 0.012; L.vel = dx * 0.012;
     });
-    const end = () => { L.drag = null; L.idle = performance.now(); };
+    const end = (e) => {
+      // แตะสั้นๆ ไม่ได้ลาก = สั่งให้บิน
+      const tap = e.type === "pointerup" && L.drag && Math.abs(e.clientX - L.drag.x) < 6 && performance.now() - L.drag.at < 400;
+      L.drag = null; L.idle = performance.now();
+      if (tap) petFly();
+    };
     canvas.addEventListener("pointerup", end); canvas.addEventListener("pointercancel", end);
   }
   if (L.key !== species + ":" + stage) {
@@ -3827,11 +3719,22 @@ function mountLivePet(T, el, stage, species) {
   }
   el.innerHTML = "";
   el.appendChild(L.canvas);
-  el.insertAdjacentHTML("beforeend", '<span class="pet3d-hint" aria-hidden="true">↔ drag to spin</span>');
+  el.insertAdjacentHTML("beforeend", `<span class="pet3d-hint" aria-hidden="true">↔ drag to spin${species === "puff" ? "" : " · tap to fly"}</span>`);
   const size = Math.max(64, Math.round(el.clientWidth || 150));
   L.r.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
   L.r.setSize(size, size, false);
-  if (!L.running) { L.running = true; requestAnimationFrame(livePetFrame); }
+  if (!L.running) { L.running = true; L.nextFly = performance.now() + 2500; requestAnimationFrame(livePetFrame); }   // เปิดหน้ามาสักพักก็บินให้ดู 1 รอบ
+}
+
+/* ท่าบิน (เฉพาะนก — Puff ไม่มีปีก): ลอยขึ้น กางปีกกระพือเร็ว บินวน 1 รอบ (ขวา → อ้อมหลัง → กลับที่เดิม) แล้วลง
+   เริ่มเอง: หลังเปิดหน้า ~2.5 วิ แล้วทุก 9-15 วิ / สั่งเอง: แตะตัวนก หรือกด Space/Enter — ไม่บินเมื่อผู้ใช้ตั้ง reduced motion */
+const PET_FLY_MS = 5200;
+function petFly() {
+  const L = pet3d.live;
+  if (!L || !L.model || L.fly || L.key.startsWith("puff:")) return false;
+  if (window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches) return false;
+  L.fly = performance.now();
+  return true;
 }
 
 function livePetFrame(now) {
@@ -3846,14 +3749,30 @@ function livePetFrame(now) {
       L.rotY += (target - L.rotY) * 0.02;
     }
   }
-  m.root.rotation.y = L.rotY;
+  // บิน: u = ความคืบหน้า 0..1, f = น้ำหนักท่าบิน (ค่อยๆ เข้า/ออก ตอนขึ้นและลง)
+  const sm = (a, b, x) => { const k = Math.min(1, Math.max(0, (x - a) / (b - a))); return k * k * (3 - 2 * k); };
+  let u = 0, f = 0;
+  if (L.fly) {
+    u = Math.max(0, (now - L.fly) / PET_FLY_MS);   // เวลาของเฟรมอาจมาก่อนเวลาที่สั่งบินนิดหนึ่ง
+    if (u >= 1) { L.fly = 0; u = 0; L.nextFly = now + 9000 + Math.random() * 6000; }
+    else f = sm(0, 0.16, u) * sm(1, 0.84, u);
+  } else if (!calm && !L.drag && now > L.nextFly) petFly();
+  const th = Math.PI * 2 * sm(0.08, 0.92, u), flyR = 0.8;
+  const base = L.rotY + (u >= 0.5 ? Math.PI * 2 : 0);
+  m.root.position.set(Math.sin(th) * flyR * f, 0, (Math.cos(th) - 1) * flyR * f);
+  m.root.rotation.y = base + (th + Math.PI / 2 - base) * f;           // หันหน้าไปตามทางบิน
+  m.bird.rotation.x = f * 0.4;                                        // โน้มตัวไปข้างหน้า
+  L.cam.position.z = 6.4 + f * 2.8;                                   // ถอยกล้องให้มีที่บิน
+  L.cam.lookAt(0, 0.12 + f * 0.25, 0);
+  if (m.shadow) { m.shadow.material.opacity = 1 - f * 0.55; m.shadow.scale.setScalar(m.shadow.userData.s0 * (1 - f * 0.3)); }
   if (!calm) {
     m.body.scale.set(1 + Math.sin(t * 2) * 0.012, 1 + Math.sin(t * 2) * 0.018, 1);      // หายใจ
     const flap = Math.max(0, Math.sin(t * 1.1) ** 24);                                   // กระพือปีกเป็นพักๆ
-    m.wingL.rotation.z = -flap * 0.5; m.wingR.rotation.z = flap * 0.5;
+    const wingA = flap * 0.5 * (1 - f) + (1 + Math.sin(t * 24) * 0.65) * f;                // บิน: กางออกแล้วกระพือเร็ว
+    m.wingL.rotation.z = -wingA; m.wingR.rotation.z = wingA;
     if (m.tail) m.tail.rotation.y = Math.sin(t * 1.7) * 0.15;
-    m.bird.position.y = Math.abs(Math.sin(t * 1.1)) ** 24 * 0.05;
-    m.bird.rotation.z = Math.sin(t * 0.8) * 0.03;
+    m.bird.position.y = Math.abs(Math.sin(t * 1.1)) ** 24 * 0.05 * (1 - f) + f * (0.5 + Math.sin(t * 5) * 0.05);
+    m.bird.rotation.z = Math.sin(t * 0.8) * 0.03 * (1 - f) - f * 0.28;                   // เอียงตัวเข้าโค้ง
     m.sparkles.forEach((s, i) => {
       const a = s.userData.a + t * 0.5;
       s.position.set(Math.cos(a) * s.userData.r, s.userData.y + Math.sin(t * 2 + i) * 0.1, Math.sin(a) * s.userData.r);
