@@ -29,7 +29,7 @@
   <a class="back" href="./">← Back to Kodo</a>
   <div class="card">
     <h1>Privacy Policy</h1>
-    <p class="meta">Kodo — kodotodolist.netlify.app · Effective 22 September 2026</p>
+    <p class="meta">Kodo — kodotodolist.netlify.app · Effective 2 October 2026</p>
 
     <p>Kodo is a personal task, routine and project tracker that runs in your web browser. This policy explains what data Kodo handles, why, where it is stored, and how you can delete it. Kodo is a small independent app. It has no ads, and your data is never sold.</p>
 
@@ -40,6 +40,7 @@
       <li><b>Files you attach</b> (for example pet documents or photos). These are stored privately. Only you can open them, through short-lived links.</li>
       <li><b>Project request links:</b> if you create one, anyone who has the link can send you a message and files for that project. What they send is stored in your account. It is visible only to you.</li>
       <li><b>Notifications:</b> if you turn them on, Kodo stores your browser’s push-notification address so it can send you reminders.</li>
+      <li><b>Telegram:</b> if you connect it, Kodo stores the ID of your Telegram chat and your Telegram display name, so it can send your summaries and reminders there. Disconnecting in Settings deletes them.</li>
     </ul>
     <p>Kodo uses your content only to provide its features to you. Examples are showing your tasks, syncing them between your devices and sending your reminders.</p>
 
@@ -50,6 +51,7 @@
       <li><b>Create and change events</b> (<code>calendar.events</code>) — only if you turn on “Email + calendar reminders”. Kodo then adds an event to your primary calendar for each task reminder and timed checklist, so Google can remind you by popup and email. Kodo updates or removes those events when you change or finish the task. Kodo saves only the IDs of the events it created, so it doesn’t make duplicates. It does not read or change your other events.</li>
     </ul>
     <p>The Google access token is kept only in your browser tab’s session storage. It is never sent to Kodo’s servers. You can disconnect at any time in Kodo Settings, or at <a href="https://myaccount.google.com/permissions" rel="noopener">myaccount.google.com/permissions</a>.</p>
+    <p><b>Calendar links for Telegram summaries.</b> This is separate from the connection above. If you connect Telegram, you can paste a calendar’s “Secret address in iCal format” in Settings. Kodo stores that address in your account. Kodo’s server reads the calendar through it only when it builds a summary for you, and it sends the titles and times of that day’s events to your Telegram chat. The events are <b>not stored</b>. Removing the link in Settings, or disconnecting Telegram, stops this and deletes the address.</p>
     <p class="note">Kodo’s use and transfer of information received from Google APIs to any other app will adhere to the <a href="https://developers.google.com/terms/api-services-user-data-policy" rel="noopener">Google API Services User Data Policy</a>, including the Limited Use requirements. Google user data is not used for advertising. It is not sold, and it is not used to train AI models. People cannot read it, except with your permission, for security reasons, or when the law requires it.</p>
 
     <h2>3. Where data is stored and who processes it</h2>
@@ -58,6 +60,7 @@
       <li><b>Netlify</b> — hosts the Kodo web app.</li>
       <li><b>Google</b> — sign-in with Google, the Calendar API (if you connect it), web fonts, and small website icons on project link cards. For those icons, only the website’s domain name is sent.</li>
       <li><b>Browser push services</b> (for example Apple, Google or Mozilla) — deliver notifications. They do this only if you turn notifications on.</li>
+      <li><b>Telegram</b> — delivers your summaries and reminders, only if you connect it. Those messages contain task titles and times, and the titles and times of calendar events that you chose to include.</li>
       <li><b>cdnjs / jsDelivr</b> — deliver open-source code libraries that the app loads.</li>
     </ul>
     <p>Data sent between your browser and these services is encrypted in transit (HTTPS). Each account can reach only its own data: this is enforced by database access rules.</p>
