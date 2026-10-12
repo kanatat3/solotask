@@ -854,6 +854,46 @@
   .legal-links a { color: var(--muted); text-decoration: underline; text-underline-offset: 2px; }
   .head-actions { display: inline-flex; gap: .15rem; }
   .proj-head { display: flex; align-items: center; justify-content: space-between; margin: .2rem 0 .6rem; }
+  /* Workflow งานวิจัย (V9.2) */
+  /* ตารางที่ตัดขึ้นบรรทัดใหม่เอง (ไม่เลื่อนซ้าย-ขวา) — มือถือ 3 คอลัมน์, จอกว้างเรียงแถวเดียว; ลำดับดูจากเลขขั้น */
+  .wf-track { display: grid; grid-template-columns: repeat(auto-fit, minmax(6.4rem, 1fr)); gap: .4rem; align-items: start; }
+  .wf-col { display: flex; flex-direction: column; gap: .3rem; min-width: 0; }
+  .wf-card {
+    flex: 1; min-width: 0; min-height: 2.75rem; text-align: left; font-family: inherit; cursor: pointer;
+    background: var(--card); color: var(--fg); border: 1px solid var(--edge); border-radius: var(--r-md);
+    padding: .5rem .6rem; display: flex; flex-direction: column; gap: .1rem; box-shadow: var(--shadow);
+  }
+  .wf-split .wf-card { padding: .4rem .6rem; }
+  .wf-top { display: flex; align-items: center; justify-content: space-between; gap: .3rem; }
+  .wf-no {
+    width: 1.25rem; height: 1.25rem; border-radius: 50%; font-size: .66rem; font-weight: 800;
+    display: inline-flex; align-items: center; justify-content: center; background: var(--border); color: var(--muted);
+  }
+  .wf-n { font-size: .64rem; font-weight: 700; border-radius: 999px; padding: .05rem .4rem; background: color-mix(in srgb, var(--primary) 14%, var(--card)); color: var(--primary); }
+  .wf-name { font-size: .8rem; font-weight: 700; line-height: 1.2; }
+  .wf-desc { font-size: .64rem; color: var(--muted); line-height: 1.25; }
+  .wf-card.is-done .wf-no { background: var(--success); color: #fff; }
+  .wf-card.is-done .wf-name { color: var(--muted); }
+  .wf-card.is-cur { border-color: var(--primary); background: color-mix(in srgb, var(--primary) 9%, var(--card)); box-shadow: 0 0 0 1px var(--primary), var(--shadow); }
+  .wf-card.is-cur .wf-no { background: var(--primary); color: #fff; }
+  .wf-fin.is-cur { border-color: var(--success); background: color-mix(in srgb, var(--success) 10%, var(--card)); box-shadow: 0 0 0 1px var(--success), var(--shadow); }
+  .wf-fin.is-cur .wf-no { background: var(--success); }
+  .wf-card:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
+  @media (hover: hover) and (pointer: fine) { .wf-card:not(.is-cur):hover { border-color: color-mix(in srgb, var(--primary) 40%, var(--edge)); } }
+  .wf-group { margin-bottom: .4rem; }
+  .wf-ghead { display: flex; align-items: center; gap: .45rem; flex-wrap: wrap; }
+  .wf-gcount { font-size: .68rem; font-weight: 600; color: var(--muted); }
+  .wf-curtag { font-size: .62rem; font-weight: 700; border-radius: 999px; padding: .08rem .45rem; background: var(--primary); color: #fff; }
+  .wf-empty { font-size: .78rem; color: var(--muted); margin: .1rem 0 .7rem; }
+  .stat-row.wf-stats { grid-template-columns: repeat(4, 1fr); margin-bottom: 1rem; }
+  @media (max-width: 29.99rem) { .stat-row.wf-stats { grid-template-columns: repeat(2, 1fr); } }
+  .wf-stage-lbl { display: block; font-size: .7rem; font-weight: 700; color: var(--primary); margin-top: .1rem; }
+  .wf-stage-lbl.is-fin { color: var(--success); }
+  .wf-segs { display: grid; grid-template-columns: repeat(6, 1fr); gap: 3px; }
+  .wf-segs span { height: .3rem; border-radius: 999px; background: var(--border); }
+  .wf-segs span.on { background: var(--pc); }
+  .wf-segs span.cur { background: color-mix(in srgb, var(--pc) 45%, var(--border)); }
+  .wf-chip { background: color-mix(in srgb, var(--primary) 10%, var(--card)); color: color-mix(in srgb, var(--primary) 70%, var(--fg)); }
   .back-btn {
     background: none; border: none; color: var(--primary); font-size: .875rem; font-weight: 600;
     cursor: pointer; font-family: inherit; padding: 0; margin-bottom: .75rem; display: inline-flex; align-items: center; gap: .25rem;
@@ -1817,13 +1857,18 @@ function migrate(s) {
         p && typeof p.id === "string" && /^[a-z0-9]{1,40}$/i.test(p.id)
         && typeof p.name === "string" && p.name.trim()
         && typeof p.color === "string" && /^#[0-9a-f]{3,8}$/i.test(p.color)) : [];
+      // ขั้นของ workflow งานวิจัย (V9.2) — ค่าคงที่อยู่ในฟังก์ชันเพราะ migrate รันก่อน WF_STAGES ถูกประกาศ
+      c.projects.forEach(p => { if (p.stage !== undefined && !["fieldwork", "editclean", "review", "analyst", "report", "deliver", "done"].includes(p.stage)) delete p.stage; });
     }
   });
   if (s.game) {
     if (s.game.petName != null) s.game.petName = typeof s.game.petName === "string" ? (s.game.petName.trim().slice(0, 24) || null) : null;
     if (s.game.petSpecies != null && !["parrotlet", "cockatiel", "puff"].includes(s.game.petSpecies)) s.game.petSpecies = null;
   }
-  (s.tasks || []).forEach(t => { if (t.projectId != null && (typeof t.projectId !== "string" || !/^[a-z0-9]{1,40}$/i.test(t.projectId))) t.projectId = null; });
+  (s.tasks || []).forEach(t => {
+    if (t.projectId != null && (typeof t.projectId !== "string" || !/^[a-z0-9]{1,40}$/i.test(t.projectId))) t.projectId = null;
+    if (t.step != null && !["fieldwork", "edit", "clean", "review", "analyst", "report", "deliver"].includes(t.step)) t.step = null;
+  });
   if (!Array.isArray(s.routines)) s.routines = [];
   if (!s.routineLog || typeof s.routineLog !== "object") s.routineLog = {};
   if (!s.meta || typeof s.meta !== "object") s.meta = {};
@@ -5576,9 +5621,143 @@ function deleteProject(catId, pid) {
   if (!cat) return;
   if (!confirm("Delete this project? Its tasks stay in " + cat.name + " without a project.")) return;
   cat.projects = catProjects(cat).filter(p => p.id !== pid);
-  state.tasks.forEach(t => { if (t.categoryId === catId && t.projectId === pid) t.projectId = null; });
+  state.tasks.forEach(t => { if (t.categoryId === catId && t.projectId === pid) { t.projectId = null; t.step = null; } });
   if (todayProject === pid) todayProject = null;
   save(); closeForm(); render();
+}
+
+/* ---------- Workflow งานวิจัย (V9.2) — โปรเจกต์ในหมวดงาน (focus = work) ----------
+   1 Fieldwork → 2 Edit (paper/open-end → code) คู่กับ Clean → 3 Review รวม → 4 Data Analyst → 5 Report → 6 ส่งลูกค้า → Done
+   project.stage = ตัวชี้ว่าโปรเจกต์อยู่ขั้นไหน (ไม่มี = ยังไม่เริ่ม); task.step = งานนี้อยู่ขั้นไหน (Edit/Clean แยกกันในขั้น 2) */
+const WF_STAGES = [
+  { k: "fieldwork", n: "Fieldwork", steps: ["fieldwork"] },
+  { k: "editclean", n: "Edit + Clean", steps: ["edit", "clean"] },
+  { k: "review", n: "Review", steps: ["review"] },
+  { k: "analyst", n: "Data Analyst", steps: ["analyst"] },
+  { k: "report", n: "Report", steps: ["report"] },
+  { k: "deliver", n: "Send to client", steps: ["deliver"] },
+];
+const WF_STEPS = {
+  fieldwork: { no: 1, n: "Fieldwork", d: "Collect the data" },
+  edit:      { no: 2, n: "Edit", d: "Paper / open-end → code" },
+  clean:     { no: 2, n: "Clean", d: "Clean what's ready now" },
+  review:    { no: 3, n: "Review", d: "Edit + Clean together" },
+  analyst:   { no: 4, n: "Data Analyst", d: "Excel → Tableau → Sheet + Dashboard" },
+  report:    { no: 5, n: "Report", d: "Data Viz / PM" },
+  deliver:   { no: 6, n: "Send to client", d: "Hand the report over" },
+};
+const WF_STEP_ORDER = Object.keys(WF_STEPS);
+function wfOn(cat) { return !!cat && !isAgentCategory(cat) && catFocus(cat) === "work"; }
+/** ลำดับขั้นของโปรเจกต์: -1 = ยังไม่เริ่ม, 0..5 = ขั้น, 6 = Done */
+function wfStageIdx(p) { return p.stage === "done" ? WF_STAGES.length : WF_STAGES.findIndex(s => s.k === p.stage); }
+function wfStageLabel(p) {
+  const i = wfStageIdx(p);
+  return i < 0 ? "Not started" : i >= WF_STAGES.length ? "Done" : `${i + 1} ${WF_STAGES[i].n}`;
+}
+/** step เริ่มต้นของงานใหม่ = ขั้นปัจจุบันของโปรเจกต์ */
+function wfDefaultStep(p) {
+  const i = p ? wfStageIdx(p) : -1;
+  return i < 0 ? "fieldwork" : i >= WF_STAGES.length ? "deliver" : WF_STAGES[i].steps[0];
+}
+function wfStepLabel(k) { return WF_STEPS[k] ? `${WF_STEPS[k].no} ${WF_STEPS[k].n}` : "No step"; }
+function setProjectStage(catId, pid, k) {
+  const p = catProjects(catById(catId)).find(x => x.id === pid);
+  if (!p || (k !== "done" && !WF_STAGES.some(s => s.k === k))) return;
+  p.stage = k;
+  save(); render();
+}
+const wfOverdue = (t, today) => { const s = taskSpan(t); return !!s && s.end < today; };
+
+/** แถบการ์ดขั้นตอน (หน้าโปรเจกต์) — กดการ์ด = โปรเจกต์อยู่ขั้นนั้น */
+function wfTrackHtml(cat, p) {
+  const idx = wfStageIdx(p);
+  const openN = k => allTasksOf(cat.id).filter(t => t.projectId === p.id && t.status === "open" && t.step === k).length;
+  const cls = j => j < idx ? "is-done" : j === idx ? "is-cur" : "";
+  const card = (j, stage, step) => {
+    const s = WF_STEPS[step], n = openN(step);
+    return `<button type="button" class="wf-card ${cls(j)}" data-stage="${stage}" data-step="${step}" ${j === idx ? 'aria-current="step"' : ""}
+      aria-label="${s.no} ${s.n}: ${s.d}${n ? ` — ${n} open` : ""}${j === idx ? " (current step)" : " — set as current step"}"
+      onclick="setProjectStage('${cat.id}', '${p.id}', '${stage}')">
+      <span class="wf-top"><span class="wf-no">${j < idx ? icon("check", 11) : s.no}</span>${n ? `<span class="wf-n">${n}</span>` : ""}</span>
+      <span class="wf-name">${s.n}</span><span class="wf-desc">${s.d}</span>
+    </button>`;
+  };
+  const cols = WF_STAGES.map((st, j) => st.steps.length > 1
+    ? `<div class="wf-col wf-split">${st.steps.map(k => card(j, st.k, k)).join("")}</div>`
+    : `<div class="wf-col">${card(j, st.k, st.steps[0])}</div>`);
+  const dj = WF_STAGES.length;
+  cols.push(`<div class="wf-col"><button type="button" class="wf-card wf-fin ${dj === idx ? "is-cur" : ""}" data-stage="done" ${dj === idx ? 'aria-current="step"' : ""}
+    aria-label="${dj === idx ? "Project done" : "Mark project as done"}" onclick="setProjectStage('${cat.id}', '${p.id}', 'done')">
+    <span class="wf-top"><span class="wf-no">${icon("check", 11)}</span></span><span class="wf-name">Done</span><span class="wf-desc">Job finished</span></button></div>`);
+  return `<div class="proj-head"><h2 class="section-title" style="margin:0">Workflow</h2><span class="ov-sub">${esc(wfStageLabel(p))}</span></div>
+    <div class="wf-track" role="group" aria-label="Workflow steps">${cols.join("")}</div>
+    <p class="hint" style="margin:.3rem 0 1rem">Tap a step to mark where this project is now</p>`;
+}
+
+/** รายการงานในหน้าโปรเจกต์ แบ่งหัวข้อตาม step (ขั้นปัจจุบันโชว์เสมอ, งานไม่มี step อยู่ท้าย) */
+function wfGroupedHtml(p, tasks) {
+  const idx = wfStageIdx(p);
+  const curSteps = idx >= 0 && idx < WF_STAGES.length ? WF_STAGES[idx].steps : [];
+  const groups = WF_STEP_ORDER.map(k => ({ k, ts: tasks.filter(t => t.step === k) }))
+    .filter(g => g.ts.length || curSteps.includes(g.k));
+  const none = tasks.filter(t => !WF_STEPS[t.step]);
+  if (none.length) groups.push({ k: "none", ts: none });
+  if (!groups.length) return "";
+  return groups.map(g => {
+    const open = sortByDue(g.ts.filter(t => t.status === "open"));
+    const done = sortByDue(g.ts.filter(t => t.status === "done")).reverse();
+    const cur = curSteps.includes(g.k);
+    return `<section class="wf-group ${cur ? "is-cur" : ""}" data-step="${g.k}">
+      <h2 class="section-title wf-ghead">${esc(wfStepLabel(g.k))}${open.length ? `<span class="wf-gcount">${open.length} open</span>` : ""}${cur ? `<span class="wf-curtag">Current</span>` : ""}</h2>
+      ${open.length || done.length ? open.concat(done).map(t => taskHtml(t, true)).join("") : `<p class="wf-empty">No tasks in this step yet</p>`}
+    </section>`;
+  }).join("");
+}
+
+/** ภาพรวมหมวดงาน: ตัวเลขสรุป + การ์ดโปรเจกต์บอกขั้น + งานใกล้กำหนด */
+function wfOverviewHtml(cat, projects) {
+  const today = startOfDay(new Date());
+  const weekEnd = new Date(today); weekEnd.setDate(weekEnd.getDate() + 7);
+  const open = allTasksOf(cat.id).filter(t => t.status === "open");
+  const overdueN = open.filter(t => wfOverdue(t, today)).length;
+  const soon = sortByDue(open.filter(t => { const s = taskSpan(t); return s && s.end < weekEnd; }));
+  const active = projects.filter(p => p.stage !== "done");
+  const stat = (k, n, label, cls = "") => `<div class="stat-card wf-stat" data-k="${k}"><span class="stat-num ${cls}">${n}</span><span class="stat-label">${label}</span></div>`;
+  const card = p => {
+    const pts = open.filter(t => t.projectId === p.id);
+    const od = pts.filter(t => wfOverdue(t, today)).length;
+    const idx = wfStageIdx(p);
+    const segs = WF_STAGES.map((s, j) => `<span class="${j < idx ? "on" : j === idx ? "cur" : ""}" style="--pc:${p.color}"></span>`).join("");
+    return `<div class="ov-card is-link wf-proj" data-pid="${p.id}" onclick="if(!event.target.closest('button,a,input,select,textarea,label')&&!textSelected())openProject('${cat.id}', '${p.id}')">
+      <div class="ov-head">
+        <span class="cat-ico" style="background:color-mix(in srgb, ${p.color} 16%, var(--card));color:color-mix(in srgb, ${p.color} 55%, var(--fg))">${icon("folder", 14)}</span>
+        <span class="name">${esc(p.name)}
+          <span class="wf-stage-lbl ${idx >= WF_STAGES.length ? "is-fin" : ""}">${esc(wfStageLabel(p))}</span>
+        </span>
+        <button class="ov-more" aria-label="Open project ${esc(p.name)}" onclick="openProject('${cat.id}', '${p.id}')">${icon("right", 14)}</button>
+      </div>
+      <span class="wf-segs" aria-hidden="true">${segs}</span>
+      <span class="ov-sub">${pts.length ? `${pts.length} open` : "No open tasks"}${od ? ` · <span class="ov-overdue">${od} overdue</span>` : ""}</span>
+    </div>`;
+  };
+  const doneP = projects.filter(p => p.stage === "done");
+  return `<div class="stat-row wf-stats">
+      ${stat("active", active.length, "Active projects")}
+      ${stat("open", open.length, "Open tasks")}
+      ${stat("overdue", overdueN, "Overdue", overdueN ? "danger" : "")}
+      ${stat("week", soon.length, "Due in 7 days")}
+    </div>
+    <div class="proj-head">
+      <h2 class="section-title" style="margin:0">Projects</h2>
+      <button class="link-primary" style="font-size:.8rem" onclick="openProjectForm('${cat.id}')">+ New project</button>
+    </div>
+    ${active.length ? `<div class="ov-grid" style="margin-bottom:1.1rem">${active.map(card).join("")}</div>` : `<p class="hint" style="margin:0 0 1rem">No active projects</p>`}
+    ${doneP.length ? `<div class="wf-completed"><h2 class="section-title" style="margin:0 0 .6rem">Completed</h2><div class="ov-grid" style="margin-bottom:1.1rem">${doneP.map(card).join("")}</div></div>` : ""}
+    <section class="wf-due">
+      <h2 class="section-title" style="margin:0 0 .6rem">Due soon</h2>
+      ${soon.length ? soon.slice(0, 30).map(t => taskHtml(t, true)).join("") : `<p class="wf-empty">Nothing due in the next 7 days</p>`}
+    </section>
+    <h2 class="section-title" style="margin:1.1rem 0 .6rem">Other tasks</h2>`;
 }
 
 function taskHtml(t, hideCat) {
@@ -5600,7 +5779,8 @@ function taskHtml(t, hideCat) {
         ${due ? `<span class="${overdue ? "overdue" : ""}">${isRange ? icon("calendar", 11) + " " : ""}${fmtSpan(t)}</span>` : ""}
         ${t.recurrence !== "none" ? `<span>${icon("repeat", 11)} ${RECURRENCE_LABELS[t.recurrence]}</span>` : ""}
         ${cat && !hideCat ? `<span class="chip" style="background:color-mix(in srgb, ${cat.color} 16%, var(--card));color:color-mix(in srgb, ${cat.color} 55%, var(--fg))">${esc(cat.name)}</span>` : ""}
-        ${proj && !(currentTab === "home" && todayCat === t.categoryId && todayProject === proj.id) ? `<span class="chip" style="background:color-mix(in srgb, ${proj.color} 14%, var(--card));color:color-mix(in srgb, ${proj.color} 55%, var(--fg))">${icon("folder", 10)} ${esc(proj.name)}</span>` : ""}
+        ${proj && !(currentTab === "home" && todayCat === t.categoryId && todayProject === proj.id) ? `<span class="chip" style="background:color-mix(in srgb, ${proj.color} 14%, var(--card));color:color-mix(in srgb, ${proj.color} 55%, var(--fg))">${icon("folder", 10)} ${esc(proj.name)}</span>`
+          + (WF_STEPS[t.step] && wfOn(cat) ? `<span class="chip wf-chip">${esc(wfStepLabel(t.step))}</span>` : "") : ""}
       </div>
       ${hasNote ? `<div class="task-note">${esc(firstNoteLine(t.note))}</div>` : ""}
     </div>
@@ -6992,7 +7172,10 @@ function renderTodayDetail() {
       </div>
     </div>`;
   }).join("") : "";
-  const projSection = projCards ? `<div class="proj-head">
+  // หมวดงาน (focus work): หน้าหมวด = ภาพรวม, หน้าโปรเจกต์ = workflow + งานแบ่งตาม step
+  const wf = !isNone && wfOn(cat);
+  const wfList = wf && proj ? wfGroupedHtml(proj, tasks) : "";
+  const projSection = wf && !proj && projects.length ? wfOverviewHtml(cat, projects) : projCards ? `<div class="proj-head">
       <h2 class="section-title" style="margin:0">Projects</h2>
       <button class="link-primary" style="font-size:.8rem" onclick="openProjectForm('${cat.id}')">+ New project</button>
     </div>
@@ -7008,10 +7191,12 @@ function renderTodayDetail() {
     ${proj ? `<p class="hint" style="margin:-.2rem 0 .8rem">Project in ${esc(name)}</p>` : ""}
     ${fromAi ? projectSummaryHtml(cat) : ""}
     ${projSection}
+    ${wf && proj ? wfTrackHtml(cat, proj) : ""}
     ${scopeToggle}
+    ${wf && proj ? (wfList || `<p class="empty">${emptyMsg}</p>`) : `
     ${open.length === 0 && done.length === 0 ? `<p class="empty">${emptyMsg}</p>` : ""}
     ${open.map(t => taskHtml(t, true)).join("")}
-    ${done.length ? `<h2 class="section-title">Done</h2>` + done.map(t => taskHtml(t, true)).join("") : ""}`;
+    ${done.length ? `<h2 class="section-title">Done</h2>` + done.map(t => taskHtml(t, true)).join("") : ""}`}`;
 }
 
 /* ---------- Google Calendar -> Kodo (อ่านอย่างเดียว ไม่มี server) ----------
@@ -8061,7 +8246,7 @@ function addCategory() {
 function deleteCategory(id) {
   if (!confirm("Delete this category? Its tasks will be kept without a category.")) return;
   state.categories = state.categories.filter(c => c.id !== id);
-  state.tasks.forEach(t => { if (t.categoryId === id) { t.categoryId = null; t.projectId = null; } });
+  state.tasks.forEach(t => { if (t.categoryId === id) { t.categoryId = null; t.projectId = null; t.step = null; } });
   save(); render();
 }
 
@@ -8095,6 +8280,7 @@ function openForm(taskId) {
   const initCat = t ? t.categoryId : (currentTab === "home" ? (todayCat || focusDefault) : null);
   const initProj = t ? t.projectId : (currentTab === "home" && initCat === todayCat ? todayProject : null);
   const projOpts = projectOptionsHtml(initCat, initProj);
+  const stepOpts = projOpts ? stepOptionsHtml(initCat, initProj, t ? t.step : null) : "";
   const remOpts = REMINDER_OPTIONS.map(([v, l]) =>
     `<option value="${v}" ${t && String(t.reminderMin ?? "") === v ? "selected" : ""}>${l}</option>`).join("");
   const recOpts = Object.entries(RECURRENCE_LABELS).map(([v, l]) =>
@@ -8120,7 +8306,10 @@ function openForm(taskId) {
           </label>
         </div>
         <label class="fld" id="fProjWrap" style="display:${projOpts ? "" : "none"}">Project
-          <select id="fProj">${projOpts}</select>
+          <select id="fProj" onchange="refreshFormSteps()">${projOpts}</select>
+        </label>
+        <label class="fld" id="fStepWrap" style="display:${stepOpts ? "" : "none"}">Step
+          <select id="fStep" data-pid="${projOpts ? esc(initProj || "") : ""}">${stepOpts}</select>
         </label>
         <label class="fld-check">
           <input type="checkbox" id="fTimeOn" ${hasTimeInit ? "checked" : ""} onchange="toggleFormTime()">
@@ -8159,6 +8348,27 @@ function refreshFormProjects() {
   const html = projectOptionsHtml(document.getElementById("fCat").value, sel.value);
   sel.innerHTML = html;
   document.getElementById("fProjWrap").style.display = html ? "" : "none";
+  refreshFormSteps();
+}
+/** ตัวเลือก Step ของงานในโปรเจกต์หมวดงาน ("" = ไม่ใช่โปรเจกต์ workflow -> ซ่อนช่อง); ไม่มีค่าที่เลือก -> ขั้นปัจจุบันของโปรเจกต์ */
+function stepOptionsHtml(catId, projId, selStep) {
+  const cat = catById(catId);
+  const p = projId ? catProjects(cat).find(x => x.id === projId) : null;
+  if (!p || !wfOn(cat)) return "";
+  const sel = WF_STEPS[selStep] ? selStep : wfDefaultStep(p);
+  return WF_STEP_ORDER.map(k => `<option value="${k}" ${k === sel ? "selected" : ""}>${esc(wfStepLabel(k))} — ${esc(WF_STEPS[k].d)}</option>`).join("");
+}
+/** เปลี่ยนหมวด/โปรเจกต์ในฟอร์ม -> โปรเจกต์เดิมคง step ที่เลือกไว้, โปรเจกต์ใหม่เริ่มที่ขั้นปัจจุบันของโปรเจกต์นั้น */
+function refreshFormSteps() {
+  const sel = document.getElementById("fStep");
+  if (!sel) return;
+  const projEl = document.getElementById("fProj");
+  const pid = document.getElementById("fProjWrap").style.display === "none" ? "" : projEl.value;
+  const keep = pid && sel.dataset.pid === pid ? sel.value : null;
+  const html = stepOptionsHtml(document.getElementById("fCat").value, pid, keep);
+  sel.innerHTML = html;
+  sel.dataset.pid = pid;
+  document.getElementById("fStepWrap").style.display = html ? "" : "none";
 }
 
 /** สลับ Due date ระหว่างมีเวลา (datetime-local) กับไม่มีเวลา (date) โดยคงวันที่เดิมไว้ */
@@ -8215,12 +8425,16 @@ function submitForm(e, taskId) {
   }
   const categoryId = document.getElementById("fCat").value || null;
   const projRaw = document.getElementById("fProj").value;
+  // เก็บเฉพาะโปรเจกต์ที่อยู่ในหมวดที่เลือกจริง
+  const projectId = projRaw && catProjects(catById(categoryId)).some(p => p.id === projRaw) ? projRaw : null;
+  const stepRaw = document.getElementById("fStep")?.value;
   const data = {
     title,
     note: document.getElementById("fNote").value.trim(),
     categoryId,
-    // เก็บเฉพาะโปรเจกต์ที่อยู่ในหมวดที่เลือกจริง
-    projectId: projRaw && catProjects(catById(categoryId)).some(p => p.id === projRaw) ? projRaw : null,
+    projectId,
+    // step มีความหมายเฉพาะงานในโปรเจกต์ของหมวดงาน
+    step: projectId && wfOn(catById(categoryId)) && WF_STEPS[stepRaw] ? stepRaw : null,
     dueAt: dueRaw ? new Date(timeOn ? dueRaw : dueRaw + "T00:00:00").toISOString() : null,
     endDate: (rangeOn && dueRaw && endRaw) ? endRaw : null,
     reminderMin: remRaw === "" ? null : Number(remRaw),
