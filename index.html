@@ -893,6 +893,26 @@
   .wf-segs span { height: .3rem; border-radius: 999px; background: var(--border); }
   .wf-segs span.on { background: var(--pc); }
   .wf-segs span.cur { background: color-mix(in srgb, var(--pc) 45%, var(--border)); }
+  .wf-ico { display: inline-flex; color: var(--muted); margin-right: auto; margin-left: .35rem; }
+  .wf-card.is-cur .wf-ico { color: var(--primary); }
+  .wf-card.is-done .wf-ico { color: var(--success); }
+  .wf-fin.is-cur .wf-ico { color: var(--success); }
+  .wf-sico { display: inline-flex; vertical-align: -2px; margin-right: .3rem; }
+  .wf-stage-lbl.is-idle { color: var(--muted); }
+  .wf-rrows { display: flex; flex-direction: column; gap: .3rem; }
+  .wf-rrow { display: flex; align-items: center; justify-content: space-between; gap: .5rem; font-size: .74rem; padding: .3rem .45rem; border-radius: var(--r-sm); background: color-mix(in srgb, var(--border) 45%, var(--card)); }
+  .wf-rrow .wf-rname { font-weight: 700; min-width: 0; overflow-wrap: anywhere; }
+  .wf-rrow .wf-stage-lbl { margin: 0; flex-shrink: 0; }
+  .wf-rtabs { display: flex; flex-wrap: wrap; gap: .4rem; }
+  .wf-rtab {
+    display: inline-flex; align-items: center; gap: .1rem; min-height: 2.75rem; padding: .35rem .8rem; font-family: inherit; cursor: pointer;
+    font-size: .8rem; font-weight: 700; color: var(--fg); background: var(--card); border: 1px solid var(--edge); border-radius: 999px; box-shadow: var(--shadow);
+  }
+  .wf-rtab .wf-rtab-st { font-size: .66rem; font-weight: 600; color: var(--muted); margin-left: .4rem; }
+  .wf-rtab.sel { border-color: var(--primary); background: color-mix(in srgb, var(--primary) 10%, var(--card)); color: var(--primary); box-shadow: 0 0 0 1px var(--primary), var(--shadow); }
+  .wf-rtab:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
+  .hero-streak.is-static { cursor: default; }
+  .hero-streak.is-static:active { transform: none; }
   .wf-chip { background: color-mix(in srgb, var(--primary) 10%, var(--card)); color: color-mix(in srgb, var(--primary) 70%, var(--fg)); }
   .back-btn {
     background: none; border: none; color: var(--primary); font-size: .875rem; font-weight: 600;
@@ -1383,7 +1403,8 @@
       font-size: .88rem; padding: .65rem .9rem; margin: 0 .6rem; border-radius: var(--r-sm);
     }
     .nav-btn .lbl { display: inline; }
-    .nav-btn.active { flex-grow: 0; }
+    /* ต้องตั้ง padding ซ้ำ: กฎ .nav-btn.active ของแถบมือถือ (padding บน-ล่าง 0) ชนะ .nav-btn ด้านบน -> ไฮไลต์บางกว่าปุ่ม */
+    .nav-btn.active { flex-grow: 0; padding: .65rem .9rem; }
     .ov-grid { grid-template-columns: repeat(3, 1fr); gap: .8rem; }
     .fab { right: 2.5rem; bottom: 2.5rem; }
   }
@@ -1605,6 +1626,10 @@ const ICONS = {
   mail: '<path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22 6 12 13 2 6"/>',
   send: '<line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/>',
   lock: '<rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>',
+  clipboard: '<path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1"/>',
+  sparkles: '<path d="M9.94 15.5a2 2 0 0 0-1.44-1.44l-6.13-1.58a.5.5 0 0 1 0-.96L8.5 9.94A2 2 0 0 0 9.94 8.5l1.58-6.14a.5.5 0 0 1 .96 0l1.58 6.14a2 2 0 0 0 1.44 1.44l6.13 1.58a.5.5 0 0 1 0 .96l-6.13 1.58a2 2 0 0 0-1.44 1.44l-1.58 6.14a.5.5 0 0 1-.96 0z"/><path d="M20 3v4"/><path d="M22 5h-4"/>',
+  flag: '<path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/>',
+  layers: '<polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/>',
   eye: '<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>',
   eyeOff: '<path d="M17.94 17.94A10.94 10.94 0 0 1 12 20c-7 0-11-8-11-8a18.5 18.5 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/>',
 };
@@ -1684,7 +1709,7 @@ let currentTab = "home";
 let lastToggled = null; // id ล่าสุดที่เพิ่งติ๊ก — ใช้เล่น check animation เฉพาะตัวนั้น
 let viewTransition = false; // true = render ถัดไปเล่นอนิเมชันเข้าหน้า
 
-function goCat(key) { todayCat = key; todayProject = null; viewTransition = true; render(); }
+function goCat(key) { todayCat = key; todayProject = null; todayRound = null; viewTransition = true; render(); }
 function goHome() { todayCat = null; todayProject = null; viewTransition = true; render(); }
 let allFilter = "";
 let calMonth = startOfMonth(new Date());
@@ -1858,7 +1883,18 @@ function migrate(s) {
         && typeof p.name === "string" && p.name.trim()
         && typeof p.color === "string" && /^#[0-9a-f]{3,8}$/i.test(p.color)) : [];
       // ขั้นของ workflow งานวิจัย (V9.2) — ค่าคงที่อยู่ในฟังก์ชันเพราะ migrate รันก่อน WF_STAGES ถูกประกาศ
-      c.projects.forEach(p => { if (p.stage !== undefined && !["fieldwork", "editclean", "review", "analyst", "report", "deliver", "done"].includes(p.stage)) delete p.stage; });
+      const STG = ["fieldwork", "editclean", "review", "analyst", "report", "deliver", "done"];
+      c.projects.forEach(p => {
+        if (p.stage !== undefined && !STG.includes(p.stage)) delete p.stage;
+        // รอบย่อย (V9.4): {id, name, stage?}
+        if (p.rounds !== undefined) {
+          p.rounds = Array.isArray(p.rounds) ? p.rounds.filter(r =>
+            r && typeof r.id === "string" && /^[a-z0-9]{1,40}$/i.test(r.id)
+            && typeof r.name === "string" && r.name.trim()).slice(0, 30) : [];
+          p.rounds.forEach(r => { r.name = r.name.trim().slice(0, 40); if (r.stage !== undefined && !STG.includes(r.stage)) delete r.stage; });
+          if (!p.rounds.length) delete p.rounds;
+        }
+      });
     }
   });
   if (s.game) {
@@ -1868,6 +1904,7 @@ function migrate(s) {
   (s.tasks || []).forEach(t => {
     if (t.projectId != null && (typeof t.projectId !== "string" || !/^[a-z0-9]{1,40}$/i.test(t.projectId))) t.projectId = null;
     if (t.step != null && !["fieldwork", "edit", "clean", "review", "analyst", "report", "deliver"].includes(t.step)) t.step = null;
+    if (t.roundId != null && (typeof t.roundId !== "string" || !/^[a-z0-9]{1,40}$/i.test(t.roundId))) t.roundId = null;
   });
   if (!Array.isArray(s.routines)) s.routines = [];
   if (!s.routineLog || typeof s.routineLog !== "object") s.routineLog = {};
@@ -5559,7 +5596,7 @@ function projectOf(t) {
   if (!t || !t.projectId) return null;
   return catProjects(catById(t.categoryId)).find(p => p.id === t.projectId) || null;
 }
-function openProject(catId, pid) { todayCat = catId; todayProject = pid; viewTransition = true; render(); }
+function openProject(catId, pid) { todayCat = catId; todayProject = pid; todayRound = null; viewTransition = true; render(); }
 
 function openProjectForm(catId, pid) {
   const cat = catById(catId);
@@ -5621,64 +5658,158 @@ function deleteProject(catId, pid) {
   if (!cat) return;
   if (!confirm("Delete this project? Its tasks stay in " + cat.name + " without a project.")) return;
   cat.projects = catProjects(cat).filter(p => p.id !== pid);
-  state.tasks.forEach(t => { if (t.categoryId === catId && t.projectId === pid) { t.projectId = null; t.step = null; } });
+  state.tasks.forEach(t => { if (t.categoryId === catId && t.projectId === pid) { t.projectId = null; t.step = null; t.roundId = null; } });
   if (todayProject === pid) todayProject = null;
   save(); closeForm(); render();
 }
 
-/* ---------- Workflow งานวิจัย (V9.2) — โปรเจกต์ในหมวดงาน (focus = work) ----------
+/* ---------- Workflow งานวิจัย (V9.2, รอบย่อย V9.4) — โปรเจกต์ในหมวดงาน (focus = work) ----------
    1 Fieldwork → 2 Edit (paper/open-end → code) คู่กับ Clean → 3 Review รวม → 4 Data Analyst → 5 Report → 6 ส่งลูกค้า → Done
-   project.stage = ตัวชี้ว่าโปรเจกต์อยู่ขั้นไหน (ไม่มี = ยังไม่เริ่ม); task.step = งานนี้อยู่ขั้นไหน (Edit/Clean แยกกันในขั้น 2) */
+   "หน่วย" ที่มีขั้น = โปรเจกต์ (ไม่มีรอบ) หรือรอบย่อย project.rounds[] (Wave 1, Wave 2 …) — แต่ละหน่วยมี stage ของตัวเอง
+   unit.stage = ตัวชี้ว่าอยู่ขั้นไหน (ไม่มี = ยังไม่เริ่ม); task.step = งานนี้อยู่ขั้นไหน; task.roundId = งานนี้อยู่รอบไหน */
 const WF_STAGES = [
-  { k: "fieldwork", n: "Fieldwork", steps: ["fieldwork"] },
-  { k: "editclean", n: "Edit + Clean", steps: ["edit", "clean"] },
-  { k: "review", n: "Review", steps: ["review"] },
-  { k: "analyst", n: "Data Analyst", steps: ["analyst"] },
-  { k: "report", n: "Report", steps: ["report"] },
-  { k: "deliver", n: "Send to client", steps: ["deliver"] },
+  { k: "fieldwork", n: "Fieldwork", ico: "clipboard", steps: ["fieldwork"] },
+  { k: "editclean", n: "Edit + Clean", ico: "edit", steps: ["edit", "clean"] },
+  { k: "review", n: "Review", ico: "eye", steps: ["review"] },
+  { k: "analyst", n: "Data Analyst", ico: "chart", steps: ["analyst"] },
+  { k: "report", n: "Report", ico: "doc", steps: ["report"] },
+  { k: "deliver", n: "Send to client", ico: "send", steps: ["deliver"] },
 ];
 const WF_STEPS = {
-  fieldwork: { no: 1, n: "Fieldwork", d: "Collect the data" },
-  edit:      { no: 2, n: "Edit", d: "Paper / open-end → code" },
-  clean:     { no: 2, n: "Clean", d: "Clean what's ready now" },
-  review:    { no: 3, n: "Review", d: "Edit + Clean together" },
-  analyst:   { no: 4, n: "Data Analyst", d: "Excel → Tableau → Sheet + Dashboard" },
-  report:    { no: 5, n: "Report", d: "Data Viz / PM" },
-  deliver:   { no: 6, n: "Send to client", d: "Hand the report over" },
+  fieldwork: { no: 1, n: "Fieldwork", d: "Collect the data", ico: "clipboard" },
+  edit:      { no: 2, n: "Edit", d: "Paper / open-end → code", ico: "edit" },
+  clean:     { no: 2, n: "Clean", d: "Clean what's ready now", ico: "sparkles" },
+  review:    { no: 3, n: "Review", d: "Edit + Clean together", ico: "eye" },
+  analyst:   { no: 4, n: "Data Analyst", d: "Excel → Tableau → Sheet + Dashboard", ico: "chart" },
+  report:    { no: 5, n: "Report", d: "Data Viz / PM", ico: "doc" },
+  deliver:   { no: 6, n: "Send to client", d: "Hand the report over", ico: "send" },
 };
 const WF_STEP_ORDER = Object.keys(WF_STEPS);
+const WF_MAX_ROUNDS = 30;
+let todayRound = null;   // รอบที่เลือกดูอยู่ในหน้าโปรเจกต์ (null = เลือกให้เอง)
 function wfOn(cat) { return !!cat && !isAgentCategory(cat) && catFocus(cat) === "work"; }
-/** ลำดับขั้นของโปรเจกต์: -1 = ยังไม่เริ่ม, 0..5 = ขั้น, 6 = Done */
-function wfStageIdx(p) { return p.stage === "done" ? WF_STAGES.length : WF_STAGES.findIndex(s => s.k === p.stage); }
-function wfStageLabel(p) {
-  const i = wfStageIdx(p);
+function wfRounds(p) { return p && Array.isArray(p.rounds) ? p.rounds : []; }
+function roundOf(t) {
+  const p = projectOf(t);
+  return p && t.roundId ? wfRounds(p).find(r => r.id === t.roundId) || null : null;
+}
+/** โปรเจกต์จบเมื่อทุกรอบจบ (ไม่มีรอบ = ดู stage ของโปรเจกต์) */
+function wfProjDone(p) { const rs = wfRounds(p); return rs.length ? rs.every(r => r.stage === "done") : p.stage === "done"; }
+/** รอบที่ควรเลือกให้: รอบแรกที่ยังไม่จบ ไม่งั้นรอบสุดท้าย */
+function wfDefaultRound(p) { const rs = wfRounds(p); return rs.find(r => r.stage !== "done") || rs[rs.length - 1] || null; }
+/** ลำดับขั้นของหน่วย: -1 = ยังไม่เริ่ม, 0..5 = ขั้น, 6 = Done */
+function wfStageIdx(u) { return u.stage === "done" ? WF_STAGES.length : WF_STAGES.findIndex(s => s.k === u.stage); }
+function wfStageLabel(u) {
+  const i = wfStageIdx(u);
   return i < 0 ? "Not started" : i >= WF_STAGES.length ? "Done" : `${i + 1} ${WF_STAGES[i].n}`;
 }
-/** step เริ่มต้นของงานใหม่ = ขั้นปัจจุบันของโปรเจกต์ */
-function wfDefaultStep(p) {
-  const i = p ? wfStageIdx(p) : -1;
+function wfStageIcon(u) {
+  const i = wfStageIdx(u);
+  return i < 0 ? "clock" : i >= WF_STAGES.length ? "flag" : WF_STAGES[i].ico;
+}
+/** ป้ายขั้นพร้อมไอคอน เช่น [📊] 4 Data Analyst */
+function wfStageTag(u) {
+  const i = wfStageIdx(u);
+  return `<span class="wf-stage-lbl ${i >= WF_STAGES.length ? "is-fin" : i < 0 ? "is-idle" : ""}"><span class="wf-sico" aria-hidden="true">${icon(wfStageIcon(u), 12)}</span>${esc(wfStageLabel(u))}</span>`;
+}
+/** step เริ่มต้นของงานใหม่ = ขั้นปัจจุบันของหน่วย (รอบ/โปรเจกต์) */
+function wfDefaultStep(u) {
+  const i = u ? wfStageIdx(u) : -1;
   return i < 0 ? "fieldwork" : i >= WF_STAGES.length ? "deliver" : WF_STAGES[i].steps[0];
 }
 function wfStepLabel(k) { return WF_STEPS[k] ? `${WF_STEPS[k].no} ${WF_STEPS[k].n}` : "No step"; }
-function setProjectStage(catId, pid, k) {
-  const p = catProjects(catById(catId)).find(x => x.id === pid);
-  if (!p || (k !== "done" && !WF_STAGES.some(s => s.k === k))) return;
-  p.stage = k;
+function wfFind(catId, pid, rid) {
+  const p = catProjects(catById(catId)).find(x => x.id === pid) || null;
+  const r = p && rid ? wfRounds(p).find(x => x.id === rid) || null : null;
+  return { p, r };
+}
+function setProjectStage(catId, pid, k, rid) {
+  const { p, r } = wfFind(catId, pid, rid);
+  const u = rid ? r : p;
+  if (!u || (k !== "done" && !WF_STAGES.some(s => s.k === k))) return;
+  u.stage = k;
   save(); render();
 }
 const wfOverdue = (t, today) => { const s = taskSpan(t); return !!s && s.end < today; };
 
-/** แถบการ์ดขั้นตอน (หน้าโปรเจกต์) — กดการ์ด = โปรเจกต์อยู่ขั้นนั้น */
-function wfTrackHtml(cat, p) {
-  const idx = wfStageIdx(p);
-  const openN = k => allTasksOf(cat.id).filter(t => t.projectId === p.id && t.status === "open" && t.step === k).length;
+/* ----- รอบย่อย ----- */
+function selectRound(rid) { todayRound = rid; render(); }
+function openRoundForm(catId, pid, rid) {
+  const { p, r } = wfFind(catId, pid, rid);
+  if (!p) return;
+  const first = !rid && !wfRounds(p).length;
+  const nTasks = state.tasks.filter(t => t.categoryId === catId && t.projectId === pid).length;
+  document.getElementById("modal").innerHTML = `
+  <div class="overlay" onclick="if(event.target===this)closeForm()">
+    <div class="sheet" role="dialog" aria-label="${r ? "Rename round" : "New round"}">
+      <div class="sheet-head">
+        <h2>${r ? "Rename round" : "New round in " + esc(p.name)}</h2>
+        <button class="x-btn" aria-label="Close" onclick="closeForm()">✕</button>
+      </div>
+      <form onsubmit="saveRound(event, '${catId}', '${pid}', '${r ? r.id : ""}')">
+        <label class="fld">Round name
+          <input id="rName" required maxlength="40" value="${r ? esc(r.name) : ""}" placeholder="e.g. Wave ${wfRounds(p).length + 1}">
+        </label>
+        ${first && (nTasks || p.stage) ? `<p class="hint" style="margin:0 0 .8rem">The project's ${nTasks} task${nTasks === 1 ? "" : "s"}${p.stage ? " and its current step" : ""} move into this round.</p>` : ""}
+        <button type="submit" class="btn btn-primary">Save</button>
+      </form>
+    </div>
+  </div>`;
+  setTimeout(() => document.getElementById("rName")?.focus(), 50);
+}
+function saveRound(e, catId, pid, rid) {
+  e.preventDefault();
+  const { p } = wfFind(catId, pid);
+  const name = document.getElementById("rName").value.trim().slice(0, 40);
+  if (!p || !name) return;
+  if (!Array.isArray(p.rounds)) p.rounds = [];
+  if (p.rounds.some(x => x.id !== rid && x.name.toLowerCase() === name.toLowerCase())) {
+    showToast("❌ A round with this name already exists in this project");
+    return;
+  }
+  if (rid) {
+    const r = p.rounds.find(x => x.id === rid);
+    if (r) r.name = name;
+  } else {
+    if (p.rounds.length >= WF_MAX_ROUNDS) { showToast(`❌ A project can have up to ${WF_MAX_ROUNDS} rounds`); return; }
+    const r = { id: uid(), name };
+    // รอบแรก: งานเดิมทั้งหมด + ขั้นปัจจุบันของโปรเจกต์ย้ายเข้ารอบนี้
+    if (!p.rounds.length) {
+      if (p.stage) { r.stage = p.stage; delete p.stage; }
+      state.tasks.forEach(t => { if (t.categoryId === catId && t.projectId === pid) t.roundId = r.id; });
+    }
+    p.rounds.push(r);
+    todayRound = r.id;
+  }
+  save(); closeForm(); render();
+}
+function deleteRound(catId, pid, rid) {
+  const { p, r } = wfFind(catId, pid, rid);
+  if (!p || !r) return;
+  const n = state.tasks.filter(t => t.categoryId === catId && t.projectId === pid && t.roundId === rid).length;
+  const last = wfRounds(p).length === 1;
+  if (!confirm(`Delete round "${r.name}"? Its ${n} task${n === 1 ? "" : "s"} stay in ${p.name}${last ? "" : " without a round"}.`)) return;
+  p.rounds = wfRounds(p).filter(x => x.id !== rid);
+  // รอบสุดท้าย: โปรเจกต์กลับไปใช้ขั้นของรอบนั้น
+  if (!p.rounds.length) { delete p.rounds; if (r.stage) p.stage = r.stage; }
+  state.tasks.forEach(t => { if (t.categoryId === catId && t.projectId === pid && t.roundId === rid) t.roundId = null; });
+  if (todayRound === rid) todayRound = null;
+  save(); render();
+}
+
+/** แถบการ์ดขั้นตอนของหน่วย (โปรเจกต์ หรือรอบ r) — กดการ์ด = อยู่ขั้นนั้น */
+function wfTrackHtml(cat, p, r) {
+  const u = r || p;
+  const idx = wfStageIdx(u);
+  const rArg = r ? r.id : "";
+  const openN = k => allTasksOf(cat.id).filter(t => t.projectId === p.id && (!r || t.roundId === r.id) && t.status === "open" && t.step === k).length;
   const cls = j => j < idx ? "is-done" : j === idx ? "is-cur" : "";
   const card = (j, stage, step) => {
     const s = WF_STEPS[step], n = openN(step);
     return `<button type="button" class="wf-card ${cls(j)}" data-stage="${stage}" data-step="${step}" ${j === idx ? 'aria-current="step"' : ""}
       aria-label="${s.no} ${s.n}: ${s.d}${n ? ` — ${n} open` : ""}${j === idx ? " (current step)" : " — set as current step"}"
-      onclick="setProjectStage('${cat.id}', '${p.id}', '${stage}')">
-      <span class="wf-top"><span class="wf-no">${j < idx ? icon("check", 11) : s.no}</span>${n ? `<span class="wf-n">${n}</span>` : ""}</span>
+      onclick="setProjectStage('${cat.id}', '${p.id}', '${stage}', '${rArg}')">
+      <span class="wf-top"><span class="wf-no">${j < idx ? icon("check", 11) : s.no}</span><span class="wf-ico" aria-hidden="true">${icon(s.ico, 16)}</span>${n ? `<span class="wf-n">${n}</span>` : ""}</span>
       <span class="wf-name">${s.n}</span><span class="wf-desc">${s.d}</span>
     </button>`;
   };
@@ -5687,16 +5818,32 @@ function wfTrackHtml(cat, p) {
     : `<div class="wf-col">${card(j, st.k, st.steps[0])}</div>`);
   const dj = WF_STAGES.length;
   cols.push(`<div class="wf-col"><button type="button" class="wf-card wf-fin ${dj === idx ? "is-cur" : ""}" data-stage="done" ${dj === idx ? 'aria-current="step"' : ""}
-    aria-label="${dj === idx ? "Project done" : "Mark project as done"}" onclick="setProjectStage('${cat.id}', '${p.id}', 'done')">
-    <span class="wf-top"><span class="wf-no">${icon("check", 11)}</span></span><span class="wf-name">Done</span><span class="wf-desc">Job finished</span></button></div>`);
-  return `<div class="proj-head"><h2 class="section-title" style="margin:0">Workflow</h2><span class="ov-sub">${esc(wfStageLabel(p))}</span></div>
-    <div class="wf-track" role="group" aria-label="Workflow steps">${cols.join("")}</div>
-    <p class="hint" style="margin:.3rem 0 1rem">Tap a step to mark where this project is now</p>`;
+    aria-label="${dj === idx ? "Done" : "Mark as done"}" onclick="setProjectStage('${cat.id}', '${p.id}', 'done', '${rArg}')">
+    <span class="wf-top"><span class="wf-no">${icon("check", 11)}</span><span class="wf-ico" aria-hidden="true">${icon("flag", 16)}</span></span><span class="wf-name">Done</span><span class="wf-desc">Job finished</span></button></div>`);
+  return `<div class="wf-track" role="group" aria-label="Workflow steps">${cols.join("")}</div>
+    <p class="hint" style="margin:.3rem 0 1rem">Tap a step to mark where ${r ? "this round" : "this project"} is now</p>`;
 }
 
-/** รายการงานในหน้าโปรเจกต์ แบ่งหัวข้อตาม step (ขั้นปัจจุบันโชว์เสมอ, งานไม่มี step อยู่ท้าย) */
-function wfGroupedHtml(p, tasks) {
-  const idx = wfStageIdx(p);
+/** ส่วน Workflow ของหน้าโปรเจกต์: ไม่มีรอบ = แถบขั้นของโปรเจกต์ + ปุ่ม + Round; มีรอบ = แท็บรอบ + แถบขั้นของรอบที่เลือก */
+function wfProjectHtml(cat, p, r) {
+  const rounds = wfRounds(p);
+  const addBtn = `<button class="link-primary" style="font-size:.8rem" onclick="openRoundForm('${cat.id}', '${p.id}')">+ Round</button>`;
+  if (!rounds.length) return `<div class="proj-head"><h2 class="section-title" style="margin:0">Workflow</h2>${addBtn}</div>${wfTrackHtml(cat, p, null)}`;
+  const tabs = rounds.map(x => `<button type="button" role="tab" class="wf-rtab ${x.id === r.id ? "sel" : ""}" aria-selected="${x.id === r.id}"
+      onclick="selectRound('${x.id}')"><span class="wf-sico" aria-hidden="true">${icon(wfStageIcon(x), 12)}</span>${esc(x.name)}<span class="wf-rtab-st">${esc(wfStageLabel(x))}</span></button>`).join("");
+  return `<div class="proj-head"><h2 class="section-title" style="margin:0">Rounds</h2>${addBtn}</div>
+    <div class="wf-rtabs" role="tablist" aria-label="Rounds">${tabs}</div>
+    <div class="proj-head" style="margin-top:.7rem">
+      <h2 class="section-title" style="margin:0">Workflow · ${esc(r.name)}</h2>
+      <span class="head-actions"><button class="edit-btn" aria-label="Rename round ${esc(r.name)}" onclick="openRoundForm('${cat.id}', '${p.id}', '${r.id}')">${icon("edit", 15)}</button>
+        <button class="edit-btn" aria-label="Delete round ${esc(r.name)}" onclick="deleteRound('${cat.id}', '${p.id}', '${r.id}')">${icon("trash", 15)}</button></span>
+    </div>
+    ${wfTrackHtml(cat, p, r)}`;
+}
+
+/** รายการงาน แบ่งหัวข้อตาม step (ขั้นปัจจุบันของหน่วยโชว์เสมอ, งานไม่มี step อยู่ท้าย) */
+function wfGroupedHtml(u, tasks) {
+  const idx = wfStageIdx(u);
   const curSteps = idx >= 0 && idx < WF_STAGES.length ? WF_STAGES[idx].steps : [];
   const groups = WF_STEP_ORDER.map(k => ({ k, ts: tasks.filter(t => t.step === k) }))
     .filter(g => g.ts.length || curSteps.includes(g.k));
@@ -5708,39 +5855,46 @@ function wfGroupedHtml(p, tasks) {
     const done = sortByDue(g.ts.filter(t => t.status === "done")).reverse();
     const cur = curSteps.includes(g.k);
     return `<section class="wf-group ${cur ? "is-cur" : ""}" data-step="${g.k}">
-      <h2 class="section-title wf-ghead">${esc(wfStepLabel(g.k))}${open.length ? `<span class="wf-gcount">${open.length} open</span>` : ""}${cur ? `<span class="wf-curtag">Current</span>` : ""}</h2>
+      <h2 class="section-title wf-ghead">${WF_STEPS[g.k] ? `<span class="wf-sico" aria-hidden="true">${icon(WF_STEPS[g.k].ico, 13)}</span>` : ""}${esc(wfStepLabel(g.k))}${open.length ? `<span class="wf-gcount">${open.length} open</span>` : ""}${cur ? `<span class="wf-curtag">Current</span>` : ""}</h2>
       ${open.length || done.length ? open.concat(done).map(t => taskHtml(t, true)).join("") : `<p class="wf-empty">No tasks in this step yet</p>`}
     </section>`;
   }).join("");
 }
 
-/** ภาพรวมหมวดงาน: ตัวเลขสรุป + การ์ดโปรเจกต์บอกขั้น + งานใกล้กำหนด */
+/** ภาพรวมหมวดงาน: ตัวเลขสรุป + การ์ดโปรเจกต์บอกขั้น (ทุกรอบ) + งานใกล้กำหนด */
 function wfOverviewHtml(cat, projects) {
   const today = startOfDay(new Date());
   const weekEnd = new Date(today); weekEnd.setDate(weekEnd.getDate() + 7);
   const open = allTasksOf(cat.id).filter(t => t.status === "open");
   const overdueN = open.filter(t => wfOverdue(t, today)).length;
   const soon = sortByDue(open.filter(t => { const s = taskSpan(t); return s && s.end < weekEnd; }));
-  const active = projects.filter(p => p.stage !== "done");
+  const active = projects.filter(p => !wfProjDone(p));
   const stat = (k, n, label, cls = "") => `<div class="stat-card wf-stat" data-k="${k}"><span class="stat-num ${cls}">${n}</span><span class="stat-label">${label}</span></div>`;
+  const segsHtml = (u, color) => {
+    const idx = wfStageIdx(u);
+    return `<span class="wf-segs" aria-hidden="true">${WF_STAGES.map((s, j) => `<span class="${j < idx ? "on" : j === idx ? "cur" : ""}" style="--pc:${color}"></span>`).join("")}</span>`;
+  };
   const card = p => {
     const pts = open.filter(t => t.projectId === p.id);
     const od = pts.filter(t => wfOverdue(t, today)).length;
-    const idx = wfStageIdx(p);
-    const segs = WF_STAGES.map((s, j) => `<span class="${j < idx ? "on" : j === idx ? "cur" : ""}" style="--pc:${p.color}"></span>`).join("");
+    const rounds = wfRounds(p);
+    const body = rounds.length
+      ? `<div class="wf-rrows">${rounds.map(r => `<div class="wf-rrow" data-rid="${r.id}"><span class="wf-rname">${esc(r.name)}</span>${wfStageTag(r)}</div>`).join("")}</div>`
+      : segsHtml(p, p.color);
+    const sub = rounds.length ? `${rounds.length} round${rounds.length === 1 ? "" : "s"}` : "";
     return `<div class="ov-card is-link wf-proj" data-pid="${p.id}" onclick="if(!event.target.closest('button,a,input,select,textarea,label')&&!textSelected())openProject('${cat.id}', '${p.id}')">
       <div class="ov-head">
         <span class="cat-ico" style="background:color-mix(in srgb, ${p.color} 16%, var(--card));color:color-mix(in srgb, ${p.color} 55%, var(--fg))">${icon("folder", 14)}</span>
         <span class="name">${esc(p.name)}
-          <span class="wf-stage-lbl ${idx >= WF_STAGES.length ? "is-fin" : ""}">${esc(wfStageLabel(p))}</span>
+          ${rounds.length ? `<span class="wf-stage-lbl ${wfProjDone(p) ? "is-fin" : ""}"><span class="wf-sico" aria-hidden="true">${icon(wfProjDone(p) ? "flag" : "layers", 12)}</span>${sub}</span>` : wfStageTag(p)}
         </span>
         <button class="ov-more" aria-label="Open project ${esc(p.name)}" onclick="openProject('${cat.id}', '${p.id}')">${icon("right", 14)}</button>
       </div>
-      <span class="wf-segs" aria-hidden="true">${segs}</span>
+      ${body}
       <span class="ov-sub">${pts.length ? `${pts.length} open` : "No open tasks"}${od ? ` · <span class="ov-overdue">${od} overdue</span>` : ""}</span>
     </div>`;
   };
-  const doneP = projects.filter(p => p.stage === "done");
+  const doneP = projects.filter(p => wfProjDone(p));
   return `<div class="stat-row wf-stats">
       ${stat("active", active.length, "Active projects")}
       ${stat("open", open.length, "Open tasks")}
@@ -5779,8 +5933,8 @@ function taskHtml(t, hideCat) {
         ${due ? `<span class="${overdue ? "overdue" : ""}">${isRange ? icon("calendar", 11) + " " : ""}${fmtSpan(t)}</span>` : ""}
         ${t.recurrence !== "none" ? `<span>${icon("repeat", 11)} ${RECURRENCE_LABELS[t.recurrence]}</span>` : ""}
         ${cat && !hideCat ? `<span class="chip" style="background:color-mix(in srgb, ${cat.color} 16%, var(--card));color:color-mix(in srgb, ${cat.color} 55%, var(--fg))">${esc(cat.name)}</span>` : ""}
-        ${proj && !(currentTab === "home" && todayCat === t.categoryId && todayProject === proj.id) ? `<span class="chip" style="background:color-mix(in srgb, ${proj.color} 14%, var(--card));color:color-mix(in srgb, ${proj.color} 55%, var(--fg))">${icon("folder", 10)} ${esc(proj.name)}</span>`
-          + (WF_STEPS[t.step] && wfOn(cat) ? `<span class="chip wf-chip">${esc(wfStepLabel(t.step))}</span>` : "") : ""}
+        ${proj && !(currentTab === "home" && todayCat === t.categoryId && todayProject === proj.id) ? `<span class="chip" style="background:color-mix(in srgb, ${proj.color} 14%, var(--card));color:color-mix(in srgb, ${proj.color} 55%, var(--fg))">${icon("folder", 10)} ${esc(proj.name)}${wfOn(cat) && roundOf(t) ? " · " + esc(roundOf(t).name) : ""}</span>`
+          + (WF_STEPS[t.step] && wfOn(cat) ? `<span class="chip wf-chip">${icon(WF_STEPS[t.step].ico, 10)} ${esc(wfStepLabel(t.step))}</span>` : "") : ""}
       </div>
       ${hasNote ? `<div class="task-note">${esc(firstNoteLine(t.note))}</div>` : ""}
     </div>
@@ -6010,8 +6164,9 @@ function heroActionsHtml() {
   const pet = petForLevel(level);
   const streak = currentStreak();
   return `<div class="hero-actions">
-    <button class="hero-streak" onclick="openPet()" aria-label="${streak} day streak — open ${esc(pet.name)}">${flameSvg(20, streak > 0, streak > 0)} ${streak}</button>
-    <button class="hero-pet sp-${petSpecies()} ${justCheckedIn || justLeveled ? "bounce" : ""}" onclick="openPet()" aria-label="Open ${esc(pet.name)} · Lv ${level}">${petSvg(level)}</button>
+    ${PETS_TAB ? `<button class="hero-streak" onclick="openPet()" aria-label="${streak} day streak — open ${esc(pet.name)}">${flameSvg(20, streak > 0, streak > 0)} ${streak}</button>
+    <button class="hero-pet sp-${petSpecies()} ${justCheckedIn || justLeveled ? "bounce" : ""}" onclick="openPet()" aria-label="Open ${esc(pet.name)} · Lv ${level}">${petSvg(level)}</button>`
+      : `<span class="hero-streak is-static" role="img" aria-label="${streak} day streak">${flameSvg(20, streak > 0, streak > 0)} ${streak}</span>`}
   </div>`;
 }
 
@@ -7174,7 +7329,14 @@ function renderTodayDetail() {
   }).join("") : "";
   // หมวดงาน (focus work): หน้าหมวด = ภาพรวม, หน้าโปรเจกต์ = workflow + งานแบ่งตาม step
   const wf = !isNone && wfOn(cat);
-  const wfList = wf && proj ? wfGroupedHtml(proj, tasks) : "";
+  // มีรอบ: เลือกรอบ (ค่าที่ค้างไม่ถูกต้อง -> รอบแนะนำ) แล้วโชว์เฉพาะงานของรอบนั้น + งานที่ไม่อยู่ในรอบไหนแยกไว้ท้าย
+  const rounds = wf && proj ? wfRounds(proj) : [];
+  const round = rounds.length ? (rounds.find(r => r.id === todayRound) || wfDefaultRound(proj)) : null;
+  const inRound = t => rounds.some(r => r.id === t.roundId);
+  const wfList = wf && proj ? wfGroupedHtml(round || proj, round ? tasks.filter(t => t.roundId === round.id) : tasks) : "";
+  const noRound = round ? tasks.filter(t => !inRound(t)) : [];
+  const noRoundHtml = noRound.length ? `<section class="wf-group" data-step="noround"><h2 class="section-title wf-ghead">Not in a round<span class="wf-gcount">${noRound.filter(t => t.status === "open").length} open</span></h2>
+    ${sortByDue(noRound).map(t => taskHtml(t, true)).join("")}</section>` : "";
   const projSection = wf && !proj && projects.length ? wfOverviewHtml(cat, projects) : projCards ? `<div class="proj-head">
       <h2 class="section-title" style="margin:0">Projects</h2>
       <button class="link-primary" style="font-size:.8rem" onclick="openProjectForm('${cat.id}')">+ New project</button>
@@ -7191,9 +7353,9 @@ function renderTodayDetail() {
     ${proj ? `<p class="hint" style="margin:-.2rem 0 .8rem">Project in ${esc(name)}</p>` : ""}
     ${fromAi ? projectSummaryHtml(cat) : ""}
     ${projSection}
-    ${wf && proj ? wfTrackHtml(cat, proj) : ""}
+    ${wf && proj ? wfProjectHtml(cat, proj, round) : ""}
     ${scopeToggle}
-    ${wf && proj ? (wfList || `<p class="empty">${emptyMsg}</p>`) : `
+    ${wf && proj ? ((wfList || `<p class="empty">${emptyMsg}</p>`) + noRoundHtml) : `
     ${open.length === 0 && done.length === 0 ? `<p class="empty">${emptyMsg}</p>` : ""}
     ${open.map(t => taskHtml(t, true)).join("")}
     ${done.length ? `<h2 class="section-title">Done</h2>` + done.map(t => taskHtml(t, true)).join("") : ""}`}`;
@@ -8030,6 +8192,7 @@ function renderColorPick() {
   }
 }
 
+const PETS_TAB = false;   // ผู้ใช้ขอซ่อนไว้ก่อน (2026-10-12) — หน้า/ข้อมูลสัตว์เลี้ยงยังอยู่ครบ
 const TABS = [
   ["home", "home", "Home", renderHome],
   ["calendar", "calendar", "Calendar", renderCalendar],
@@ -8202,7 +8365,7 @@ function render() {
   } else {
     view.classList.remove("anim");
   }
-  document.getElementById("navBar").innerHTML = TABS.map(([id, ico, label]) =>
+  document.getElementById("navBar").innerHTML = TABS.filter(([id]) => id !== "pets" || PETS_TAB).map(([id, ico, label]) =>
     `<button class="nav-btn ${id === currentTab ? "active" : ""}" onclick="switchTab('${id}')"
       aria-current="${id === currentTab ? "page" : "false"}">
       <span class="ico">${icon(ico, 20)}</span><span class="lbl">${label}</span></button>`).join("");
@@ -8246,7 +8409,7 @@ function addCategory() {
 function deleteCategory(id) {
   if (!confirm("Delete this category? Its tasks will be kept without a category.")) return;
   state.categories = state.categories.filter(c => c.id !== id);
-  state.tasks.forEach(t => { if (t.categoryId === id) { t.categoryId = null; t.projectId = null; t.step = null; } });
+  state.tasks.forEach(t => { if (t.categoryId === id) { t.categoryId = null; t.projectId = null; t.step = null; t.roundId = null; } });
   save(); render();
 }
 
@@ -8280,7 +8443,11 @@ function openForm(taskId) {
   const initCat = t ? t.categoryId : (currentTab === "home" ? (todayCat || focusDefault) : null);
   const initProj = t ? t.projectId : (currentTab === "home" && initCat === todayCat ? todayProject : null);
   const projOpts = projectOptionsHtml(initCat, initProj);
-  const stepOpts = projOpts ? stepOptionsHtml(initCat, initProj, t ? t.step : null) : "";
+  // รอบเริ่มต้น: งานเดิมใช้ของงาน, งานใหม่จากหน้าโปรเจกต์ใช้รอบที่กำลังดู
+  const initRound = t ? t.roundId : (currentTab === "home" && initCat === todayCat && initProj && initProj === todayProject ? todayRound : null);
+  const roundOpts = projOpts ? roundOptionsHtml(initCat, initProj, initRound) : "";
+  const roundSel = roundOpts ? (roundOpts.match(/value="([a-z0-9]+)" selected/i) || [])[1] || null : null;
+  const stepOpts = projOpts ? stepOptionsHtml(initCat, initProj, roundSel, t ? t.step : null) : "";
   const remOpts = REMINDER_OPTIONS.map(([v, l]) =>
     `<option value="${v}" ${t && String(t.reminderMin ?? "") === v ? "selected" : ""}>${l}</option>`).join("");
   const recOpts = Object.entries(RECURRENCE_LABELS).map(([v, l]) =>
@@ -8306,10 +8473,13 @@ function openForm(taskId) {
           </label>
         </div>
         <label class="fld" id="fProjWrap" style="display:${projOpts ? "" : "none"}">Project
-          <select id="fProj" onchange="refreshFormSteps()">${projOpts}</select>
+          <select id="fProj" onchange="refreshFormRounds()">${projOpts}</select>
+        </label>
+        <label class="fld" id="fRoundWrap" style="display:${roundOpts ? "" : "none"}">Round
+          <select id="fRound" onchange="refreshFormSteps()">${roundOpts}</select>
         </label>
         <label class="fld" id="fStepWrap" style="display:${stepOpts ? "" : "none"}">Step
-          <select id="fStep" data-pid="${projOpts ? esc(initProj || "") : ""}">${stepOpts}</select>
+          <select id="fStep" data-unit="${projOpts && initProj ? esc(initProj + ":" + (roundSel || "")) : ""}">${stepOpts}</select>
         </label>
         <label class="fld-check">
           <input type="checkbox" id="fTimeOn" ${hasTimeInit ? "checked" : ""} onchange="toggleFormTime()">
@@ -8348,14 +8518,34 @@ function refreshFormProjects() {
   const html = projectOptionsHtml(document.getElementById("fCat").value, sel.value);
   sel.innerHTML = html;
   document.getElementById("fProjWrap").style.display = html ? "" : "none";
+  refreshFormRounds();
+}
+/** ตัวเลือกรอบของโปรเจกต์ ("" = ไม่มีรอบ -> ซ่อนช่อง); ไม่ได้เลือก -> รอบแรกที่ยังไม่จบ */
+function roundOptionsHtml(catId, projId, selId) {
+  const cat = catById(catId);
+  const p = projId ? catProjects(cat).find(x => x.id === projId) : null;
+  const rs = wfOn(cat) ? wfRounds(p) : [];
+  if (!rs.length) return "";
+  const sel = rs.some(r => r.id === selId) ? selId : wfDefaultRound(p).id;
+  return rs.map(r => `<option value="${r.id}" ${r.id === sel ? "selected" : ""}>${esc(r.name)} — ${esc(wfStageLabel(r))}</option>`).join("");
+}
+function refreshFormRounds() {
+  const sel = document.getElementById("fRound");
+  if (!sel) return;
+  const projEl = document.getElementById("fProj");
+  const pid = document.getElementById("fProjWrap").style.display === "none" ? "" : projEl.value;
+  const html = roundOptionsHtml(document.getElementById("fCat").value, pid, sel.value);
+  sel.innerHTML = html;
+  document.getElementById("fRoundWrap").style.display = html ? "" : "none";
   refreshFormSteps();
 }
 /** ตัวเลือก Step ของงานในโปรเจกต์หมวดงาน ("" = ไม่ใช่โปรเจกต์ workflow -> ซ่อนช่อง); ไม่มีค่าที่เลือก -> ขั้นปัจจุบันของโปรเจกต์ */
-function stepOptionsHtml(catId, projId, selStep) {
+function stepOptionsHtml(catId, projId, roundId, selStep) {
   const cat = catById(catId);
   const p = projId ? catProjects(cat).find(x => x.id === projId) : null;
   if (!p || !wfOn(cat)) return "";
-  const sel = WF_STEPS[selStep] ? selStep : wfDefaultStep(p);
+  const r = roundId ? wfRounds(p).find(x => x.id === roundId) : null;
+  const sel = WF_STEPS[selStep] ? selStep : wfDefaultStep(r || p);
   return WF_STEP_ORDER.map(k => `<option value="${k}" ${k === sel ? "selected" : ""}>${esc(wfStepLabel(k))} — ${esc(WF_STEPS[k].d)}</option>`).join("");
 }
 /** เปลี่ยนหมวด/โปรเจกต์ในฟอร์ม -> โปรเจกต์เดิมคง step ที่เลือกไว้, โปรเจกต์ใหม่เริ่มที่ขั้นปัจจุบันของโปรเจกต์นั้น */
@@ -8364,10 +8554,14 @@ function refreshFormSteps() {
   if (!sel) return;
   const projEl = document.getElementById("fProj");
   const pid = document.getElementById("fProjWrap").style.display === "none" ? "" : projEl.value;
-  const keep = pid && sel.dataset.pid === pid ? sel.value : null;
-  const html = stepOptionsHtml(document.getElementById("fCat").value, pid, keep);
+  const rEl = document.getElementById("fRound");
+  const rid = rEl && document.getElementById("fRoundWrap").style.display !== "none" ? rEl.value : "";
+  // โปรเจกต์/รอบเดิม -> คง step ที่เลือกไว้; เปลี่ยน -> เริ่มที่ขั้นปัจจุบันของรอบ/โปรเจกต์ใหม่
+  const unit = pid ? pid + ":" + rid : "";
+  const keep = unit && sel.dataset.unit === unit ? sel.value : null;
+  const html = stepOptionsHtml(document.getElementById("fCat").value, pid, rid, keep);
   sel.innerHTML = html;
-  sel.dataset.pid = pid;
+  sel.dataset.unit = unit;
   document.getElementById("fStepWrap").style.display = html ? "" : "none";
 }
 
@@ -8428,6 +8622,8 @@ function submitForm(e, taskId) {
   // เก็บเฉพาะโปรเจกต์ที่อยู่ในหมวดที่เลือกจริง
   const projectId = projRaw && catProjects(catById(categoryId)).some(p => p.id === projRaw) ? projRaw : null;
   const stepRaw = document.getElementById("fStep")?.value;
+  const roundRaw = document.getElementById("fRound")?.value;
+  const wfProj = projectId && wfOn(catById(categoryId)) ? catProjects(catById(categoryId)).find(p => p.id === projectId) : null;
   const data = {
     title,
     note: document.getElementById("fNote").value.trim(),
@@ -8435,6 +8631,8 @@ function submitForm(e, taskId) {
     projectId,
     // step มีความหมายเฉพาะงานในโปรเจกต์ของหมวดงาน
     step: projectId && wfOn(catById(categoryId)) && WF_STEPS[stepRaw] ? stepRaw : null,
+    // รอบต้องเป็นของโปรเจกต์นี้; โปรเจกต์ที่มีรอบ งานต้องอยู่ในรอบใดรอบหนึ่ง
+    roundId: wfProj && wfRounds(wfProj).length ? (wfRounds(wfProj).some(r => r.id === roundRaw) ? roundRaw : wfDefaultRound(wfProj).id) : null,
     dueAt: dueRaw ? new Date(timeOn ? dueRaw : dueRaw + "T00:00:00").toISOString() : null,
     endDate: (rangeOn && dueRaw && endRaw) ? endRaw : null,
     reminderMin: remRaw === "" ? null : Number(remRaw),
