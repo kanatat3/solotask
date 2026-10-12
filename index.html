@@ -889,10 +889,17 @@
   @media (max-width: 29.99rem) { .stat-row.wf-stats { grid-template-columns: repeat(2, 1fr); } }
   .wf-stage-lbl { display: block; font-size: .7rem; font-weight: 700; color: var(--primary); margin-top: .1rem; }
   .wf-stage-lbl.is-fin { color: var(--success); }
-  .wf-segs { display: grid; grid-template-columns: repeat(6, 1fr); gap: 3px; }
-  .wf-segs span { height: .3rem; border-radius: 999px; background: var(--border); }
-  .wf-segs span.on { background: var(--pc); }
-  .wf-segs span.cur { background: color-mix(in srgb, var(--pc) 45%, var(--border)); }
+  .wf-pips { display: flex; align-items: center; min-width: 0; }
+  .wf-pip {
+    flex-shrink: 0; width: 1.6rem; height: 1.6rem; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center;
+    background: var(--card); color: var(--muted); box-shadow: inset 0 0 0 1px var(--border);
+  }
+  .wf-pip.on { box-shadow: none; background: color-mix(in srgb, var(--pc) 18%, var(--card)); color: color-mix(in srgb, var(--pc) 70%, var(--fg)); }
+  .wf-pip.cur { background: var(--pc); color: #fff; box-shadow: 0 0 0 3px color-mix(in srgb, var(--pc) 28%, transparent); }
+  .wf-pip-line { flex: 1; min-width: .15rem; height: 2px; background: var(--border); }
+  .wf-pip-line.on { background: color-mix(in srgb, var(--pc) 55%, var(--border)); }
+  .wf-rrow .wf-pip { width: 1.35rem; height: 1.35rem; }
+  .wf-rrow .wf-pip svg { width: 10px; height: 10px; }
   .wf-ico { display: inline-flex; color: var(--muted); margin-right: auto; margin-left: .35rem; }
   .wf-card.is-cur .wf-ico { color: var(--primary); }
   .wf-card.is-done .wf-ico { color: var(--success); }
@@ -900,7 +907,8 @@
   .wf-sico { display: inline-flex; vertical-align: -2px; margin-right: .3rem; }
   .wf-stage-lbl.is-idle { color: var(--muted); }
   .wf-rrows { display: flex; flex-direction: column; gap: .3rem; }
-  .wf-rrow { display: flex; align-items: center; justify-content: space-between; gap: .5rem; font-size: .74rem; padding: .3rem .45rem; border-radius: var(--r-sm); background: color-mix(in srgb, var(--border) 45%, var(--card)); }
+  .wf-rrow-top { display: flex; align-items: center; justify-content: space-between; gap: .5rem; }
+  .wf-rrow { display: flex; flex-direction: column; gap: .35rem; font-size: .74rem; padding: .3rem .45rem; border-radius: var(--r-sm); background: color-mix(in srgb, var(--border) 45%, var(--card)); }
   .wf-rrow .wf-rname { font-weight: 700; min-width: 0; overflow-wrap: anywhere; }
   .wf-rrow .wf-stage-lbl { margin: 0; flex-shrink: 0; }
   .wf-rtabs { display: flex; flex-wrap: wrap; gap: .4rem; }
@@ -5712,6 +5720,14 @@ function wfStageTag(u) {
   const i = wfStageIdx(u);
   return `<span class="wf-stage-lbl ${i >= WF_STAGES.length ? "is-fin" : i < 0 ? "is-idle" : ""}"><span class="wf-sico" aria-hidden="true">${icon(wfStageIcon(u), 12)}</span>${esc(wfStageLabel(u))}</span>`;
 }
+/** แถวไอคอนขั้น 1–6 + ธงจบงาน: ผ่านแล้ว = สีโปรเจกต์, ขั้นปัจจุบัน = วงทึบเด่น, ยังไม่ถึง = เทา (ดูปุ๊บรู้ว่าถึงไหน) */
+function wfPipsHtml(u, color) {
+  const idx = wfStageIdx(u);
+  const pips = WF_STAGES.map((st, j) => ({ ico: st.ico, t: `${j + 1} ${st.n}`, c: j < idx ? "on" : j === idx ? "cur" : "" }));
+  pips.push({ ico: "flag", t: "Done", c: idx >= WF_STAGES.length ? "cur" : "" });
+  return `<span class="wf-pips" style="--pc:${color}" aria-hidden="true">${pips.map((x, j) =>
+    (j ? `<span class="wf-pip-line ${x.c ? "on" : ""}"></span>` : "") + `<span class="wf-pip ${x.c}" title="${x.t}">${icon(x.ico, 12)}</span>`).join("")}</span>`;
+}
 /** step เริ่มต้นของงานใหม่ = ขั้นปัจจุบันของหน่วย (รอบ/โปรเจกต์) */
 function wfDefaultStep(u) {
   const i = u ? wfStageIdx(u) : -1;
@@ -5870,17 +5886,14 @@ function wfOverviewHtml(cat, projects) {
   const soon = sortByDue(open.filter(t => { const s = taskSpan(t); return s && s.end < weekEnd; }));
   const active = projects.filter(p => !wfProjDone(p));
   const stat = (k, n, label, cls = "") => `<div class="stat-card wf-stat" data-k="${k}"><span class="stat-num ${cls}">${n}</span><span class="stat-label">${label}</span></div>`;
-  const segsHtml = (u, color) => {
-    const idx = wfStageIdx(u);
-    return `<span class="wf-segs" aria-hidden="true">${WF_STAGES.map((s, j) => `<span class="${j < idx ? "on" : j === idx ? "cur" : ""}" style="--pc:${color}"></span>`).join("")}</span>`;
-  };
+
   const card = p => {
     const pts = open.filter(t => t.projectId === p.id);
     const od = pts.filter(t => wfOverdue(t, today)).length;
     const rounds = wfRounds(p);
     const body = rounds.length
-      ? `<div class="wf-rrows">${rounds.map(r => `<div class="wf-rrow" data-rid="${r.id}"><span class="wf-rname">${esc(r.name)}</span>${wfStageTag(r)}</div>`).join("")}</div>`
-      : segsHtml(p, p.color);
+      ? `<div class="wf-rrows">${rounds.map(r => `<div class="wf-rrow" data-rid="${r.id}"><div class="wf-rrow-top"><span class="wf-rname">${esc(r.name)}</span>${wfStageTag(r)}</div>${wfPipsHtml(r, p.color)}</div>`).join("")}</div>`
+      : wfPipsHtml(p, p.color);
     const sub = rounds.length ? `${rounds.length} round${rounds.length === 1 ? "" : "s"}` : "";
     return `<div class="ov-card is-link wf-proj" data-pid="${p.id}" onclick="if(!event.target.closest('button,a,input,select,textarea,label')&&!textSelected())openProject('${cat.id}', '${p.id}')">
       <div class="ov-head">
