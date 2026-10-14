@@ -4,7 +4,7 @@ These files live at the root of the deploy repo. Netlify runs `npm run verify` a
 
 `npm run verify` runs three steps:
 1. **lint**: `scripts/check-page.mjs` makes sure every inline script parses, each page has lang/title/viewport, and no server-side Supabase key is present.
-2. **build**: `scripts/build.mjs` copies the site files into `dist/`, which is the folder Netlify publishes.
+2. **build**: `scripts/build.mjs` copies the site files into `dist/`, which is the folder Netlify publishes. It also writes `dist/version.json` with the commit, the Node version and the build time, so `curl https://kodotodolist.netlify.app/version.json` shows which build is live.
 3. **test:e2e**: Playwright drives `dist/` the way a user would.
    - Projects: mobile, desktop, and dark (mobile in dark mode).
    - Flows: home, the tap-first task form, the Work overview, project workflow and rounds, the Calendar/All/Settings tabs, request.html (invalid link, sending with a file, the name being remembered) and the privacy/terms pages.

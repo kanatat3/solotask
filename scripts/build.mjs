@@ -10,5 +10,7 @@ fs.rmSync(dist, { recursive: true, force: true });
 fs.mkdirSync(dist);
 const files = fs.readdirSync(root).filter(f => SITE.test(f) && fs.statSync(path.join(root, f)).isFile());
 for (const f of files) fs.copyFileSync(path.join(root, f), path.join(dist, f));
+// version.json: which commit / Node built the live site (Netlify sets COMMIT_REF) — check with curl <site>/version.json
+fs.writeFileSync(path.join(dist, "version.json"), JSON.stringify({ commit: process.env.COMMIT_REF || "local", node: process.version, builtAt: new Date().toISOString() }) + "\n");
 for (const must of ["index.html", "request.html", "sw.js", "manifest.json"]) if (!files.includes(must)) { console.error("BUILD: missing " + must); process.exit(1); }
 console.log(`build ok: ${files.length} files -> dist/`);
