@@ -1201,6 +1201,20 @@
   }
 
   label.fld { display: block; font-size: .7rem; color: var(--muted); margin-bottom: .75rem; }
+  div.fld { font-size: .7rem; color: var(--muted); margin-bottom: .75rem; }
+  fieldset.chip-set { border: 0; padding: 0; margin: 0 0 .75rem; min-width: 0; font-size: .7rem; color: var(--muted); }
+  fieldset.chip-set legend { padding: 0; margin-bottom: .1rem; }
+  fieldset.chip-set:disabled .chip-opt { opacity: .45; cursor: not-allowed; }
+  .chip-row { display: flex; flex-wrap: wrap; gap: .4rem; margin: .3rem 0 .45rem; }
+  .chip-opt {
+    position: relative; display: inline-flex; align-items: center; min-height: 2.5rem; padding: 0 .85rem; border-radius: 999px; cursor: pointer;
+    font-family: inherit; font-size: .82rem; font-weight: 600; line-height: 1; color: var(--fg); background: var(--bg); border: 1.5px solid transparent;
+  }
+  .chip-opt input { position: absolute; opacity: 0; width: 1px; height: 1px; }
+  /* ที่เลือก = สีอ่อน (accent ทึบเก็บไว้ให้ปุ่มหลักอย่างเดียว ตามกฎ 60-30-10) */
+  .chip-opt[aria-pressed="true"], .chip-opt:has(input:checked) { background: color-mix(in srgb, var(--primary) 13%, var(--card)); border-color: var(--primary); color: color-mix(in srgb, var(--primary) 75%, var(--fg)); }
+  .chip-opt:focus-visible, .chip-opt:has(input:focus-visible) { outline: 2px solid var(--primary); outline-offset: 2px; }
+  @media (hover: hover) and (pointer: fine) { .chip-opt:not([aria-pressed="true"]):not(:has(input:checked)):hover { border-color: color-mix(in srgb, var(--primary) 45%, var(--edge)); } }
   label.fld-check {
     display: flex; align-items: center; gap: .5rem; font-size: .8rem; color: var(--fg);
     margin-bottom: .75rem; cursor: pointer;
@@ -2036,6 +2050,7 @@ function dateBtnLabel(v, type) {
 function syncDateBtn(id) {
   const i = document.getElementById(id), b = document.getElementById(id + "Btn");
   if (i && b) b.innerHTML = dateBtnLabel(i.value, i.type);
+  if (id === "fDue" || id === "fEnd") refreshDueUi();
 }
 function openDatePicker(id) {
   const i = document.getElementById(id);
@@ -8431,12 +8446,9 @@ function deleteCategory(id) {
 /* ---------- form modal ---------- */
 function openForm(taskId) {
   const t = taskId ? state.tasks.find(x => x.id === taskId) : null;
-  // ถ้าเปิดจากหน้า calendar และเป็น task ใหม่ ให้ default วันที่เป็นวันที่เลือกไว้
+  // งานใหม่: วันครบกำหนดเริ่มที่วันนี้ (เปิดจากหน้า calendar = วันที่เลือกไว้) — แตะปุ่มวันอื่น/No date ได้ทันที
   let defaultDue = "";
-  if (!t && currentTab === "calendar") {
-    const d = new Date(calSelected + "T09:00:00");
-    defaultDue = toInputValue(d);
-  }
+  if (!t) defaultDue = toInputValue(currentTab === "calendar" ? new Date(calSelected + "T09:00:00") : new Date());
   // งานเดิมที่ตั้งเวลาไว้ตรงเที่ยงคืนพอดี ถือว่าไม่ได้ตั้งเวลาไว้ (เข้ากับ heuristic ของ fmtDateTime)
   const hasTimeInit = t && t.dueAt
     ? (new Date(t.dueAt).getHours() !== 0 || new Date(t.dueAt).getMinutes() !== 0)
@@ -8463,10 +8475,8 @@ function openForm(taskId) {
   const roundOpts = projOpts ? roundOptionsHtml(initCat, initProj, initRound) : "";
   const roundSel = roundOpts ? (roundOpts.match(/value="([a-z0-9]+)" selected/i) || [])[1] || null : null;
   const stepOpts = projOpts ? stepOptionsHtml(initCat, initProj, roundSel, t ? t.step : null) : "";
-  const remOpts = REMINDER_OPTIONS.map(([v, l]) =>
-    `<option value="${v}" ${t && String(t.reminderMin ?? "") === v ? "selected" : ""}>${l}</option>`).join("");
-  const recOpts = Object.entries(RECURRENCE_LABELS).map(([v, l]) =>
-    `<option value="${v}" ${t && t.recurrence === v ? "selected" : ""}>${l}</option>`).join("");
+  const remVal = t ? String(t.reminderMin ?? "") : "";
+  const recVal = t && RECURRENCE_LABELS[t.recurrence] ? t.recurrence : "none";
   document.getElementById("modal").innerHTML = `
   <div class="overlay" onclick="if(event.target===this)closeForm()">
     <div class="sheet">
@@ -8474,19 +8484,16 @@ function openForm(taskId) {
         <h2>${t ? "Edit Task" : "New Task"}</h2>
         <button class="x-btn" aria-label="Close" onclick="closeForm()">✕</button>
       </div>
-      <form onsubmit="submitForm(event, '${taskId || ""}')">
+      <form id="taskForm" data-edit="${t ? "1" : ""}" onsubmit="submitForm(event, '${taskId || ""}')">
         <label class="fld">What needs to be done?
           <input id="fTitle" required maxlength="${TITLE_MAX}" value="${t ? esc(t.title) : ""}" placeholder="e.g. Send report">
         </label>
-        <label class="fld">Notes (optional)
-          <textarea id="fNote" rows="2">${t ? esc(t.note || "") : ""}</textarea>
-        </label>
-        <div class="row2">
-          <label class="fld">Category<select id="fCat" onchange="refreshFormProjects()">${catOpts}</select></label>
-          <label class="fld"><span id="fDueLabelText">${t?.endDate ? "Start date" : "Due date"}</span>
-            ${dateFieldHtml("fDue", hasTimeInit ? dueInputVal : dueInputVal.slice(0, 10), "", hasTimeInit ? "datetime-local" : "date")}
-          </label>
+        <div class="fld" role="group" aria-labelledby="fDueLabelText">
+          <span id="fDueLabelText">${t?.endDate ? "Start date" : "Due date"}</span>
+          <div class="chip-row" id="fDueChips">${dueChipsHtml(hasTimeInit ? dueInputVal : dueInputVal.slice(0, 10))}</div>
+          ${dateFieldHtml("fDue", hasTimeInit ? dueInputVal : dueInputVal.slice(0, 10), `aria-label="${t?.endDate ? "Start date" : "Due date"}"`, hasTimeInit ? "datetime-local" : "date")}
         </div>
+        <label class="fld">Category<select id="fCat" onchange="refreshFormProjects()">${catOpts}</select></label>
         <label class="fld" id="fProjWrap" style="display:${projOpts ? "" : "none"}">Project
           <select id="fProj" onchange="refreshFormRounds()">${projOpts}</select>
         </label>
@@ -8507,17 +8514,82 @@ function openForm(taskId) {
         <label class="fld" id="fEndWrap" style="display:${t?.endDate ? "" : "none"}">End date
           ${dateFieldHtml("fEnd", t?.endDate || "")}
         </label>
-        <div class="row2">
-          <label class="fld">Reminder<select id="fRem">${remOpts}</select></label>
-          <label class="fld">Repeat<select id="fRec">${recOpts}</select></label>
-        </div>
-        <button type="submit" class="btn btn-primary">Save</button>
+        ${chipGroupHtml("fRec", "Repeat", Object.entries(RECURRENCE_LABELS), recVal)}
+        ${chipGroupHtml("fRem", "Reminder", REMINDER_CHIPS, remVal)}
+        <label class="fld">Notes (optional)
+          <textarea id="fNote" rows="2">${t ? esc(t.note || "") : ""}</textarea>
+        </label>
+        <button type="submit" class="btn btn-primary" id="fSubmit">${t ? "Save changes" : "Add task"}</button>
         ${t && t.dueAt ? `<a class="btn btn-outline" href="${esc(googleCalUrl(t))}" target="_blank" rel="noopener" style="text-decoration:none">${icon("calendar", 15)} Add to Google Calendar</a>` : ""}
         ${t ? `<button type="button" class="btn btn-danger-outline" onclick="deleteTask('${t.id}')">Delete Task</button>` : ""}
       </form>
     </div>
   </div>`;
+  refreshDueUi();
   setTimeout(() => document.getElementById("fTitle")?.focus(), 50);
+}
+
+/* ---------- ฟอร์มงาน: เลือกด้วยการแตะ (V9.7) ----------
+   วันครบกำหนด = ปุ่ม Today / Tomorrow / 4 วันถัดไป / No date + ปุ่ม Other date (เปิดปฏิทิน)
+   Repeat / Reminder = ปุ่มแตะ (radio) ค่าเก็บใน input hidden id เดิม (fRec / fRem) ให้ submitForm อ่านเหมือนเดิม */
+const DUE_CHIP_DAYS = 6;
+const REMINDER_CHIPS = [["", "None"], ["0", "At due time"], ["15", "15 min before"], ["30", "30 min before"], ["60", "1 hour before"], ["1440", "1 day before"]];
+function dueChipDays() {
+  const d = startOfDay(new Date()), out = [];
+  for (let i = 0; i < DUE_CHIP_DAYS; i++) { out.push(dateKey(d)); d.setDate(d.getDate() + 1); }
+  return out;
+}
+function dueDayName(k) {
+  const i = dueChipDays().indexOf(k);
+  if (i === 0) return "Today";
+  if (i === 1) return "Tomorrow";
+  const d = new Date(k + "T00:00:00");
+  return `${DOW[d.getDay()]} ${d.getDate()}`;
+}
+function dueChipsHtml(val) {
+  const k = (val || "").slice(0, 10);
+  return dueChipDays().map(day => `<button type="button" class="chip-opt" data-day="${day}" aria-pressed="${day === k}" onclick="pickDueDay('${day}')">${dueDayName(day)}</button>`).join("")
+    + `<button type="button" class="chip-opt" data-day="" aria-pressed="${!k}" onclick="pickDueDay('')">No date</button>`;
+}
+function pickDueDay(k) {
+  const i = document.getElementById("fDue");
+  if (!i) return;
+  if (!k) i.value = "";
+  else if (i.type === "datetime-local") i.value = k + "T" + (i.value.slice(11, 16) || "09:00");
+  else i.value = k;
+  syncDateBtn("fDue");
+}
+/** กลุ่มปุ่มแตะเลือกได้ 1 ค่า (radio) — ค่าเก็บใน input hidden ตาม id */
+function chipGroupHtml(id, label, options, value) {
+  return `<fieldset class="fld chip-set" id="${id}Set"><legend>${label}</legend><div class="chip-row">
+    ${options.map(([v, l]) => `<label class="chip-opt"><input type="radio" name="${id}R" value="${v}" ${v === value ? "checked" : ""}
+      onchange="document.getElementById('${id}').value = this.value">${l}</label>`).join("")}
+  </div><input type="hidden" id="${id}" value="${esc(value)}"></fieldset>`;
+}
+/** วันในฟอร์มเปลี่ยน -> ปุ่มวันที่เลือก, วันจบห้ามก่อนวันเริ่ม, Reminder ใช้ได้เฉพาะงานที่มีวัน, ปุ่มบันทึกบอกผลลัพธ์ */
+function refreshDueUi() {
+  const due = document.getElementById("fDue");
+  if (!due || !document.getElementById("fDueChips")) return;
+  const k = due.value.slice(0, 10);
+  const days = dueChipDays();
+  document.querySelectorAll("#fDueChips .chip-opt").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.day === k)));
+  // ปุ่มเปิดปฏิทิน: วันที่อยู่นอกปุ่มลัด -> โชว์วันที่นั้น, ไม่งั้นเป็น "Other date"
+  const btn = document.getElementById("fDueBtn");
+  if (btn && (!k || days.includes(k)) && due.type === "date") btn.innerHTML = `<span class="date-ph">Other date…</span>` + icon("calendar", 14);
+  const end = document.getElementById("fEnd");
+  if (end) {
+    end.min = k;
+    if (k && end.value && end.value < k) { end.value = k; const eb = document.getElementById("fEndBtn"); if (eb) eb.innerHTML = dateBtnLabel(k, "date"); }
+  }
+  const remSet = document.getElementById("fRemSet");
+  if (remSet) {
+    remSet.disabled = !k;
+    if (!k) { document.getElementById("fRem").value = ""; remSet.querySelectorAll("input[type=radio]").forEach(r => { r.checked = r.value === ""; }); }
+  }
+  const sub = document.getElementById("fSubmit");
+  if (sub && !document.getElementById("taskForm")?.dataset.edit) {
+    sub.textContent = !k ? "Add task · no date" : "Add task · " + (days.includes(k) ? dueDayName(k) : fmtDMY(new Date(k + "T00:00:00")));
+  }
 }
 
 /** ตัวเลือกโปรเจกต์ของหมวด ("" = หมวดนี้ไม่มีโปรเจกต์ -> ซ่อนช่อง) */
@@ -8604,8 +8676,9 @@ function toggleFormRange() {
   if (on && !document.getElementById("fEnd").value) {
     // ตั้งค่าเริ่มต้น End date = วันเดียวกับ Due date ให้กรอกต่อง่ายๆ
     const dueVal = document.getElementById("fDue").value;
-    if (dueVal) document.getElementById("fEnd").value = dueVal.slice(0, 10);
+    if (dueVal) { document.getElementById("fEnd").value = dueVal.slice(0, 10); syncDateBtn("fEnd"); }
   }
+  refreshDueUi();
 }
 
 function closeForm() {
