@@ -20,10 +20,10 @@
   :root, :root[data-theme="day"] {
     /* กลางวัน: พื้นเทาอมฟ้าอ่อนสะอาดๆ การ์ดขาว hero สี indigo เข้ม (แบบ reference) */
     --bg: #f3f4f9; --fg: #15172b; --card: #ffffff; --border: #e5e7f0; --edge: transparent;
-    --muted: #676c86; --primary: #6366f1; --primary-dark: #4f46e5;
+    --muted: #676c86; --primary: #4f46e5; --primary-dark: #4338ca;
     --primary-soft: #eceefe;
     --hero: #6366f1; --hero-2: #7c6cf5; --hero-fg: #ffffff;
-    --danger: #ef4444; --danger-text: #c2410c; --success: #059669;
+    --danger: #ef4444; --danger-text: #c2410c; --success: #047857;
     --switch-on: #0f8a3d;
     --shadow: 0 1px 2px rgba(21, 23, 43, .04), 0 8px 24px -16px rgba(21, 23, 43, .16);
     --r-lg: 1.5rem; --r-md: 1.15rem; --r-sm: .8rem;
@@ -917,6 +917,7 @@
     font-size: .8rem; font-weight: 700; color: var(--fg); background: var(--card); border: 1px solid var(--edge); border-radius: 999px; box-shadow: var(--shadow);
   }
   .wf-rtab .wf-rtab-st { font-size: .66rem; font-weight: 600; color: var(--muted); margin-left: .4rem; }
+  .wf-rtab.sel .wf-rtab-st { color: inherit; }
   .wf-rtab.sel { border-color: var(--primary); background: color-mix(in srgb, var(--primary) 10%, var(--card)); color: var(--primary); box-shadow: 0 0 0 1px var(--primary), var(--shadow); }
   .wf-rtab:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
   .hero-streak.is-static { cursor: default; }
@@ -940,8 +941,9 @@
     flex-shrink: 0; margin-top: .05rem; width: 1.5rem; height: 1.5rem;
     border-radius: 50%; border: 2px solid color-mix(in srgb, var(--muted) 45%, var(--border));
     display: flex; align-items: center; justify-content: center;
-    color: #fff; font-size: .72rem; pointer-events: none;
+    color: #fff; font-size: .72rem; pointer-events: none; background: none; padding: 0; font-family: inherit; cursor: pointer;
   }
+  .task-status:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
   .task.is-done .task-status { background: var(--success); border-color: var(--success); }
   .task-body { flex: 1; min-width: 0; }
   .edit-btn {
@@ -1319,10 +1321,11 @@
     position: relative; padding: .2rem .15rem; min-width: 0; overflow: hidden;
   }
   .cal-num { text-align: center; line-height: 1.2; }
-  .cal-day.other { color: var(--muted); opacity: .4; }
+  .cal-day.other { color: var(--muted); }
+  .cal-day.other .cal-lbl, .cal-day.other .cal-dot { opacity: .55; }
   .cal-day.today { border-color: var(--primary); font-weight: 700; }
   .cal-day.sel { background: var(--primary); color: #fff; }
-  .cal-day.sel .cal-lbl { background: rgba(255,255,255,.25) !important; color: #fff !important; }
+  .cal-day.sel .cal-lbl { background: rgba(10, 8, 60, .32) !important; color: #fff !important; }
   .cal-lbl {
     display: block; font-size: .66rem; font-weight: 600; line-height: 1.45;
     border-radius: .25rem; padding: 0 .2rem;
@@ -1570,14 +1573,14 @@
     border: none; border-radius: 999px; background: none; color: var(--muted); font: inherit; font-size: .78rem; font-weight: 800; cursor: pointer;
     transition: background-color .18s var(--ease-out), color .18s var(--ease-out);
   }
-  .focus-switch button.sel { background: var(--fc); color: #fff; }
+  .focus-switch button.sel { background: color-mix(in srgb, var(--fc) 16%, var(--card)); color: color-mix(in srgb, var(--fc) 45%, var(--fg)); box-shadow: inset 0 0 0 1.5px color-mix(in srgb, var(--fc) 55%, transparent); }
   @media (hover: hover) and (pointer: fine) { .focus-switch button:not(.sel):hover { background: color-mix(in srgb, var(--fc) 12%, transparent); color: var(--fg); } }
   .focus-pill {
     flex-shrink: 0; border: 1px solid var(--border); background: var(--bg); color: var(--muted); border-radius: 999px;
     font: inherit; font-size: .66rem; font-weight: 800; padding: .25rem .55rem; cursor: pointer; min-height: 1.8rem;
   }
-  .focus-pill.work { color: #6366f1; border-color: color-mix(in srgb, #6366f1 40%, var(--border)); }
-  .focus-pill.personal { color: #059669; border-color: color-mix(in srgb, #10b981 40%, var(--border)); }
+  .focus-pill.work { color: color-mix(in srgb, #6366f1 62%, var(--fg)); border-color: color-mix(in srgb, #6366f1 40%, var(--border)); }
+  .focus-pill.personal { color: color-mix(in srgb, #10b981 52%, var(--fg)); border-color: color-mix(in srgb, #10b981 40%, var(--border)); }
 
   /* ตัวเลือกธีมในหน้า Settings */
   .set-row .theme-seg { margin: 0; flex-shrink: 0; }
@@ -5952,11 +5955,9 @@ function taskHtml(t, hideCat) {
   const overdue = t.status === "open" && span && span.end.getTime() < startOfDay(new Date()).getTime();
   const hasNote = !!firstNoteLine(t.note);
   const proj = projectOf(t);
-  return `<div class="task ${t.status === "done" ? "is-done" : ""} ${t.id === lastToggled ? "just-done" : ""}" onclick="if(!textSelected())toggleDone('${t.id}')"
-    role="button" tabindex="0"
-    onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();toggleDone('${t.id}')}"
-    aria-label="${esc(t.title)} — ${t.status === "done" ? "done, press to reopen" : "press to mark as done"}">
-    <span class="task-status">${t.status === "done" ? "✓" : ""}</span>
+  return `<div class="task ${t.status === "done" ? "is-done" : ""} ${t.id === lastToggled ? "just-done" : ""}" onclick="if(!textSelected())toggleDone('${t.id}')">
+    <button type="button" class="task-status" aria-pressed="${t.status === "done"}" aria-label="${t.status === "done" ? "Reopen" : "Mark as done"}: ${esc(t.title)}"
+      onclick="event.stopPropagation();toggleDone('${t.id}')">${t.status === "done" ? "✓" : ""}</button>
     <div class="task-body">
       <div class="task-title ${t.status === "done" ? "done" : ""}">${esc(t.title)}</div>
       <div class="task-meta">
@@ -8396,7 +8397,7 @@ function render() {
     view.classList.remove("anim");
   }
   document.getElementById("navBar").innerHTML = TABS.filter(([id]) => id !== "pets" || PETS_TAB).map(([id, ico, label]) =>
-    `<button class="nav-btn ${id === currentTab ? "active" : ""}" onclick="switchTab('${id}')"
+    `<button class="nav-btn ${id === currentTab ? "active" : ""}" onclick="switchTab('${id}')" aria-label="${label}"
       aria-current="${id === currentTab ? "page" : "false"}">
       <span class="ico">${icon(ico, 20)}</span><span class="lbl">${label}</span></button>`).join("");
   document.getElementById("fabBtn").style.display =

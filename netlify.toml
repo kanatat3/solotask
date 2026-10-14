@@ -1,0 +1,9 @@
+# The build command is the verify gate: lint + build (site files -> dist/) + Playwright e2e with axe (WCAG 2.1 AA).
+# Any failure stops the deploy, so the live site keeps the last good version.
+[build]
+  publish = "dist"
+  command = "npm ci && npx playwright install chromium && npm run verify"
+
+[build.environment]
+  NODE_VERSION = "20"
+  CI = "1"

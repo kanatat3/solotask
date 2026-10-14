@@ -1,0 +1,15 @@
+{
+  "name": "kodo",
+  "private": true,
+  "description": "Kodo single-file web app (index.html + request.html) and its verify gate",
+  "scripts": {
+    "lint": "node scripts/check-page.mjs",
+    "build": "node scripts/build.mjs",
+    "test:e2e": "playwright test",
+    "verify": "npm run lint && npm run build && npm run test:e2e"
+  },
+  "devDependencies": {
+    "@axe-core/playwright": "^4.10.2",
+    "@playwright/test": "^1.56.1"
+  }
+}
