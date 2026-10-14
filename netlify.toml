@@ -5,5 +5,5 @@
   command = "npm ci && npx playwright install chromium && npm run verify"
 
 [build.environment]
-  NODE_VERSION = "20"
+  NODE_VERSION = "24"
   CI = "1"
