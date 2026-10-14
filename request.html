@@ -122,8 +122,8 @@
   const token = new URLSearchParams(location.hash.slice(1)).get("t") || "";
   const files = [];   // { file, type, url }
 
-  if (!/^[A-Za-z0-9_-]{24,64}$/.test(token)) { app.innerHTML = `<h1>Link not valid</h1><p class="sub">Ask for a new request link.</p>`; return; }
-  if (!window.supabase) { app.innerHTML = `<h1>Can't connect</h1><p class="sub">Check your internet connection and reload.</p>`; return; }
+  if (!/^[A-Za-z0-9_-]{24,64}$/.test(token)) { app.removeAttribute("aria-busy"); app.innerHTML = `<h1>Link not valid</h1><p class="sub">Ask for a new request link.</p>`; return; }
+  if (!window.supabase) { app.removeAttribute("aria-busy"); app.innerHTML = `<h1>Can't connect</h1><p class="sub">Check your internet connection and reload.</p>`; return; }
   const sb = window.supabase.createClient(SB_URL, SB_KEY, { auth: { persistSession: false, autoRefreshToken: false } });
 
   const rid = () => Array.from(crypto.getRandomValues(new Uint8Array(12)), b => b.toString(16).padStart(2, "0")).join("");
