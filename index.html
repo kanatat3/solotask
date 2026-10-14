@@ -1891,15 +1891,17 @@ function migrate(s) {
         && typeof p.name === "string" && p.name.trim()
         && typeof p.color === "string" && /^#[0-9a-f]{3,8}$/i.test(p.color)) : [];
       // ขั้นของ workflow งานวิจัย (V9.2) — ค่าคงที่อยู่ในฟังก์ชันเพราะ migrate รันก่อน WF_STAGES ถูกประกาศ
-      const STG = ["fieldwork", "editclean", "review", "analyst", "report", "deliver", "done"];
+      // V9.6: ตัดขั้น Review ออก -> โปรเจกต์/รอบที่อยู่ Review กลับไปอยู่ Edit + Clean (ยังไม่ถึง Data Analyst)
+      const STG = ["fieldwork", "editclean", "analyst", "report", "deliver", "done"];
+      const fixStage = u => { if (u.stage === "review") u.stage = "editclean"; if (u.stage !== undefined && !STG.includes(u.stage)) delete u.stage; };
       c.projects.forEach(p => {
-        if (p.stage !== undefined && !STG.includes(p.stage)) delete p.stage;
+        fixStage(p);
         // รอบย่อย (V9.4): {id, name, stage?}
         if (p.rounds !== undefined) {
           p.rounds = Array.isArray(p.rounds) ? p.rounds.filter(r =>
             r && typeof r.id === "string" && /^[a-z0-9]{1,40}$/i.test(r.id)
             && typeof r.name === "string" && r.name.trim()).slice(0, 30) : [];
-          p.rounds.forEach(r => { r.name = r.name.trim().slice(0, 40); if (r.stage !== undefined && !STG.includes(r.stage)) delete r.stage; });
+          p.rounds.forEach(r => { r.name = r.name.trim().slice(0, 40); fixStage(r); });
           if (!p.rounds.length) delete p.rounds;
         }
       });
@@ -1911,7 +1913,8 @@ function migrate(s) {
   }
   (s.tasks || []).forEach(t => {
     if (t.projectId != null && (typeof t.projectId !== "string" || !/^[a-z0-9]{1,40}$/i.test(t.projectId))) t.projectId = null;
-    if (t.step != null && !["fieldwork", "edit", "clean", "review", "analyst", "report", "deliver"].includes(t.step)) t.step = null;
+    if (t.step === "review") t.step = "clean";   // V9.6: ไม่มีขั้น Review แล้ว
+    if (t.step != null && !["fieldwork", "edit", "clean", "analyst", "report", "deliver"].includes(t.step)) t.step = null;
     if (t.roundId != null && (typeof t.roundId !== "string" || !/^[a-z0-9]{1,40}$/i.test(t.roundId))) t.roundId = null;
   });
   if (!Array.isArray(s.routines)) s.routines = [];
@@ -5672,25 +5675,24 @@ function deleteProject(catId, pid) {
 }
 
 /* ---------- Workflow งานวิจัย (V9.2, รอบย่อย V9.4) — โปรเจกต์ในหมวดงาน (focus = work) ----------
-   1 Fieldwork → 2 Edit (paper/open-end → code) คู่กับ Clean → 3 Review รวม → 4 Data Analyst → 5 Report → 6 ส่งลูกค้า → Done
+   1 Data Collection → 2 Edit (paper/open-end → code) คู่กับ Clean → 3 Data Analyst → 4 Report → 5 ส่งลูกค้า → Done
+   (V9.6: เปลี่ยนชื่อ Fieldwork เป็น Data Collection — key ยังเป็น "fieldwork" ข้อมูลเดิมใช้ต่อได้; ตัดขั้น Review ออก)
    "หน่วย" ที่มีขั้น = โปรเจกต์ (ไม่มีรอบ) หรือรอบย่อย project.rounds[] (Wave 1, Wave 2 …) — แต่ละหน่วยมี stage ของตัวเอง
    unit.stage = ตัวชี้ว่าอยู่ขั้นไหน (ไม่มี = ยังไม่เริ่ม); task.step = งานนี้อยู่ขั้นไหน; task.roundId = งานนี้อยู่รอบไหน */
 const WF_STAGES = [
-  { k: "fieldwork", n: "Fieldwork", ico: "clipboard", steps: ["fieldwork"] },
+  { k: "fieldwork", n: "Data Collection", ico: "clipboard", steps: ["fieldwork"] },
   { k: "editclean", n: "Edit + Clean", ico: "edit", steps: ["edit", "clean"] },
-  { k: "review", n: "Review", ico: "eye", steps: ["review"] },
   { k: "analyst", n: "Data Analyst", ico: "chart", steps: ["analyst"] },
   { k: "report", n: "Report", ico: "doc", steps: ["report"] },
   { k: "deliver", n: "Send to client", ico: "send", steps: ["deliver"] },
 ];
 const WF_STEPS = {
-  fieldwork: { no: 1, n: "Fieldwork", d: "Collect the data", ico: "clipboard" },
+  fieldwork: { no: 1, n: "Data Collection", d: "Collect the data", ico: "clipboard" },
   edit:      { no: 2, n: "Edit", d: "Paper / open-end → code", ico: "edit" },
   clean:     { no: 2, n: "Clean", d: "Clean what's ready now", ico: "sparkles" },
-  review:    { no: 3, n: "Review", d: "Edit + Clean together", ico: "eye" },
-  analyst:   { no: 4, n: "Data Analyst", d: "Excel → Tableau → Sheet + Dashboard", ico: "chart" },
-  report:    { no: 5, n: "Report", d: "Data Viz / PM", ico: "doc" },
-  deliver:   { no: 6, n: "Send to client", d: "Hand the report over", ico: "send" },
+  analyst:   { no: 3, n: "Data Analyst", d: "Excel → Tableau → Sheet + Dashboard", ico: "chart" },
+  report:    { no: 4, n: "Report", d: "Data Viz / PM", ico: "doc" },
+  deliver:   { no: 5, n: "Send to client", d: "Hand the report over", ico: "send" },
 };
 const WF_STEP_ORDER = Object.keys(WF_STEPS);
 const WF_MAX_ROUNDS = 30;
