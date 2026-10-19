@@ -25,6 +25,30 @@ test("add a task with the tap-first form", async ({ page }) => {
   await expect(page.getByText("Send the weekly report")).toBeVisible();
 });
 
+test("date range by clicking start and end in the calendar (DD/MM/YYYY)", async ({ page }) => {
+  await openApp(page);
+  await page.locator("#fabBtn").click();
+  await page.locator("#fTitle").fill("Fieldwork trip");
+  await page.getByRole("button", { name: "Open calendar" }).first().click();
+  const cal = page.locator("#fDueCal");
+  await expect(cal).toBeVisible();
+  await expectNoA11yViolations(page, "task form calendar");
+  // pick two days of next month so they are always in the same view
+  await cal.getByRole("button", { name: "Next month" }).click();
+  const days = cal.locator(".dp-day:not(.is-other)");
+  await days.nth(9).click();
+  await expect(cal.locator(".dp-hint")).toContainText("last day");
+  await days.nth(13).click();
+  await expect(cal).toBeHidden();
+  await expect(page.locator("#fDueLabelText")).toHaveText("Start date");
+  await expect(page.locator("#fDueTxt")).toHaveValue(/^10\/\d{2}\/\d{4}$/);
+  await expect(page.locator("#fEndTxt")).toHaveValue(/^14\/\d{2}\/\d{4}$/);
+  await expect(page.locator("#fSubmit")).toHaveText(/^Add task · 10\/\d{2}\/\d{4} – 14\/\d{2}\/\d{4}$/);
+  await page.locator("#fSubmit").click();
+  await page.locator("#navBar").getByRole("button", { name: "All" }).click();
+  await expect(page.getByText("Fieldwork trip")).toBeVisible();
+});
+
 test("Work overview, project workflow and rounds", async ({ page }) => {
   await openApp(page);
   await page.evaluate(() => goCat("cw"));

@@ -1095,6 +1095,18 @@
   .rq-copy { display: inline-flex; align-items: center; gap: .3rem; flex-shrink: 0; padding: .3rem .6rem; border: 1px solid var(--border); border-radius: 999px;
     background: var(--bg); color: var(--fg); font: inherit; font-size: .74rem; font-weight: 600; cursor: pointer; }
   .rq-copy-all { margin: 0 0 .6rem; padding: .45rem .8rem; font-size: .8rem; }
+  .rq-group { margin: 1.1rem 0 .4rem; }
+  .rq-g-head { display: flex; align-items: center; gap: .6rem; margin: 0 0 .55rem; position: sticky; top: 0; z-index: 2; background: var(--bg); padding: .4rem 0; }
+  .rq-g-t { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+  .rq-g-t h2 { margin: 0; font-size: 1rem; line-height: 1.25; overflow-wrap: anywhere; }
+  .rq-g-sub { font-size: .74rem; color: var(--muted); }
+  .rq-g-new { color: var(--danger-text); font-weight: 700; }
+  .rq-all-chip { display: inline-flex; align-items: center; gap: .2rem; }
+  .rq-sk { background: var(--card); border: 1px solid var(--edge); border-radius: var(--r-md); padding: .9rem; margin: .8rem 0; display: flex; flex-direction: column; gap: .55rem; }
+  .rq-sk .sk-line, .rq-sk .sk-block { display: block; border-radius: .4rem; background: linear-gradient(90deg, var(--bg) 0%, var(--border) 50%, var(--bg) 100%); background-size: 200% 100%; animation: rqsk 1.2s ease-in-out infinite; }
+  .rq-sk .sk-line { height: .8rem; } .rq-sk .sk-block { height: 3.5rem; }
+  @keyframes rqsk { from { background-position: 100% 0; } to { background-position: -100% 0; } }
+  @media (prefers-reduced-motion: reduce) { .rq-sk .sk-line, .rq-sk .sk-block { animation: none; } }
   .rq-copy:hover { color: var(--primary); border-color: color-mix(in srgb, var(--primary) 40%, var(--border)); }
   .rq-status { width: 100%; margin-top: .5rem; }
   .rq-status .cal-seg-btn { flex: 1; }
@@ -1235,24 +1247,44 @@
   textarea { resize: vertical; }
   .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: .75rem; }
   /* ช่องวันที่: ปุ่มแสดง "5 Oct 2026" ทับช่อง date ของเบราว์เซอร์ (ซึ่งแสดงตามเครื่อง เช่น mm/dd/yyyy) — ช่องจริงซ่อนไว้ใต้ปุ่ม ใช้เปิดตัวเลือกวันที่ */
-  .datefld { position: relative; display: block; }
-  .datefld .date-btn {
-    width: 100%; text-align: left; background: var(--bg); border: 1.5px solid transparent; border-radius: var(--r-sm);
-    padding: .7rem .85rem; margin-top: .3rem; font: inherit; font-size: .9rem; font-weight: 600; color: var(--fg); cursor: pointer;
-    display: flex; align-items: center; gap: .5rem; min-height: 2.75rem; transition: border-color .15s ease-out, background .15s ease-out;
-  }
-  .datefld .date-btn:focus-visible { outline: none; border-color: var(--primary); background: var(--card); }
-  .datefld .date-btn .date-ph { color: var(--muted); font-weight: 500; }
-  .datefld .date-btn svg { margin-left: auto; color: var(--muted); flex-shrink: 0; }
-  .datefld input { position: absolute; inset: .3rem 0 0 0; width: 100%; height: calc(100% - .3rem); margin: 0; opacity: 0; pointer-events: none; }
-  .datefld input.date-native { position: static; height: auto; opacity: 1; pointer-events: auto; }
-  .datefld:has(input.date-native) .date-btn { display: none; }
+  .datefld { display: block; margin-top: .3rem; }
+  .date-row { display: flex; gap: .4rem; align-items: stretch; }
+  .date-row .date-txt { flex: 1; min-width: 0; font-weight: 600; letter-spacing: .02em; font-variant-numeric: tabular-nums; }
+  .date-row .time-txt { width: 5.4rem; flex: none; font-weight: 600; font-variant-numeric: tabular-nums; text-align: center; }
+  .date-row input[aria-invalid="true"], input.time-only:invalid:not(:placeholder-shown) { border-color: var(--danger-text); }
+  .date-cal-btn { flex: none; width: 2.9rem; min-height: 2.75rem; display: grid; place-items: center; border-radius: var(--r-sm); border: 1.5px solid transparent;
+    background: var(--bg); color: var(--muted); cursor: pointer; }
+  .date-cal-btn[aria-expanded="true"] { border-color: var(--primary); color: var(--primary); background: var(--card); }
+  .date-cal-btn:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
+  .end-head { display: flex; align-items: center; justify-content: space-between; font-size: .7rem; color: var(--muted); }
+  .end-clear { font-size: .78rem; min-height: 2rem; }
+  /* ปฏิทินในฟอร์ม */
+  .dp { margin-top: .5rem; padding: .7rem; border-radius: var(--r-md); background: var(--card); border: 1px solid var(--edge); box-shadow: var(--shadow); color: var(--fg); }
+  .dp-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: .4rem; }
+  .dp-title { font-size: .9rem; font-weight: 800; }
+  .dp-nav { width: 2.5rem; height: 2.5rem; border-radius: 50%; border: none; background: none; color: var(--fg); display: grid; place-items: center; cursor: pointer; }
+  .dp-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px 0; }
+  .dp-dow { text-align: center; font-size: .66rem; font-weight: 700; color: var(--muted); padding: .2rem 0; }
+  .dp-day { height: 2.5rem; border: none; background: none; font: inherit; font-size: .85rem; font-weight: 600; color: var(--fg); cursor: pointer; border-radius: .7rem; font-variant-numeric: tabular-nums; }
+  .dp-day.is-other { color: var(--muted); }
+  .dp-day.is-today { box-shadow: inset 0 0 0 1.5px var(--primary); }
+  .dp-day.in-range { background: color-mix(in srgb, var(--primary) 12%, var(--card)); border-radius: 0; }
+  .dp-day.is-sel { background: var(--primary); color: #fff; }
+  .dp-day.r-start { border-radius: .7rem 0 0 .7rem; }
+  .dp-day.r-end { border-radius: 0 .7rem .7rem 0; }
+  .dp-day:disabled { color: var(--muted); opacity: .45; cursor: not-allowed; text-decoration: line-through; }
+  .dp-day:focus-visible, .dp-nav:focus-visible, .dp-done:focus-visible { outline: 2px solid var(--primary); outline-offset: 1px; }
+  @media (hover: hover) and (pointer: fine) { .dp-day:not(.is-sel):not(:disabled):hover, .dp-nav:hover { background: var(--hover-tint); } }
+  .dp-foot { display: flex; align-items: center; justify-content: space-between; gap: .6rem; margin-top: .5rem; }
+  .dp-hint { font-size: .74rem; color: var(--muted); }
+  .dp-done { flex: none; min-height: 2.5rem; padding: 0 1rem; border-radius: 999px; border: none; background: color-mix(in srgb, var(--primary) 13%, var(--card)); color: color-mix(in srgb, var(--primary) 75%, var(--fg)); font: inherit; font-weight: 700; cursor: pointer; }
+
   .btn { width: 100%; border: none; border-radius: var(--r-sm); padding: .85rem; font-weight: 800; cursor: pointer; margin-top: .25rem; transition: transform .12s cubic-bezier(.22, 1, .36, 1), background .15s; }
   .btn:active { transform: scale(.98); }
   .btn-primary { background: var(--primary); color: #fff; }
   .btn-primary:active { background: var(--primary-dark); }
   .btn-outline { background: transparent; border: 1.5px solid var(--border); color: var(--fg); }
-  .btn-danger-outline { background: transparent; border: 1.5px solid color-mix(in srgb, var(--danger) 45%, transparent); color: var(--danger); }
+  .btn-danger-outline { background: transparent; border: 1.5px solid color-mix(in srgb, var(--danger) 45%, transparent); color: color-mix(in srgb, var(--danger) 75%, var(--fg)); }
 
   .card { background: var(--card); border: 1px solid var(--edge); border-radius: var(--r-md); padding: 1rem; margin-bottom: .75rem; box-shadow: var(--shadow); }
   .cat-row { display: flex; align-items: center; gap: .75rem; background: var(--card); border: 1px solid var(--border); border-radius: .75rem; padding: .6rem .75rem; margin-bottom: .5rem; }
@@ -2009,12 +2041,8 @@ function dateKey(d) {
   const p = n => String(n).padStart(2, "0");
   return d.getFullYear() + "-" + p(d.getMonth()+1) + "-" + p(d.getDate());
 }
-function fmtTime(d) {
-  let h = d.getHours(); const m = String(d.getMinutes()).padStart(2, "0");
-  const ap = h >= 12 ? "PM" : "AM";
-  h = h % 12 || 12;
-  return h + ":" + m + " " + ap;
-}
+/** เวลา 24 ชม. "13:06" เสมอ (ไม่มี AM/PM) */
+function fmtTime(d) { return String(d.getHours()).padStart(2, "0") + ":" + String(d.getMinutes()).padStart(2, "0"); }
 function fmtDate(d) {
   const diff = Math.round((startOfDay(d) - startOfDay(new Date())) / 86400000);
   if (diff === 0) return "Today";
@@ -2022,8 +2050,26 @@ function fmtDate(d) {
   if (diff === -1) return "Yesterday";
   return DOW[d.getDay()] + " " + fmtDMY(d);
 }
-/** "5 Oct 2026" — วัน เดือน ปี เสมอ (ไม่มีคำว่า Today/Tomorrow) */
-function fmtDMY(d) { return d.getDate() + " " + MONTHS_SHORT[d.getMonth()] + " " + d.getFullYear(); }
+/** "05/10/2026" — DD/MM/YYYY เสมอ (ไม่ขึ้นกับภาษาเครื่อง; ไม่มีคำว่า Today/Tomorrow) */
+function fmtDMY(d) { return String(d.getDate()).padStart(2, "0") + "/" + String(d.getMonth() + 1).padStart(2, "0") + "/" + d.getFullYear(); }
+/** "2026-10-05" -> "05/10/2026" */
+function keyToDMY(k) { return /^\d{4}-\d{2}-\d{2}/.test(k || "") ? k.slice(8, 10) + "/" + k.slice(5, 7) + "/" + k.slice(0, 4) : ""; }
+/** "5/10/2026" หรือ "05/10/2026" -> "2026-10-05" (วันก่อนเดือนเสมอ); วันที่ไม่มีจริง (31/02) -> null */
+function parseDMY(str) {
+  const m = /^(\d{1,2})\/(\d{1,2})\/(\d{4})$/.exec(String(str || "").trim());
+  if (!m) return null;
+  const d = new Date(Number(m[3]), Number(m[2]) - 1, Number(m[1]));
+  return d.getFullYear() === Number(m[3]) && d.getMonth() === Number(m[2]) - 1 && d.getDate() === Number(m[1]) ? dateKey(d) : null;
+}
+/** "9:5" / "0930" -> "09:30"; ไม่ใช่เวลา 24 ชม. ที่ถูกต้อง -> null */
+function parseHM(str) {
+  const m = /^([01]?\d|2[0-3]):?([0-5]\d)$/.exec(String(str || "").trim());
+  return m ? m[1].padStart(2, "0") + ":" + m[2] : null;
+}
+/** พิมพ์ตัวเลขแล้วใส่ / ให้เอง: 16102026 -> 16/10/2026 */
+function maskDMY(v) { const d = String(v).replace(/\D/g, "").slice(0, 8); return d.length > 4 ? d.slice(0, 2) + "/" + d.slice(2, 4) + "/" + d.slice(4) : d.length > 2 ? d.slice(0, 2) + "/" + d.slice(2) : d; }
+/** พิมพ์ตัวเลขแล้วใส่ : ให้เอง: 0930 -> 09:30 */
+function maskHM(v) { const d = String(v).replace(/\D/g, "").slice(0, 4); return d.length > 2 ? d.slice(0, 2) + ":" + d.slice(2) : d; }
 /** เหมือน fmtDate แต่ Today/Tomorrow/Yesterday มีวันที่ต่อท้าย: "Today · 5 Oct 2026" */
 function fmtDateLong(d) {
   const l = fmtDate(d);
@@ -2038,28 +2084,149 @@ function toInputValue(d) {
   return d.getFullYear() + "-" + p(d.getMonth()+1) + "-" + p(d.getDate()) + "T" + p(d.getHours()) + ":" + p(d.getMinutes());
 }
 
-/** ช่องวันที่ของฟอร์ม: ปุ่มแสดงวันที่แบบ "5 Oct 2026" + ช่อง date/datetime-local ของเบราว์เซอร์ซ่อนอยู่ใต้ปุ่ม (id เดิม อ่าน .value ได้เหมือนเดิม)
- *  ช่อง date ของเบราว์เซอร์แสดงตามภาษาเครื่อง (เช่น mm/dd/yyyy) จึงไม่ใช้โชว์ตรงๆ; กดปุ่ม -> showPicker() เปิดตัวเลือกวันที่
- *  เบราว์เซอร์เก่าที่ไม่มี showPicker -> โชว์ช่องของเบราว์เซอร์แทน */
-function dateFieldHtml(id, value, attrs = "", type = "date") {
-  return `<span class="datefld"><input type="${type}" id="${id}" value="${esc(value || "")}" ${attrs} tabindex="-1" aria-hidden="true" onchange="syncDateBtn('${id}')" oninput="syncDateBtn('${id}')">
-    <button type="button" class="date-btn" id="${id}Btn" onclick="openDatePicker('${id}')" aria-haspopup="dialog">${dateBtnLabel(value, type)}</button></span>`;
+/** ช่องวันที่ (V9.9): พิมพ์ DD/MM/YYYY ได้ (ใส่ / ให้เอง) + ปุ่มเปิดปฏิทินของเราเอง — ไม่ใช้ตัวเลือกวันที่ของเบราว์เซอร์ (แสดงตามภาษาเครื่อง เช่น mm/dd/yyyy)
+ *  ค่าจริงอยู่ใน input id เดิม (ซ่อนไว้; type date = "YYYY-MM-DD", datetime-local = "YYYY-MM-DDTHH:mm") — โค้ดเดิมอ่าน .value/.type ได้เหมือนเดิม
+ *  type datetime-local -> มีช่องเวลา HH:mm (24 ชม.) ต่อท้าย; opts.rangeEnd = id ของช่องวันจบ -> ปฏิทินคลิกวันเริ่มแล้ววันจบเป็นช่วงได้ */
+function dateFieldHtml(id, value, attrs = "", type = "date", opts = {}) {
+  const v = value || "";
+  return `<span class="datefld" id="${id}Wrap" ${opts.rangeEnd ? `data-range-end="${opts.rangeEnd}"` : ""}>
+    <input type="${type}" id="${id}" value="${esc(v)}" hidden>
+    <span class="date-row">
+      <input type="text" class="date-txt" id="${id}Txt" inputmode="numeric" autocomplete="off" maxlength="10" placeholder="DD/MM/YYYY"
+        value="${keyToDMY(v.slice(0, 10))}" ${attrs} oninput="dateTyped('${id}')" onblur="dateBlur('${id}')">
+      <input type="text" class="time-txt" id="${id}Time" inputmode="numeric" autocomplete="off" maxlength="5" placeholder="HH:mm" aria-label="Time (24-hour)"
+        value="${v.length > 10 ? esc(v.slice(11, 16)) : ""}" ${type === "datetime-local" ? "" : "hidden"} oninput="timeTyped('${id}')" onblur="timeBlur('${id}')">
+      <button type="button" class="date-cal-btn" id="${id}Btn" aria-label="Open calendar" aria-expanded="false" aria-controls="${id}Cal" onclick="toggleDatePicker('${id}')">${icon("calendar", 16)}</button>
+    </span>
+    <div class="dp" id="${id}Cal" hidden></div>
+  </span>`;
 }
-function dateBtnLabel(v, type) {
-  const d = v ? new Date(v.length === 10 ? v + "T00:00:00" : v) : null;
-  const text = d && !isNaN(d) ? fmtDMY(d) + (type === "datetime-local" ? " · " + fmtTime(d) : "") : `<span class="date-ph">${type === "datetime-local" ? "Pick date & time" : "Pick a date"}</span>`;
-  return text + icon("calendar", 14);
-}
+/** ค่าในช่องจริงเปลี่ยนจากโค้ด (ปุ่มวัน, ปฏิทิน, สลับเวลา) -> อัปเดตช่องที่ผู้ใช้เห็น */
 function syncDateBtn(id) {
-  const i = document.getElementById(id), b = document.getElementById(id + "Btn");
-  if (i && b) b.innerHTML = dateBtnLabel(i.value, i.type);
-  if (id === "fDue" || id === "fEnd") refreshDueUi();
-}
-function openDatePicker(id) {
   const i = document.getElementById(id);
   if (!i) return;
-  try { i.showPicker(); }
-  catch { i.classList.add("date-native"); i.removeAttribute("tabindex"); i.removeAttribute("aria-hidden"); i.focus(); }
+  const txt = document.getElementById(id + "Txt"), tm = document.getElementById(id + "Time");
+  if (txt) { txt.value = keyToDMY(i.value.slice(0, 10)); txt.removeAttribute("aria-invalid"); }
+  if (tm) { tm.hidden = i.type !== "datetime-local"; tm.value = i.value.length > 10 ? i.value.slice(11, 16) : ""; tm.removeAttribute("aria-invalid"); }
+  const cal = document.getElementById(id + "Cal");
+  if (cal && !cal.hidden) renderDatePicker(id);
+  if (id === "fDue" || id === "fEnd") refreshDueUi();
+}
+function setDateValue(id, key) {
+  const i = document.getElementById(id);
+  if (!i) return;
+  if (!key) i.value = "";
+  else if (i.type === "datetime-local") i.value = key + "T" + (parseHM(document.getElementById(id + "Time")?.value) || i.value.slice(11, 16) || "09:00");
+  else i.value = key;
+}
+/** พิมพ์วันที่: ใส่ / ให้เอง; ครบและถูกต้อง -> เก็บค่า; ลบหมด -> ไม่มีวัน */
+function dateTyped(id) {
+  const txt = document.getElementById(id + "Txt");
+  const masked = maskDMY(txt.value);
+  if (masked !== txt.value) txt.value = masked;
+  const key = parseDMY(masked);
+  const i = document.getElementById(id);
+  // วันจบก่อนวันเริ่มไม่ได้ (min = วันเริ่ม)
+  if (key && i && i.min && key < i.min.slice(0, 10)) { txt.setAttribute("aria-invalid", "true"); return; }
+  if (key || !masked) {
+    txt.removeAttribute("aria-invalid");
+    setDateValue(id, key);
+    const cal = document.getElementById(id + "Cal");
+    if (cal && !cal.hidden) renderDatePicker(id);
+    if (id === "fDue" || id === "fEnd") refreshDueUi();
+  }
+}
+/** ออกจากช่องแล้ววันที่ยังไม่ครบ/ไม่มีจริง -> ขึ้นกรอบแดงและคืนค่าเดิมที่ถูกต้อง */
+function dateBlur(id) {
+  const txt = document.getElementById(id + "Txt"), i = document.getElementById(id);
+  if (!txt || !i || !txt.value || parseDMY(txt.value)) return;
+  txt.value = keyToDMY(i.value.slice(0, 10));
+  txt.setAttribute("aria-invalid", "true");
+  showToast("❌ Use DD/MM/YYYY, e.g. " + fmtDMY(new Date()));
+}
+function timeTyped(id) {
+  const tm = document.getElementById(id + "Time"), i = document.getElementById(id);
+  const masked = maskHM(tm.value);
+  if (masked !== tm.value) tm.value = masked;
+  const hm = parseHM(masked);
+  if (hm && masked.length === 5 && i.value) { i.value = i.value.slice(0, 10) + "T" + hm; tm.removeAttribute("aria-invalid"); }
+}
+function timeBlur(id) {
+  const tm = document.getElementById(id + "Time"), i = document.getElementById(id);
+  if (!tm || !i) return;
+  const hm = parseHM(tm.value);
+  if (hm) { tm.value = hm; if (i.value) i.value = i.value.slice(0, 10) + "T" + hm; tm.removeAttribute("aria-invalid"); }
+  else if (tm.value) { tm.value = i.value.length > 10 ? i.value.slice(11, 16) : ""; tm.setAttribute("aria-invalid", "true"); showToast("❌ Use 24-hour time HH:mm, e.g. 13:30"); }
+}
+
+/* ----- ปฏิทินในฟอร์ม: เดือนที่ดูอยู่ + สถานะเลือกช่วง ----- */
+const dpState = {};   // id -> { y, m, picking }  (picking = คลิกวันเริ่มแล้ว รอคลิกวันจบ)
+function toggleDatePicker(id) {
+  const cal = document.getElementById(id + "Cal"), btn = document.getElementById(id + "Btn"), i = document.getElementById(id);
+  if (!cal) return;
+  if (!cal.hidden) { closeDatePicker(id); return; }
+  const base = i.value ? new Date(i.value.slice(0, 10) + "T00:00:00") : new Date();
+  dpState[id] = { y: base.getFullYear(), m: base.getMonth(), picking: false };
+  cal.hidden = false; btn.setAttribute("aria-expanded", "true");
+  renderDatePicker(id);
+  cal.querySelector(".dp-day[aria-pressed=true], .dp-day.is-today, .dp-day:not([disabled])")?.focus();
+}
+function closeDatePicker(id) {
+  const cal = document.getElementById(id + "Cal"), btn = document.getElementById(id + "Btn");
+  if (cal) cal.hidden = true;
+  if (btn) btn.setAttribute("aria-expanded", "false");
+}
+function dpShift(id, n) { const st = dpState[id]; if (!st) return; const d = new Date(st.y, st.m + n, 1); st.y = d.getFullYear(); st.m = d.getMonth(); renderDatePicker(id); }
+function renderDatePicker(id) {
+  const cal = document.getElementById(id + "Cal"), i = document.getElementById(id), wrap = document.getElementById(id + "Wrap");
+  const st = dpState[id];
+  if (!cal || !i || !st) return;
+  const endId = wrap?.dataset.rangeEnd, endEl = endId ? document.getElementById(endId) : null;
+  const start = i.value.slice(0, 10), end = endEl ? endEl.value : "";
+  const min = i.min ? i.min.slice(0, 10) : "";
+  const first = new Date(st.y, st.m, 1), today = todayKey();
+  const d = new Date(first); d.setDate(1 - first.getDay());
+  let cells = "";
+  for (let n = 0; n < 42; n++, d.setDate(d.getDate() + 1)) {
+    const k = dateKey(d), other = d.getMonth() !== st.m;
+    if (n >= 35 && other) break;   // ไม่ต้องมีแถวสุดท้ายที่เป็นเดือนหน้าทั้งแถว
+    const isStart = k === start, isEnd = !!end && k === end, inRange = !!end && k > start && k < end;
+    const cls = ["dp-day", other ? "is-other" : "", k === today ? "is-today" : "", isStart || isEnd ? "is-sel" : "", inRange ? "in-range" : "", isStart && end ? "r-start" : "", isEnd ? "r-end" : ""].filter(Boolean).join(" ");
+    cells += `<button type="button" class="${cls}" data-day="${k}" aria-pressed="${isStart || isEnd}" ${min && k < min ? "disabled" : ""}
+      aria-label="${DOW[d.getDay()]} ${fmtDMY(d)}${k === today ? " (today)" : ""}" onclick="dpPick('${id}', '${k}')">${d.getDate()}</button>`;
+  }
+  const hint = endEl
+    ? (st.picking ? "Now tap the last day — or Done for a single day" : end ? `${fmtDMY(new Date(start + "T00:00:00"))} – ${fmtDMY(new Date(end + "T00:00:00"))}` : "Tap a day — tap a second day to make it a range")
+    : "";
+  cal.innerHTML = `<div class="dp-head">
+      <button type="button" class="dp-nav" aria-label="Previous month" onclick="dpShift('${id}', -1)">${icon("left", 16)}</button>
+      <span class="dp-title" aria-live="polite">${MONTHS[st.m]} ${st.y}</span>
+      <button type="button" class="dp-nav" aria-label="Next month" onclick="dpShift('${id}', 1)">${icon("right", 16)}</button>
+    </div>
+    <div class="dp-grid" role="group" aria-label="${MONTHS[st.m]} ${st.y}">${DOW.map(w => `<span class="dp-dow" aria-hidden="true">${w.slice(0, 2)}</span>`).join("")}${cells}</div>
+    <div class="dp-foot"><span class="dp-hint">${hint}</span><button type="button" class="dp-done" onclick="closeDatePicker('${id}')">Done</button></div>`;
+}
+/** คลิกวันในปฏิทิน: ช่องปกติ = เลือกแล้วปิด; ช่องที่มีวันจบ = คลิกแรกวันเริ่ม คลิกที่สองวันจบ (คลิกวันเดิม = วันเดียว, คลิกวันก่อนหน้า = เริ่มใหม่) */
+function dpPick(id, key) {
+  const wrap = document.getElementById(id + "Wrap"), st = dpState[id];
+  const endId = wrap?.dataset.rangeEnd, endEl = endId ? document.getElementById(endId) : null;
+  if (!endEl) { setDateValue(id, key); closeDatePicker(id); syncDateBtn(id); document.getElementById(id + "Txt")?.focus(); return; }
+  const start = document.getElementById(id).value.slice(0, 10);
+  if (st && st.picking && start && key > start) {
+    endEl.value = key; st.picking = false;
+    syncDateBtn(endId); syncDateBtn(id);
+    closeDatePicker(id);
+    document.getElementById(id + "Txt")?.focus();
+    return;
+  }
+  setDateValue(id, key); endEl.value = "";
+  if (st) st.picking = !(st.picking && key === start);   // คลิกวันเดิมซ้ำ = จบที่วันเดียว
+  syncDateBtn(endId); syncDateBtn(id);
+}
+/** ช่องเวลา 24 ชม. (ใช้แทน <input type="time"> ซึ่งแสดง AM/PM ตามภาษาเครื่อง) */
+function timeFieldHtml(id, value, attrs = "") {
+  return `<input type="text" id="${id}" class="time-only" inputmode="numeric" autocomplete="off" maxlength="5" placeholder="HH:mm" value="${esc(value || "")}"
+    pattern="([01]\\d|2[0-3]):[0-5]\\d" title="24-hour time, e.g. 13:30" ${attrs} oninput="this.value = maskHM(this.value)" onblur="const h = parseHM(this.value); if (h) this.value = h;">`;
 }
 
 /* ---------- recurrence ---------- */
@@ -2930,7 +3097,7 @@ async function importAgentLog() {
       let note = stripAgentIcon(r.note).trim();
       if (startedAt) {
         const s = new Date(startedAt), d = new Date(doneAt);
-        const fmtT = x => x.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", hour12: false });
+        const fmtT = x => fmtTime(x);
         const sameDay = dateKey(s) === dateKey(d);
         const mins = Math.max(1, Math.round((d - s) / 60000));
         const dur = mins >= 60 ? `${Math.floor(mins / 60)}h ${mins % 60}m` : `${mins}m`;
@@ -3050,7 +3217,7 @@ function disconnectCloud() {
 
 // กลับมาที่แท็บ → ดึงข้อมูลล่าสุด (เผื่อแก้จากเครื่องอื่น)
 document.addEventListener("visibilitychange", () => {
-  if (!document.hidden && sb && sbUser) { pullCloud().then(() => render()); loadRequestCounts(); if (requestsView) loadRequests(requestsView.project); if (tgPending()) tgLoad(true); }
+  if (!document.hidden && sb && sbUser) { pullCloud().then(() => render()); loadRequestCounts(); if (requestsView) requestsView.all ? loadAllRequests() : loadRequests(requestsView.project); if (tgPending()) tgLoad(true); }
 });
 
 /* ---------- auth (mock + cloud) ---------- */
@@ -3470,8 +3637,8 @@ function openSchedule(catId) {
       <div class="setup-label">Days of week</div>
       <div class="day-pills" id="schDays">${dayBtns}</div>
       <div class="row2" style="margin-top:.75rem">
-        <label class="fld">From<input type="time" id="schStart" value="${s.start}" onkeydown="submitOnEnter(event)"></label>
-        <label class="fld">To<input type="time" id="schEnd" value="${s.end}" onkeydown="submitOnEnter(event)"></label>
+        <label class="fld">From${timeFieldHtml("schStart", s.start, 'onkeydown="submitOnEnter(event)"')}</label>
+        <label class="fld">To${timeFieldHtml("schEnd", s.end, 'onkeydown="submitOnEnter(event)"')}</label>
       </div>
       <button class="btn btn-primary" onclick="saveSchedule()">Save</button>
       ${c.schedule ? `<button class="btn btn-danger-outline" onclick="clearSchedule()">Remove schedule</button>` : ""}
@@ -3483,8 +3650,9 @@ function saveSchedule() {
   if (!c) return closeForm();
   if (!document.getElementById("schStart")) return;   // หน้าต่างถูกปิดไปแล้ว
   const days = [...document.querySelectorAll("#schDays .day-pill.sel")].map(b => Number(b.dataset.day));
-  const start = document.getElementById("schStart").value;
-  const end = document.getElementById("schEnd").value;
+  const rawS = document.getElementById("schStart").value.trim(), rawE = document.getElementById("schEnd").value.trim();
+  const start = rawS ? parseHM(rawS) : "", end = rawE ? parseHM(rawE) : "";
+  if (start === null || end === null) { showToast("❌ Use 24-hour time HH:mm, e.g. 09:00"); return; }
   if (days.length && start && start === end) { showToast("❌ Start and end time can't be the same"); return; }
   c.schedule = (days.length && start && end) ? { days, start, end } : null;
   save(); closeForm(); render();
@@ -5503,7 +5671,7 @@ function openChecklistForm(clId) {
       <div class="setup-label">Remind on (optional)</div>
       <div class="day-pills" id="clDays">${dayBtns}</div>
       <label class="fld" style="margin-top:.75rem">Time
-        <input type="time" id="clTime" value="${rem.time}" onkeydown="submitOnEnter(event)">
+        ${timeFieldHtml("clTime", rem.time, 'aria-label="Reminder time (24-hour)" onkeydown="submitOnEnter(event)"')}
       </label>
       <p class="hint" style="margin:0 0 .75rem">At that time the list resets and you get a notification to run through it.</p>
       <button class="btn btn-primary" onclick="saveChecklist()">Save</button>
@@ -5517,7 +5685,9 @@ function saveChecklist() {
   const title = document.getElementById("clTitle").value.trim();
   if (!title) return;
   const days = [...document.querySelectorAll("#clDays .day-pill.sel")].map(b => Number(b.dataset.day));
-  const time = document.getElementById("clTime").value;
+  const rawT = document.getElementById("clTime").value.trim();
+  const time = rawT ? parseHM(rawT) : "";
+  if (time === null) { showToast("❌ Use 24-hour time HH:mm, e.g. 08:30"); return; }
   const reminder = (days.length && time) ? { days, time } : null;
   if (editingChecklist === "new") {
     state.checklists.push({ id: uid(), title, items: [], reminder });
@@ -6783,8 +6953,8 @@ function latestReviewCardHtml(cat) {
    ตาราง request_links (ลิงก์ละโปรเจกต์) + project_requests (เรื่องที่ส่งมา) + bucket "request-files" (ไฟล์แนบ)
    ผู้ส่งใช้หน้า request.html#t=<token> (ไม่ต้อง login) ส่วนในแอปเจ้าของดู/ตั้งสถานะ/ลบ ได้เฉพาะของตัวเอง
    ข้อมูลอยู่บน cloud โดยตรง (ไม่อยู่ใน state ที่ sync) จึงต้อง login แบบ cloud */
-let requestsView = null;          // null | { project, filter }
-const reqStore = { counts: {}, byProject: {}, loading: {}, countsAt: 0 };
+let requestsView = null;          // null | { project, filter, from? } | { all: true, filter }
+const reqStore = { counts: {}, byProject: {}, loading: {}, countsAt: 0, allAt: 0, allError: "", allLoading: false };
 const REQ_STATUS = { new: "New", progress: "In progress", done: "Done" };
 const REQUEST_PAGE = "https://kodotodolist.netlify.app/request.html";
 function requestsReady() { return !!(sb && sbUser); }
@@ -6822,13 +6992,52 @@ async function loadRequests(project) {
   }
   if (requestsView && requestsView.project === project) render();
 }
-function openRequests(project) {
-  requestsView = { project, filter: "open" };
+function openRequests(project, from) {
+  requestsView = { project, filter: "open", from: from || null };
   viewTransition = true;
   render();
   loadRequests(project);
 }
-function closeRequests() { requestsView = null; viewTransition = true; render(); }
+/** กลับ: หน้า request ของโปรเจกต์ที่เปิดมาจากหน้ารวม -> กลับหน้ารวม, ไม่งั้นปิด */
+function closeRequests() {
+  requestsView = requestsView && requestsView.from === "all" ? { all: true, filter: requestsView.allFilter || "open" } : null;
+  viewTransition = true; render();
+  if (requestsView && requestsView.all) loadAllRequests();
+}
+/* ----- หน้ารวม request ทุกโปรเจกต์ ----- */
+function openAllRequests() {
+  requestsView = { all: true, filter: "open" };
+  viewTransition = true;
+  render();
+  loadAllRequests();
+}
+async function loadAllRequests() {
+  if (!requestsReady() || reqStore.allLoading) return;
+  reqStore.allLoading = true;
+  try {
+    const [links, reqs] = await Promise.all([
+      sb.from("request_links").select("id, token, active, created_at, project").eq("owner", sbUser.id).eq("active", true).limit(200),
+      sb.from("project_requests").select("id, project, author, body, attachments, status, created_at, updated_at").eq("owner", sbUser.id).order("created_at", { ascending: false }).limit(1000),
+    ]);
+    if (links.error || reqs.error) throw new Error((links.error || reqs.error).message);
+    const groups = {};
+    for (const r of reqs.data || []) (groups[r.project] = groups[r.project] || []).push(r);
+    for (const l of links.data || []) groups[l.project] = groups[l.project] || [];
+    const counts = {};
+    for (const [project, items] of Object.entries(groups)) {
+      reqStore.byProject[project] = { link: (links.data || []).find(l => l.project === project) || null, items, at: Date.now(), error: "" };
+      const n = items.filter(r => r.status === "new").length;
+      if (n) counts[project] = n;
+    }
+    reqStore.counts = counts;
+    reqStore.allAt = Date.now(); reqStore.allError = "";
+  } catch (e) {
+    reqStore.allError = e.message || "Couldn't load requests";
+  } finally {
+    reqStore.allLoading = false;
+  }
+  if (requestsView && requestsView.all) render();
+}
 function randomToken() {
   return btoa(String.fromCharCode(...crypto.getRandomValues(new Uint8Array(24)))).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
 }
@@ -6868,6 +7077,7 @@ async function deleteRequest(project, id) {
   const { error } = await sb.from("project_requests").delete().eq("id", id).eq("owner", sbUser.id);
   if (error) { showToast("❌ " + error.message); return; }
   reqStore.byProject[project].items = reqStore.byProject[project].items.filter(r => r.id !== id);
+  reqStore.counts[project] = reqStore.byProject[project].items.filter(r => r.status === "new").length;
   render();
 }
 const REQ_PATH_RE = /^[A-Za-z0-9_-]{24,64}\/[A-Za-z0-9_-]{8,64}\.[a-z0-9]{1,5}$/;
@@ -6944,13 +7154,73 @@ function requestsBannerHtml() {
   if (!entries.length) return "";
   const total = entries.reduce((a, [, n]) => a + n, 0);
   return `<div class="rq-banner">${icon("mail", 15)}<span class="rq-banner-t"><b>${total} new request${total > 1 ? "s" : ""}</b></span>
-    ${entries.map(([p, n]) => `<button class="rv-chip" onclick="openRequests(${esc(JSON.stringify(p))})">${esc(p)} · ${n}</button>`).join("")}</div>`;
+    ${entries.map(([p, n]) => `<button class="rv-chip" onclick="openRequests(${esc(JSON.stringify(p))})">${esc(p)} · ${n}</button>`).join("")}
+    <button class="rv-chip rq-all-chip" onclick="openAllRequests()">See all ${icon("right", 12)}</button></div>`;
 }
+/** การ์ด request 1 เรื่อง (หัว: ผู้ส่ง/เวลา/Copy/ลบ, เนื้อหา, ไฟล์, ปุ่มสถานะ) */
+function requestCardHtml(project, r) {
+  const P = esc(JSON.stringify(project));
+  return `<article class="rv-post rq-post ${r.status}">
+      <header class="rv-post-head">${reviewAvatar(r.author ? r.author : "Anonymous", 36)}
+        <span class="rv-post-who"><b class="rv-post-app">${esc(r.author || "Anonymous")}</b><span class="rv-post-time">${esc(reviewWhen(r.created_at))}</span></span>
+        <button class="rq-copy" aria-label="Copy this request" title="Copy this request" onclick="copyRequest(${P}, '${esc(r.id)}')">${icon("copy", 13)} Copy</button>
+        <button class="rt-del" aria-label="Delete request" onclick="deleteRequest(${P}, '${esc(r.id)}')">${icon("trash", 13)}</button>
+      </header>
+      ${requestBodyHtml(r.body)}
+      ${requestAttachmentsHtml(r.attachments)}
+      <div class="cal-seg rq-status" role="radiogroup" aria-label="Status">${Object.entries(REQ_STATUS).map(([k, l]) =>
+        `<button class="cal-seg-btn ${r.status === k ? "sel" : ""}" role="radio" aria-checked="${r.status === k}" onclick="setRequestStatus(${P}, '${esc(r.id)}', '${k}')">${l}</button>`).join("")}</div>
+    </article>`;
+}
+const reqMatch = (f) => (r) => f === "all" ? true : f === "open" ? r.status !== "done" : r.status === f;
+/** หมวด AI ของโปรเจกต์ (ไว้ใช้ไอคอนแอปจริงในหัวกลุ่ม) */
+function agentCatByLabel(project) { return agentCategories().find(c => agentCatLabel(c) === project) || null; }
+
+/** หน้ารวม: ทุก request แบ่งกลุ่มตามโปรเจกต์ (กลุ่มที่มีเรื่องใหม่สุดอยู่บน) + ตัวกรองสถานะรวม */
+function renderAllRequestsPage() {
+  const f = requestsView.filter || "open";
+  const head = `<div class="rv-feed-head"><button class="back-btn" onclick="closeRequests()">${icon("left", 15)} Back</button></div>
+    <h1 style="margin:.2rem 0 .1rem">All requests</h1><p class="hint" style="margin:0 0 .8rem">Everything people sent, grouped by project</p>`;
+  if (!requestsReady()) return `<div class="rv-feed">${head}<p class="empty">Sign in with cloud sync to receive requests.</p></div>`;
+  if (!reqStore.allAt) return `<div class="rv-feed" aria-busy="true">${head}${reqStore.allError ? `<p class="hint" style="color:var(--danger-text)">${esc(reqStore.allError)}</p>` : [0, 1].map(() => `<div class="rq-sk"><span class="sk-line" style="width:40%"></span><span class="sk-block"></span><span class="sk-line" style="width:70%"></span></div>`).join("")}</div>`;
+  const projects = Object.entries(reqStore.byProject).map(([project, st]) => ({ project, items: (st && st.items) || [] }));
+  const all = projects.flatMap(p => p.items);
+  const count = (k) => all.filter(reqMatch(k)).length;
+  const chip = (k, l) => `<button class="rv-chip ${f === k ? "sel" : ""}" aria-pressed="${f === k}" onclick="requestsView.filter='${k}';render()">${l} · ${count(k)}</button>`;
+  const groups = projects
+    .map(p => ({ ...p, shown: p.items.filter(reqMatch(f)), latest: p.items.reduce((m, r) => r.created_at > m ? r.created_at : m, "") }))
+    .filter(p => p.shown.length)
+    .sort((a, b) => b.latest.localeCompare(a.latest));
+  const groupHtml = (g) => {
+    const cat = agentCatByLabel(g.project);
+    const P = esc(JSON.stringify(g.project));
+    const nNew = g.items.filter(r => r.status === "new").length, nProg = g.items.filter(r => r.status === "progress").length;
+    const sub = [nNew ? `<span class="rq-g-new">${nNew} new</span>` : "", nProg ? `${nProg} in progress` : "", `${g.items.length} total`].filter(Boolean).join(" · ");
+    const nOpen = g.items.filter(r => r.status !== "done").length;
+    return `<section class="rq-group" data-project="${esc(g.project)}" aria-labelledby="rqg-${esc(g.project.replace(/[^A-Za-z0-9]/g, "_"))}">
+      <header class="rq-g-head">
+        ${cat ? catIcoHtml(cat, cat.color, cat.icon || AGENT_CAT_ICON, 15) : `<span class="cat-ico" style="background:var(--primary-soft);color:var(--primary)">${icon("mail", 15)}</span>`}
+        <span class="rq-g-t"><h2 id="rqg-${esc(g.project.replace(/[^A-Za-z0-9]/g, "_"))}">${esc(g.project)}</h2><span class="rq-g-sub">${sub}</span></span>
+        ${nOpen ? `<button class="rq-copy" onclick="copyOpenRequests(${P})" aria-label="Copy all open requests of ${esc(g.project)}">${icon("copy", 13)} Copy open · ${nOpen}</button>` : ""}
+        <button class="ov-more" aria-label="Open the request page of ${esc(g.project)}" onclick="openRequests(${P}, 'all'); requestsView.allFilter = '${f}'">${icon("right", 14)}</button>
+      </header>
+      ${g.shown.map(r => requestCardHtml(g.project, r)).join("")}
+    </section>`;
+  };
+  return `<div class="rv-feed">${head}
+    ${reqStore.allError ? `<p class="hint" style="color:var(--danger-text)">${esc(reqStore.allError)}</p>` : ""}
+    <div class="rv-chips" role="group" aria-label="Filter by status">${chip("open", "Open")}${chip("new", "New")}${chip("progress", "In progress")}${chip("done", "Done")}${chip("all", "All")}</div>
+    ${groups.length ? groups.map(groupHtml).join("") : `<p class="empty">${f === "open" ? "No open requests ✓" : all.length ? "Nothing here" : "No requests yet — create a request link on a project's Requests page"}</p>`}
+  </div>`;
+}
+
 function renderRequestsPage() {
+  if (requestsView.all) return renderAllRequestsPage();
   const { project } = requestsView;
   const f = requestsView.filter || "open";
   const st = reqStore.byProject[project];
-  const head = `<div class="rv-feed-head"><button class="back-btn" onclick="closeRequests()">${icon("left", 15)} Back</button></div>
+  const head = `<div class="rv-feed-head"><button class="back-btn" onclick="closeRequests()">${icon("left", 15)} ${requestsView.from === "all" ? "All requests" : "Back"}</button>
+      ${requestsView.from === "all" ? "" : `<button class="link-primary" style="font-size:.8rem" onclick="openAllRequests()">All requests</button>`}</div>
     <h1 style="margin:.2rem 0 .1rem">Requests</h1><p class="hint" style="margin:0 0 .8rem">${esc(project)} · things people want fixed or changed</p>`;
   if (!requestsReady()) return `<div class="rv-feed">${head}<p class="empty">Sign in with cloud sync to receive requests.</p></div>`;
   if (!st) return `<div class="rv-feed">${head}<p class="empty">Loading…</p></div>`;
@@ -6970,17 +7240,7 @@ function renderRequestsPage() {
   const items = st.items.filter(r => f === "all" ? true : f === "open" ? r.status !== "done" : r.status === f);
   const count = (k) => st.items.filter(r => k === "open" ? r.status !== "done" : r.status === k).length;
   const chip = (k, l) => `<button class="rv-chip ${f === k ? "sel" : ""}" onclick="requestsView.filter='${k}';render()">${l} · ${k === "all" ? st.items.length : count(k)}</button>`;
-  const cards = items.map(r => `<article class="rv-post rq-post ${r.status}">
-      <header class="rv-post-head">${reviewAvatar(r.author ? r.author : "Anonymous", 36)}
-        <span class="rv-post-who"><b class="rv-post-app">${esc(r.author || "Anonymous")}</b><span class="rv-post-time">${esc(reviewWhen(r.created_at))}</span></span>
-        <button class="rq-copy" aria-label="Copy this request" title="Copy this request" onclick="copyRequest(${esc(JSON.stringify(project))}, '${esc(r.id)}')">${icon("copy", 13)} Copy</button>
-        <button class="rt-del" aria-label="Delete request" onclick="deleteRequest(${esc(JSON.stringify(project))}, '${esc(r.id)}')">${icon("trash", 13)}</button>
-      </header>
-      ${requestBodyHtml(r.body)}
-      ${requestAttachmentsHtml(r.attachments)}
-      <div class="cal-seg rq-status" role="radiogroup" aria-label="Status">${Object.entries(REQ_STATUS).map(([k, l]) =>
-        `<button class="cal-seg-btn ${r.status === k ? "sel" : ""}" role="radio" aria-checked="${r.status === k}" onclick="setRequestStatus(${esc(JSON.stringify(project))}, '${esc(r.id)}', '${k}')">${l}</button>`).join("")}</div>
-    </article>`).join("");
+  const cards = items.map(r => requestCardHtml(project, r)).join("");
   return `<div class="rv-feed">${head}${linkCard}
     ${st.error ? `<p class="hint" style="color:var(--danger-text)">${esc(st.error)}</p>` : ""}
     ${count("open") ? `<button class="rq-copy rq-copy-all" onclick="copyOpenRequests(${esc(JSON.stringify(project))})">${icon("copy", 13)} Copy all open · ${count("open")}</button>` : ""}
@@ -7283,6 +7543,8 @@ function renderAiHub() {
       <h1 class="cat-head" style="font-size:1.25rem">
         <span class="cat-ico" style="background:color-mix(in srgb, ${AI_HUB_COLOR} 16%, var(--card));color:color-mix(in srgb, ${AI_HUB_COLOR} 55%, var(--fg))">${icon(AGENT_CAT_ICON, 15)}</span>
         AI Work</h1>
+      ${requestsReady() ? (() => { const n = Object.values(reqStore.counts).reduce((x, y) => x + y, 0);
+        return `<button class="edit-btn rq-icon" aria-label="${n ? `All requests — ${n} new` : "All requests"}" title="All requests" onclick="openAllRequests()">${icon("mail", 15)}${n ? `<span class="rq-dot">${n > 9 ? "9+" : n}</span>` : ""}</button>`; })() : ""}
     </div>
     <p class="hint" style="margin:0 0 .9rem">${rows.length} project${rows.length > 1 ? "s" : ""} · ${totalTasks} task${totalTasks > 1 ? "s" : ""} — เลือกโปรเจกต์เพื่อดูงานทั้งหมด</p>
     ${rows.length ? `<div class="ov-grid">${cards}</div>` : `<p class="empty">ยังไม่มีงานจาก AI</p>`}`;
@@ -7924,7 +8186,7 @@ function renderCalendar() {
       ${greadBar()}
       <div class="cal-head">
         <button class="cal-nav" aria-label="Previous week" onclick="calShiftDays(-7)">${icon("left")}</button>
-        <span class="cal-title"><h2>${weekStart.getFullYear() === weekEnd.getFullYear() ? weekStart.getDate() + " " + MONTHS_SHORT[weekStart.getMonth()] : fmtDMY(weekStart)} – ${fmtDMY(weekEnd)}</h2>${calTodayBtn()}</span>
+        <span class="cal-title"><h2>${weekStart.getFullYear() === weekEnd.getFullYear() ? fmtDMY(weekStart).slice(0, 5) : fmtDMY(weekStart)} – ${fmtDMY(weekEnd)}</h2>${calTodayBtn()}</span>
         <button class="cal-nav" aria-label="Next week" onclick="calShiftDays(7)">${icon("right")}</button>
       </div>
       ${rows}`;
@@ -8492,7 +8754,11 @@ function openForm(taskId) {
         <div class="fld" role="group" aria-labelledby="fDueLabelText">
           <span id="fDueLabelText">${t?.endDate ? "Start date" : "Due date"}</span>
           <div class="chip-row" id="fDueChips">${dueChipsHtml(hasTimeInit ? dueInputVal : dueInputVal.slice(0, 10))}</div>
-          ${dateFieldHtml("fDue", hasTimeInit ? dueInputVal : dueInputVal.slice(0, 10), `aria-label="${t?.endDate ? "Start date" : "Due date"}"`, hasTimeInit ? "datetime-local" : "date")}
+          ${dateFieldHtml("fDue", hasTimeInit ? dueInputVal : dueInputVal.slice(0, 10), `aria-label="${t?.endDate ? "Start date" : "Due date"} (DD/MM/YYYY)"`, hasTimeInit ? "datetime-local" : "date", { rangeEnd: "fEnd" })}
+          <div class="fld" id="fEndWrap" style="display:${t?.endDate ? "" : "none"};margin:.55rem 0 0">
+            <span class="end-head"><span id="fEndLbl">Until</span><button type="button" class="link-primary end-clear" onclick="clearFormRange()">Single day</button></span>
+            ${dateFieldHtml("fEnd", t?.endDate || "", 'aria-labelledby="fEndLbl"')}
+          </div>
         </div>
         <label class="fld">Category<select id="fCat" onchange="refreshFormProjects()">${catOpts}</select></label>
         <label class="fld" id="fProjWrap" style="display:${projOpts ? "" : "none"}">Project
@@ -8507,13 +8773,6 @@ function openForm(taskId) {
         <label class="fld-check">
           <input type="checkbox" id="fTimeOn" ${hasTimeInit ? "checked" : ""} onchange="toggleFormTime()">
           Include time
-        </label>
-        <label class="fld-check">
-          <input type="checkbox" id="fRangeOn" ${t?.endDate ? "checked" : ""} onchange="toggleFormRange()">
-          Multi-day task (spans a date range)
-        </label>
-        <label class="fld" id="fEndWrap" style="display:${t?.endDate ? "" : "none"}">End date
-          ${dateFieldHtml("fEnd", t?.endDate || "")}
         </label>
         ${chipGroupHtml("fRec", "Repeat", Object.entries(RECURRENCE_LABELS), recVal)}
         ${chipGroupHtml("fRem", "Reminder", REMINDER_CHIPS, remVal)}
@@ -8555,9 +8814,9 @@ function dueChipsHtml(val) {
 function pickDueDay(k) {
   const i = document.getElementById("fDue");
   if (!i) return;
-  if (!k) i.value = "";
-  else if (i.type === "datetime-local") i.value = k + "T" + (i.value.slice(11, 16) || "09:00");
-  else i.value = k;
+  setDateValue("fDue", k);
+  const end = document.getElementById("fEnd");
+  if (end && end.value) { end.value = ""; syncDateBtn("fEnd"); }
   syncDateBtn("fDue");
 }
 /** กลุ่มปุ่มแตะเลือกได้ 1 ค่า (radio) — ค่าเก็บใน input hidden ตาม id */
@@ -8574,13 +8833,19 @@ function refreshDueUi() {
   const k = due.value.slice(0, 10);
   const days = dueChipDays();
   document.querySelectorAll("#fDueChips .chip-opt").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.day === k)));
-  // ปุ่มเปิดปฏิทิน: วันที่อยู่นอกปุ่มลัด -> โชว์วันที่นั้น, ไม่งั้นเป็น "Other date"
-  const btn = document.getElementById("fDueBtn");
-  if (btn && (!k || days.includes(k)) && due.type === "date") btn.innerHTML = `<span class="date-ph">Other date…</span>` + icon("calendar", 14);
   const end = document.getElementById("fEnd");
   if (end) {
     end.min = k;
-    if (k && end.value && end.value < k) { end.value = k; const eb = document.getElementById("fEndBtn"); if (eb) eb.innerHTML = dateBtnLabel(k, "date"); }
+    if (!k && end.value) end.value = "";                       // ไม่มีวันเริ่ม = ไม่มีช่วง
+    if (k && end.value && end.value <= k) end.value = "";      // วันจบต้องหลังวันเริ่ม (วันเดียวกัน = งานวันเดียว)
+    const et = document.getElementById("fEndTxt");
+    if (et && document.activeElement !== et) et.value = keyToDMY(end.value);
+    const ranged = !!end.value;
+    const wrap = document.getElementById("fEndWrap");
+    if (wrap) wrap.style.display = ranged ? "" : "none";
+    const lbl = document.getElementById("fDueLabelText");
+    if (lbl) lbl.textContent = ranged ? "Start date" : "Due date";
+    document.getElementById("fDueTxt")?.setAttribute("aria-label", (ranged ? "Start date" : "Due date") + " (DD/MM/YYYY)");
   }
   const remSet = document.getElementById("fRemSet");
   if (remSet) {
@@ -8589,7 +8854,9 @@ function refreshDueUi() {
   }
   const sub = document.getElementById("fSubmit");
   if (sub && !document.getElementById("taskForm")?.dataset.edit) {
-    sub.textContent = !k ? "Add task · no date" : "Add task · " + (days.includes(k) ? dueDayName(k) : fmtDMY(new Date(k + "T00:00:00")));
+    const endV = document.getElementById("fEnd")?.value;
+    const startName = days.includes(k) ? dueDayName(k) : fmtDMY(new Date(k + "T00:00:00"));
+    sub.textContent = !k ? "Add task · no date" : endV ? `Add task · ${fmtDMY(new Date(k + "T00:00:00"))} – ${fmtDMY(new Date(endV + "T00:00:00"))}` : "Add task · " + startName;
   }
 }
 
@@ -8669,17 +8936,11 @@ function toggleFormTime() {
   syncDateBtn("fDue");
 }
 
-/** สลับโหมด multi-day: โชว์/ซ่อนช่อง End date + เปลี่ยน label ช่องแรกเป็น "Start date" */
-function toggleFormRange() {
-  const on = document.getElementById("fRangeOn").checked;
-  document.getElementById("fEndWrap").style.display = on ? "" : "none";
-  document.getElementById("fDueLabelText").textContent = on ? "Start date" : "Due date";
-  if (on && !document.getElementById("fEnd").value) {
-    // ตั้งค่าเริ่มต้น End date = วันเดียวกับ Due date ให้กรอกต่อง่ายๆ
-    const dueVal = document.getElementById("fDue").value;
-    if (dueVal) { document.getElementById("fEnd").value = dueVal.slice(0, 10); syncDateBtn("fEnd"); }
-  }
-  refreshDueUi();
+/** ปุ่ม "Single day": เลิกช่วง กลับเป็นงานวันเดียว */
+function clearFormRange() {
+  const end = document.getElementById("fEnd");
+  if (end) { end.value = ""; syncDateBtn("fEnd"); }
+  document.getElementById("fDueTxt")?.focus();
 }
 
 function closeForm() {
@@ -8700,8 +8961,8 @@ function submitForm(e, taskId) {
   const dueRaw = document.getElementById("fDue").value;
   const timeOn = document.getElementById("fTimeOn").checked;
   const remRaw = document.getElementById("fRem").value;
-  const rangeOn = document.getElementById("fRangeOn").checked;
-  const endRaw = rangeOn ? document.getElementById("fEnd").value : "";
+  const endRaw = document.getElementById("fEnd")?.value || "";
+  const rangeOn = !!endRaw;
   if (rangeOn && endRaw && dueRaw && endRaw < dueRaw.slice(0, 10)) {
     showToast("❌ End date can't be before the start date");
     return;
