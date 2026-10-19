@@ -2,7 +2,7 @@
 // driven against an in-page fake Supabase (same mock as kodo-tests) — real clicks + axe.
 import { test, expect } from "@playwright/test";
 import { mockSupabaseHead } from "./mock-supabase.mjs";
-import { USER, demoState, expectNoA11yViolations } from "./helpers.mjs";
+import { USER, demoState, expectNoA11yViolations, pinTheme } from "./helpers.mjs";
 
 const TABLES = {
   request_links: [{ id: "l1", owner: USER.uid, project: "Kodo", token: "Tok_abcdefghijklmnopqrstuvwxyz0123", active: true, created_at: "2026-09-15T01:00:00Z" }],
@@ -18,6 +18,7 @@ async function openCloudApp(page) {
   const script = mockSupabaseHead({ userId: USER.uid, email: USER.email, remote: state }).replace(/^\s*<script>|<\/script>\s*$/g, "")
     + `;window.__sb.tables = ${JSON.stringify(TABLES)};`;
   await page.route(/^https?:\/\/(?!127\.0\.0\.1)/, (r) => r.abort());
+  await pinTheme(page);
   await page.addInitScript(script);
   await page.addInitScript(([user, st]) => {
     if (sessionStorage.getItem("__e2e_seeded")) return;

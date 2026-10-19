@@ -26,9 +26,18 @@ export function demoState() {
   };
 }
 
+/** The app theme is "auto by clock" (06-18 day, else night), so a run must not depend on when it happens:
+ *  the dark project (colorScheme dark) pins night, every other project pins day. */
+export async function pinTheme(page) {
+  await page.addInitScript(() => {
+    try { localStorage.setItem("kodo-theme", matchMedia("(prefers-color-scheme: dark)").matches ? "night" : "day"); } catch { /* ignore */ }
+  });
+}
+
 /** Seed localStorage once per test (later reloads keep what the app saved) and keep the run offline. */
 export async function openApp(page, state = demoState()) {
   await page.route(/^https?:\/\/(?!127\.0\.0\.1)/, (r) => r.abort());
+  await pinTheme(page);
   await page.addInitScript(([user, st]) => {
     if (sessionStorage.getItem("__e2e_seeded")) return;
     localStorage.setItem("task-studio-supabase", JSON.stringify({ off: true }));

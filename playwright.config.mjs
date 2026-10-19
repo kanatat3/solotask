@@ -25,7 +25,7 @@ export default defineConfig({
   projects: [
     { name: "mobile", use: { ...devices["Pixel 7"] } },
     { name: "desktop", use: { ...devices["Desktop Chrome"], viewport: { width: 1280, height: 800 } } },
-    // dark theme is its own state: same flows, colors re-checked by axe
+    // night theme (app pins it from colorScheme in e2e/helpers.mjs pinTheme): same flows, colors re-checked by axe
     { name: "dark", use: { ...devices["Pixel 7"], colorScheme: "dark" } },
   ],
 });
