@@ -3,7 +3,8 @@ import { openApp, expectNoA11yViolations } from "./helpers.mjs";
 
 test("home renders and passes axe", async ({ page }) => {
   await openApp(page);
-  await expect(page.getByText("Due today")).toBeVisible();
+  await expect(page.getByRole("img", { name: /^Kodo/ }).first()).toBeVisible();
+  await expect(page.locator("#kbRow .kb-pill").first()).toBeVisible();
   await expect(page.getByRole("radio", { name: /Both/ })).toHaveAttribute("aria-checked", "true");
   await expectNoA11yViolations(page, "home");
 });
@@ -21,8 +22,8 @@ test("add a task with the tap-first form", async ({ page }) => {
   await expect(submit).toHaveText("Add task · Tomorrow");
   await submit.click();
   await expect(page.locator("#fTitle")).toHaveCount(0);
-  await page.locator("#navBar").getByRole("button", { name: "All" }).click();
-  await expect(page.getByText("Send the weekly report")).toBeVisible();
+  await page.getByLabel("Search your tasks").fill("weekly report");
+  await expect(page.locator("#homeResults").getByText("Send the weekly report")).toBeVisible();
 });
 
 test("date range by clicking start and end in the calendar (DD/MM/YYYY)", async ({ page }) => {
@@ -45,8 +46,8 @@ test("date range by clicking start and end in the calendar (DD/MM/YYYY)", async 
   await expect(page.locator("#fEndTxt")).toHaveValue(/^14\/\d{2}\/\d{4}$/);
   await expect(page.locator("#fSubmit")).toHaveText(/^Add task · 10\/\d{2}\/\d{4} – 14\/\d{2}\/\d{4}$/);
   await page.locator("#fSubmit").click();
-  await page.locator("#navBar").getByRole("button", { name: "All" }).click();
-  await expect(page.getByText("Fieldwork trip")).toBeVisible();
+  await page.getByLabel("Search your tasks").fill("Fieldwork trip");
+  await expect(page.locator("#homeResults").getByText("Fieldwork trip")).toBeVisible();
 });
 
 test("Work overview, project workflow and rounds", async ({ page }) => {
@@ -66,7 +67,7 @@ test("Work overview, project workflow and rounds", async ({ page }) => {
   await expectNoA11yViolations(page, "project with rounds");
 });
 
-for (const tab of ["Calendar", "All", "Settings"]) {
+for (const tab of ["Projects", "Calendar", "Inbox"]) {
   test(`${tab} tab passes axe`, async ({ page }) => {
     await openApp(page);
     await page.locator("#navBar").getByRole("button", { name: tab }).click();
@@ -74,3 +75,10 @@ for (const tab of ["Calendar", "All", "Settings"]) {
     await expectNoA11yViolations(page, tab.toLowerCase());
   });
 }
+
+test("Me (settings) opens from the avatar and passes axe", async ({ page }) => {
+  await openApp(page);
+  await page.getByRole("button", { name: /^Me/ }).first().click();
+  await expect(page.locator("#navBar .nav-btn.active")).toContainText("Me");
+  await expectNoA11yViolations(page, "me");
+});

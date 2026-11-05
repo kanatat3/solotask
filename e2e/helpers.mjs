@@ -46,8 +46,9 @@ export async function openApp(page, state = demoState()) {
     sessionStorage.setItem("__e2e_seeded", "1");
   }, [USER, state]);
   await page.goto("/");
-  // first screen of a session asks Work / Personal / Both — pick Both like a user would
-  await page.getByRole("button", { name: /^Both/ }).click();
+  // V10 opens straight on Today (no focus picker); older builds asked Work / Personal / Both first
+  await page.locator(".td-head, .focus-grid").first().waitFor();
+  if (await page.locator(".focus-grid").count()) await page.getByRole("button", { name: /^Both/ }).click();
   await expect(page.locator("#navBar")).toBeVisible();
 }
 

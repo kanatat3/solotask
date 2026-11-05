@@ -27,7 +27,9 @@ async function openCloudApp(page) {
     sessionStorage.setItem("__e2e_seeded", "1");
   }, [USER, state]);
   await page.goto("/");
-  await page.getByRole("button", { name: /^Work/ }).click();
+  await page.locator(".td-head, .focus-grid").first().waitFor();
+  if (await page.locator(".focus-grid").count()) await page.getByRole("button", { name: /^Work/ }).click();
+  else await page.evaluate(() => setFocus("work"));
   await expect(page.locator("#navBar")).toBeVisible();
 }
 
